@@ -55,13 +55,32 @@ antigo baseado em Excel (`Controle_Ponto_Concretta.xlsx` + Apps Script `Código.
   visível, o clique no botão simplesmente "não faz nada". Foi assim que o botão "Excluir funcionário"
   parou de funcionar (02/09/2026). Use a função `confirmarAcao(mensagem)` já existente no código (um
   modal HTML próprio que retorna uma Promise<boolean>) no lugar de `confirm()`.
+- **Nome de obra é só texto, não tem ID fixo/FK** — está gravado como string solta em `dias.{dia}.m/t` e
+  também é o `nome` de um doc separado em `obras/{id}` (só pra alimentar o dropdown). Isso significa que
+  renomear ou apagar um doc de `obras` nunca quebra lançamentos já feitos (eles continuam mostrando o
+  nome antigo como texto órfão), mas também significa que é fácil criar **obra duplicada** sem perceber
+  — já aconteceu duas vezes (Rubens renomeando "UBS" pra "COLÉGIO MILITAR" ao vivo, coincidindo com uma
+  obra nova sendo criada com o mesmo nome). Se o Rubens disser algo como "tem obra repetida na lista",
+  ler a coleção `obras` inteira, achar nomes duplicados e apagar um dos docs (não afeta lançamentos).
+- **Status Ativo/Inativo do funcionário é só informativo hoje** — não filtra nada. Um funcionário
+  Inativo continua aparecendo normalmente na Conferência de Ponto e pode receber lançamento de dia igual
+  um Ativo. Só afeta o pill visual, os stat cards "Ativos/Inativos" e a coluna "Situação" do CSV
+  exportado. Rubens perguntou sobre isso e cogitou pedir pra Inativo sumir da Conferência de Ponto, mas
+  **isso ainda não foi decidido** — não implementar até ele confirmar que quer.
 
-## Apelidos e nomes de obra (grupo do WhatsApp escreve errado/informal)
+## Obras ativas (02/09/2026)
+
+CRAS, CRECHE, COLÉGIO MILITAR, PARQUE IMPERIAL, PRAÇA G. **"UBS" não existe mais** — foi renomeada pra
+COLÉGIO MILITAR (duas vezes: uma revertida em 15/08, a definitiva em 02/09). Se aparecer "UBS" em
+qualquer mensagem futura, é COLÉGIO MILITAR.
+
+## Apelidos (grupo do WhatsApp escreve errado/informal)
 
 - "Praça" / "Praça Imperial" → **PARQUE IMPERIAL**
 - "Praça canto da serra" → **PRAÇA G** ("canto da serra" é bairro, não nome de obra)
 - "Cras canto da serra" → **CRAS** (mesma lógica)
 - "Creche canto da serra" → **CRECHE**
+- "UBS" → **COLÉGIO MILITAR** (ver acima)
 - "Cleber Lucas" / "Kleber Lucas" → Kleber Lucas Sousa Soares
 - "Marlon Molra" → Marlon Moura Silva
 - "Dairo Silva" → Dário Silva Dos Santos
@@ -70,6 +89,16 @@ antigo baseado em Excel (`Controle_Ponto_Concretta.xlsx` + Apps Script `Código.
   Leonardo Paixão Santos, pessoa diferente, aparecem juntos às vezes)
 - "Silvestre de Oliveira" → Silvestre Pereira da Silva
 - "Edson Silva" → Edison Silva de Oliveira
+
+## Cadastro (34 pessoas em 02/09/2026)
+
+Os 32 originais do seed, **menos** Daniel Júlio e Valdecir Alves dos Reis (excluídos de propósito pelo
+Rubens em 02/09), **mais** 4 novos cadastrados no mesmo dia pela equipe do "Willian Ponte" (chefe de
+equipe novo no WhatsApp, não confundir com o funcionário Willian de Souza): Willian de Souza
+(Encarregado), Carlos André (Ajudante), Walison Ricardo (Carpinteiro), Ronilson da Silva (Ajudante) —
+nenhum tem PIX cadastrado ainda. **O Firestore não guarda histórico de quem foi excluído** — se precisar
+checar isso de novo, comparar a lista `todos` ao vivo contra o array `SEED` hardcoded no código (só
+serve de base pros 32 originais, não pega quem foi cadastrado depois).
 
 ## Lançamento diário de ponto por WhatsApp
 
