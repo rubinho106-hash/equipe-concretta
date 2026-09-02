@@ -97,6 +97,20 @@ qualquer mensagem futura, é COLÉGIO MILITAR.
 - "Silvestre de Oliveira" → Silvestre Pereira da Silva
 - "Edson Silva" → Edison Silva de Oliveira
 
+## Fechamento de Ponto (02/09/2026)
+
+4ª aba do segmentado, ao lado da Conferência de Ponto — mesmo mês selecionado (`mesConferencia`
+compartilhado). Mostra dias trabalhados × `valorDiaria` (campo novo no cadastro, R$ por dia completo) por
+funcionário, com total geral e exportar CSV. Botão "Fechar mês"/"Reabrir mês" grava
+`fechamentos/{AAAA-MM} = {fechado: bool}` — mês fechado trava a Conferência de Ponto daquele mês (selects
+e status Conferido/Pendente ficam `disabled` no cartão, e `salvarDia()`/`alternarConferencia()` recusam
+escrever mesmo chamados direto, não só via UI).
+
+**Cuidado ao criar outra tabela em grid**: cada linha do Fechamento é um `.fechamento-row` com
+`display:grid` PRÓPRIO (não uma tabela HTML de verdade) — colunas com `auto` fazem cada linha calcular
+sua própria largura, desalinhando quando uma célula (ex: PIX longo) varia de tamanho entre linhas. Usar
+largura fixa em px nas colunas, não `auto`, sempre que fizer uma lista desse estilo.
+
 ## Cadastro (34 pessoas em 02/09/2026)
 
 Os 32 originais do seed, **menos** Daniel Júlio e Valdecir Alves dos Reis (excluídos de propósito pelo
