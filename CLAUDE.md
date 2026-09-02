@@ -69,11 +69,11 @@ antigo baseado em Excel (`Controle_Ponto_Concretta.xlsx` + Apps Script `Código.
   leitura vazia espúria (rede/cache instável no load) — foi exatamente isso que aconteceu em 02/09/2026 e
   recriou as 32 pessoas do `SEED` por cima do cadastro real, duplicando 30 funcionários e ressuscitando 2
   que tinham sido excluídos de propósito. 66 cadastrados em vez de 34, corrigido no mesmo dia.
-- **Status Ativo/Inativo do funcionário é só informativo hoje** — não filtra nada. Um funcionário
-  Inativo continua aparecendo normalmente na Conferência de Ponto e pode receber lançamento de dia igual
-  um Ativo. Só afeta o pill visual, os stat cards "Ativos/Inativos" e a coluna "Situação" do CSV
-  exportado. Rubens perguntou sobre isso e cogitou pedir pra Inativo sumir da Conferência de Ponto, mas
-  **isso ainda não foi decidido** — não implementar até ele confirmar que quer.
+- **Status Ativo/Inativo (resolvido 02/09/2026)**: os 3 cards do topo da Lista de Funcionários (Total/
+  Ativos/Inativos) são filtro clicável (`filtroStatus`). Trocar o status de alguém (clicar na pill) pede
+  confirmação (`confirmarAcao`, vermelho pra Inativo/azul pra reativar). **Inativo não aparece mais na
+  Conferência de Ponto** (nem na lista nem nos stats de total/conferidos/pendentes) — `renderConfLista()`
+  filtra por `status !== "Inativo"` antes de tudo.
 
 ## Obras ativas (02/09/2026)
 
