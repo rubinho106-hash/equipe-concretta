@@ -952,6 +952,16 @@ document.getElementById("btn-exportar").onclick = () => {
   toast("Relatório salvo.");
 };
 
+// NAO chamar mais automaticamente — so existe pra reaproveitar em caso de
+// precisar semear um banco realmente vazio de novo no futuro (ex: um novo
+// ambiente). Rodar manualmente pelo console se algum dia for preciso:
+// seedSeVazio(db.collection("funcionarios"))
+// Historico: em 02/09/2026 essa funcao rodava automaticamente em toda
+// carga de pagina, guardada por um "colRef.limit(1).get(); if(!snap.empty)
+// return;". Uma leitura que voltou vazia por engano (rede instavel/cache)
+// bastou pra recriar as 32 pessoas originais do SEED por cima das que ja
+// existiam — duplicou 30 cadastros e ressuscitou 2 que tinham sido
+// excluidos de proposito. Nunca mais chamar isso sozinho no carregamento.
 async function seedSeVazio(colRef){
   const snap = await colRef.limit(1).get();
   if(!snap.empty) return;
@@ -962,7 +972,6 @@ async function seedSeVazio(colRef){
 
 async function iniciar(){
   const col = db.collection("funcionarios");
-  try { await seedSeVazio(col); } catch(e) { /* outro viewer pode ter semeado ao mesmo tempo — ok */ }
 
   col.orderBy("nome").onSnapshot(
     (snap) => {
@@ -1030,6 +1039,11 @@ let todasObras = [];
 let filtroObras = "";
 let editandoObraId = null;
 
+// NAO chamar mais automaticamente — mesmo motivo do seedSeVazio() de
+// funcionarios (ver comentario lá): uma leitura vazia por engano recria
+// as obras originais em cima das que já existem, duplicando. Rodar na mão
+// pelo console só se precisar semear um banco realmente vazio:
+// seedObrasSeVazio(db.collection("obras"))
 async function seedObrasSeVazio(colRef){
   const snap = await colRef.limit(1).get();
   if(!snap.empty) return;
@@ -1040,7 +1054,6 @@ async function seedObrasSeVazio(colRef){
 
 function carregarObras(){
   const col = db.collection("obras");
-  seedObrasSeVazio(col).catch(() => {});
   col.orderBy("nome").onSnapshot(
     (snap) => {
       todasObras = snap.docs.map(d => ({ id: d.id, ...d.data() }));
