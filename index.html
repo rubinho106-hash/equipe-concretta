@@ -1337,13 +1337,13 @@ async function salvarDia(dia, campo, valor){
 }
 
 function fecharFicha(){
+  salvarTamanhoFicha();
   document.getElementById("ficha-overlay").hidden = true;
   fichaFunc = null;
 }
 document.getElementById("btn-fechar-ficha").onclick = fecharFicha;
-document.getElementById("ficha-overlay").addEventListener("click", (e) => {
-  if(e.target.id === "ficha-overlay") fecharFicha();
-});
+// o cartao so fecha pelo botao "Fechar" — clicar fora nao fecha mais,
+// pra nao perder o preenchimento por engano
 
 // ---------------- Mover e redimensionar o cartao (ficha) ----------------
 // O cartao usa position:fixed com left/top/width/height controlados aqui,
@@ -1365,9 +1365,28 @@ function aplicarGeometriaFicha(){
   modal.style.height = fichaH + "px";
 }
 
+const FICHA_TAMANHO_KEY = "concretta_ficha_tamanho";
+
+function carregarTamanhoFicha(){
+  try {
+    const salvo = JSON.parse(localStorage.getItem(FICHA_TAMANHO_KEY));
+    if(salvo && typeof salvo.w === "number" && typeof salvo.h === "number") return salvo;
+  } catch(e) { /* localStorage indisponivel ou dado corrompido — ignora */ }
+  return null;
+}
+
+function salvarTamanhoFicha(){
+  try {
+    localStorage.setItem(FICHA_TAMANHO_KEY, JSON.stringify({ w: fichaW, h: fichaH }));
+  } catch(e) { /* localStorage indisponivel — sem problema, so nao lembra da proxima vez */ }
+}
+
 function posicionarFichaCentro(){
-  fichaW = Math.min(640, window.innerWidth * 0.96);
-  fichaH = Math.min(640, window.innerHeight * 0.92);
+  const salvo = carregarTamanhoFicha();
+  const larguraBase = salvo ? salvo.w : 640;
+  const alturaBase = salvo ? salvo.h : 640;
+  fichaW = Math.min(Math.max(larguraBase, FICHA_MIN_W), window.innerWidth * 0.96);
+  fichaH = Math.min(Math.max(alturaBase, FICHA_MIN_H), window.innerHeight * 0.92);
   fichaX = (window.innerWidth - fichaW) / 2;
   fichaY = (window.innerHeight - fichaH) / 2;
   aplicarGeometriaFicha();
