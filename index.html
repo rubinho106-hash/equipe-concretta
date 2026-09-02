@@ -378,12 +378,13 @@
   .fechamento-banner.fechado{ background: var(--warn-bg); color: var(--warn-ink); }
   .fechamento-header-row, .fechamento-row{
     display: grid;
-    grid-template-columns: 1fr 56px 110px 140px;
+    grid-template-columns: 1fr 56px 110px 116px 140px;
     align-items: center;
     gap: 14px;
     padding: 12px 18px;
   }
   .fechamento-header-row > div:not(:first-child), .fechamento-dias, .fechamento-valor, .fechamento-pix{ text-align: right; }
+  .fechamento-status{ display: flex; justify-content: flex-end; }
   .fechamento-header-row{
     font-size: 10px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); font-weight: 700;
     border-bottom: 1px solid var(--line);
@@ -678,6 +679,7 @@
         <div>Funcionário</div>
         <div>Dias</div>
         <div>Valor</div>
+        <div>Pagamento</div>
         <div>PIX</div>
       </div>
       <div id="fechamento-lista"></div>
@@ -1492,6 +1494,31 @@ function agruparFechamentoPorObra(){
   return { grupos, totalDias, totalValor };
 }
 
+// Status de pagamento por funcionario+obra (nao por mes inteiro, ja que
+// o Fechamento agora fatia cada pessoa por obra) -- guardado no mesmo
+// doc de pontos do mes, em pagamentos.{obra}. Independente do mes estar
+// fechado ou nao: fechar so trava o lancamento dos dias, aprovar
+// pagamento e outra etapa (normalmente vem DEPOIS de fechar o mes).
+function statusPagamento(f, obra){
+  const info = dadosMes[f.id] || {};
+  return (info.pagamentos && info.pagamentos[obra]) === "Aprovado" ? "Aprovado" : "Pendente";
+}
+
+async function alternarPagamento(f, obra){
+  const atual = statusPagamento(f, obra);
+  const novo = atual === "Aprovado" ? "Pendente" : "Aprovado";
+  try {
+    const ref = await garantirDocPontos(f.id, mesConferencia);
+    await ref.update({ ["pagamentos." + obra]: novo });
+    const snap = await ref.get();
+    dadosMes[f.id] = snap.data();
+    renderFechamento();
+    toast(novo === "Aprovado" ? "Pagamento aprovado." : "Pagamento marcado como pendente.");
+  } catch(e){
+    toast("Não deu pra salvar agora — tenta de novo.");
+  }
+}
+
 // Fileira de cards clicaveis pra filtrar o Fechamento por uma obra so
 // (troca a antiga fileira de mes, que virou um <select> compacto) --
 // mostra todas as obras da lista viva, mesmo as sem lancamento nesse mes.
@@ -1598,6 +1625,16 @@ function renderFechamento(){
       valorDiv.className = "fechamento-valor";
       valorDiv.textContent = f.valorDiaria ? formatarMoeda(valor) : "—";
 
+      const statusDiv = document.createElement("div");
+      statusDiv.className = "fechamento-status";
+      const statusAtual = statusPagamento(f, obra);
+      const statusBtn = document.createElement("button");
+      statusBtn.type = "button";
+      statusBtn.className = "pill " + (statusAtual === "Aprovado" ? "pill-conferido" : "pill-pendente");
+      statusBtn.textContent = statusAtual;
+      statusBtn.onclick = () => alternarPagamento(f, obra);
+      statusDiv.appendChild(statusBtn);
+
       const pixDiv = document.createElement("div");
       pixDiv.className = "fechamento-pix";
       pixDiv.textContent = f.pix || "—";
@@ -1606,6 +1643,7 @@ function renderFechamento(){
       row.appendChild(bloco);
       row.appendChild(diasDiv);
       row.appendChild(valorDiv);
+      row.appendChild(statusDiv);
       row.appendChild(pixDiv);
       cont.appendChild(row);
     });
@@ -1643,12 +1681,12 @@ document.getElementById("btn-fechamento-acao").onclick = async () => {
 document.getElementById("btn-fechamento-csv").onclick = () => {
   if(!mesConferencia) return;
   const { grupos } = agruparFechamentoPorObra();
-  const linhas = [["Obra","Nome","Função","Dias","Valor","Chave PIX"]];
+  const linhas = [["Obra","Nome","Função","Dias","Valor","Pagamento","Chave PIX"]];
   Object.keys(grupos).sort((a, b) => a.localeCompare(b, "pt-BR")).forEach(obra => {
     grupos[obra].linhas
       .sort((a, b) => a.f.nome.localeCompare(b.f.nome, "pt-BR"))
       .forEach(({ f, dias, valor }) => {
-        linhas.push([obra, f.nome||"", f.funcao||"", dias.toFixed(1), valor.toFixed(2), f.pix||""]);
+        linhas.push([obra, f.nome||"", f.funcao||"", dias.toFixed(1), valor.toFixed(2), statusPagamento(f, obra), f.pix||""]);
       });
   });
   const csv = linhas.map(l => l.map(v => '"' + String(v).replace(/"/g,'""') + '"').join(",")).join("\r\n");
