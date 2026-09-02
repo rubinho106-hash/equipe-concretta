@@ -1,0 +1,1106 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Equipe Concretta</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+  :root{
+    --bg: #f2f4f9;
+    --surface: #ffffff;
+    --surface-2: #f8f9fc;
+    --ink: #151b2c;
+    --muted: #626e88;
+    --line: #e2e6f0;
+    --accent: #2451d6;
+    --accent-ink: #ffffff;
+    --hero-1: #0b1330;
+    --hero-2: #1c3fb8;
+    --good-bg: #dcf3e6;
+    --good-ink: #157a4a;
+    --warn-bg: #fbe6d4;
+    --warn-ink: #a85417;
+    --danger-ink: #b3261e;
+    --shadow: 0 1px 2px rgba(20,26,50,.04), 0 8px 24px rgba(20,26,50,.06);
+    --radius: 14px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg: #0d1220;
+      --surface: #151c30;
+      --surface-2: #1a2238;
+      --ink: #eef1fb;
+      --muted: #94a1c4;
+      --line: #262f4a;
+      --accent: #6d8bff;
+      --accent-ink: #0b1330;
+      --hero-1: #070b1a;
+      --hero-2: #1a2f8c;
+      --good-bg: #113224;
+      --good-ink: #6fe0a6;
+      --warn-bg: #3a2410;
+      --warn-ink: #f0a862;
+      --danger-ink: #ff8f87;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 30px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg: #0d1220;
+    --surface: #151c30;
+    --surface-2: #1a2238;
+    --ink: #eef1fb;
+    --muted: #94a1c4;
+    --line: #262f4a;
+    --accent: #6d8bff;
+    --accent-ink: #0b1330;
+    --hero-1: #070b1a;
+    --hero-2: #1a2f8c;
+    --good-bg: #113224;
+    --good-ink: #6fe0a6;
+    --warn-bg: #3a2410;
+    --warn-ink: #f0a862;
+    --danger-ink: #ff8f87;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 30px rgba(0,0,0,.35);
+  }
+
+  *{ box-sizing: border-box; }
+  body{
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3{
+    font-family: "Archivo", system-ui, sans-serif;
+    text-wrap: balance;
+    margin: 0;
+  }
+  .num, .stat-num, .emp-dias{
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .page{ max-width: 980px; margin: 0 auto; padding: 28px 20px 80px; }
+
+  .hero{
+    background: linear-gradient(135deg, var(--hero-1) 0%, var(--hero-2) 130%);
+    border-radius: var(--radius);
+    padding: 30px 32px;
+    color: #f5f7ff;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    box-shadow: var(--shadow);
+  }
+  .hero-eyebrow{
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: #a9bdfb;
+    margin-bottom: 10px;
+  }
+  .hero h1{ font-size: 28px; font-weight: 800; color: #fff; }
+  .hero-sub{ font-size: 13.5px; color: #cbd5f7; margin-top: 8px; max-width: 440px; line-height: 1.5; }
+  .hero-stat{
+    background: rgba(255,255,255,.1);
+    border: 1px solid rgba(255,255,255,.18);
+    border-radius: 12px;
+    padding: 14px 20px;
+    text-align: center;
+    min-width: 108px;
+    flex-shrink: 0;
+  }
+  .hero-stat .num{ font-size: 26px; font-weight: 500; color: #fff; line-height: 1; }
+  .hero-stat .lbl{ font-size: 10px; color: #b9c6f4; margin-top: 6px; letter-spacing: .03em; }
+
+  .stats-row{
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 18px;
+  }
+  .stat-card{
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 16px 18px;
+    box-shadow: var(--shadow);
+  }
+  .stat-label{ font-size: 10.5px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .stat-num{ font-size: 24px; font-weight: 500; margin-top: 6px; color: var(--ink); }
+  .stat-good{ color: var(--good-ink); }
+  .stat-warn{ color: var(--warn-ink); }
+
+  .toolbar{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 18px;
+    flex-wrap: wrap;
+  }
+  .search-wrap{ position: relative; flex: 1; min-width: 220px; }
+  .search-wrap svg{ position: absolute; left: 12px; top: 50%; transform: translateY(-50%); opacity: .5; }
+  #busca{
+    width: 100%;
+    padding: 10px 12px 10px 34px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
+    font-size: 13.5px;
+  }
+  #busca:focus{ outline: 2px solid var(--accent); outline-offset: 1px; }
+  .btn{
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 9px;
+    padding: 10px 15px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    cursor: pointer;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .btn:hover{ border-color: var(--accent); }
+  .btn:focus-visible{ outline: 2px solid var(--accent); outline-offset: 1px; }
+  .btn-primary{ background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+  .btn-primary:hover{ filter: brightness(1.06); border-color: transparent; }
+  .btn-ghost{ background: transparent; }
+
+  .list-wrap{
+    margin-top: 16px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .emp-row{
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .emp-row:last-child{ border-bottom: none; }
+  .avatar{
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 13px; color: #fff;
+    flex-shrink: 0;
+  }
+  .emp-name{ font-weight: 600; font-size: 14px; }
+  .emp-sub{ font-size: 12px; color: var(--muted); margin-top: 1px; }
+  .pill{
+    border: none;
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .02em;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .pill-ativo{ background: var(--good-bg); color: var(--good-ink); }
+  .pill-inativo{ background: var(--warn-bg); color: var(--warn-ink); }
+  .row-actions{ display: flex; gap: 6px; }
+  .icon-btn{
+    background: none; border: none; cursor: pointer;
+    width: 30px; height: 30px; border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--muted);
+  }
+  .icon-btn:hover{ background: var(--surface-2); color: var(--ink); }
+
+  .empty-state, .loading-state{
+    padding: 60px 20px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 13.5px;
+  }
+
+  .overlay{
+    position: fixed; inset: 0;
+    background: rgba(10,14,28,.5);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+    z-index: 20;
+  }
+  .modal{
+    background: var(--surface);
+    border-radius: var(--radius);
+    width: 100%; max-width: 420px;
+    padding: 24px;
+    box-shadow: var(--shadow);
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .modal h2{ font-size: 18px; margin-bottom: 4px; }
+  .modal .modal-sub{ font-size: 12.5px; color: var(--muted); margin-bottom: 18px; }
+  .field{ margin-bottom: 14px; }
+  .field label{ display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: var(--muted); }
+  .field input, .field select{
+    width: 100%;
+    padding: 9px 11px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
+    font-size: 13.5px;
+  }
+  .field input:focus, .field select:focus{ outline: 2px solid var(--accent); outline-offset: 1px; }
+  .modal-actions{ display: flex; justify-content: space-between; align-items: center; margin-top: 20px; gap: 10px; }
+  .modal-actions-right{ display: flex; gap: 8px; }
+  .link-danger{ background: none; border: none; color: var(--danger-ink); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; padding: 6px 4px; }
+
+  .toast{
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--ink); color: var(--bg);
+    padding: 10px 18px; border-radius: 9px; font-size: 13px; font-weight: 500;
+    box-shadow: var(--shadow);
+    opacity: 0; pointer-events: none; transition: opacity .2s ease;
+    z-index: 30;
+  }
+  .toast.show{ opacity: 1; }
+
+  .segmented{
+    display: inline-flex;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 3px;
+    margin-top: 18px;
+    box-shadow: var(--shadow);
+  }
+  .segmented button{
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    padding: 8px 16px;
+    border-radius: 7px;
+    cursor: pointer;
+  }
+  .segmented button.active{ background: var(--accent); color: var(--accent-ink); }
+
+  .mes-tabs{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 16px;
+  }
+  .mes-tab{
+    border: 2px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 14px;
+    min-width: 132px;
+    cursor: pointer;
+    background: var(--surface);
+  }
+  .mes-tab:hover{ border-color: #c7d3ea; }
+  .mes-tab.selected{ border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .mes-tab-nome{ font-weight: 700; font-size: 13px; }
+  .mes-tab-chave{ font-size: 10.5px; color: var(--muted); margin-bottom: 6px; }
+  .mes-pill{
+    display: inline-block;
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: .02em;
+  }
+  .mes-pill-atual{ background: var(--good-bg); color: var(--good-ink); }
+  .mes-pill-encerrado{ background: var(--surface-2); color: var(--muted); }
+  .mes-pill-futuro{ background: var(--surface-2); color: var(--muted); }
+
+  .conf-row{
+    display: grid;
+    grid-template-columns: auto 1fr auto auto auto;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .conf-row:last-child{ border-bottom: none; }
+  .conf-dias{ text-align: center; min-width: 80px; }
+  .conf-dias .lbl{ font-size: 9.5px; letter-spacing: .04em; color: var(--muted); text-transform: uppercase; }
+  .conf-dias .val{ font-size: 15px; font-weight: 700; margin-top: 2px; }
+  .pill-conferido{ background: var(--good-bg); color: var(--good-ink); }
+  .pill-pendente{ background: var(--warn-bg); color: var(--warn-ink); }
+
+  .ficha-modal{ max-width: 640px; }
+  .ficha-head{ display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 4px; }
+  .ficha-periodo{ font-size: 11.5px; color: var(--muted); }
+  table.dias{
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 14px;
+    font-size: 12.5px;
+  }
+  table.dias th{
+    background: var(--surface-2);
+    color: var(--muted);
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    padding: 7px 6px;
+    text-align: center;
+    border-bottom: 1px solid var(--line);
+    position: sticky; top: 0;
+  }
+  table.dias td{
+    padding: 4px 5px;
+    border-bottom: 1px solid var(--line);
+    text-align: center;
+  }
+  table.dias td.dia-col{ font-weight: 700; color: var(--muted); width: 34px; }
+  table.dias td.qtd-col{ font-weight: 700; width: 46px; }
+  .dias-scroll{ max-height: 46vh; overflow-y: auto; }
+  .obra-select{
+    width: 100%;
+    padding: 5px 4px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
+    font-size: 11.5px;
+  }
+  .obra-select.marcado{ color: var(--danger-ink); font-weight: 700; }
+
+  [hidden]{ display: none !important; }
+
+  @media (max-width: 600px){
+    .emp-row{ grid-template-columns: auto 1fr; row-gap: 8px; }
+    .row-actions{ grid-column: 2; justify-self: end; }
+    .hero{ flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="hero">
+    <div class="hero-header-text">
+      <div class="hero-eyebrow">Gestão de Equipes · Concretta</div>
+      <h1>Equipe Concretta</h1>
+      <div class="hero-sub">Cadastro, função e situação de cada trabalhador em um só lugar.</div>
+    </div>
+    <div class="hero-stat">
+      <div class="num" id="hero-total">—</div>
+      <div class="lbl">na equipe</div>
+    </div>
+  </div>
+
+  <div class="segmented">
+    <button id="seg-equipe" class="active">Equipe</button>
+    <button id="seg-conferencia">Conferência de Ponto</button>
+  </div>
+
+  <div id="view-equipe">
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Total cadastrado</div>
+        <div class="stat-num" id="stat-total">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Ativos</div>
+        <div class="stat-num stat-good" id="stat-ativos">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Inativos</div>
+        <div class="stat-num stat-warn" id="stat-inativos">—</div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="search-wrap">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="busca" type="text" placeholder="Buscar por nome ou função...">
+      </div>
+      <button class="btn" id="btn-exportar">⬇ Exportar CSV</button>
+      <button class="btn btn-primary" id="btn-novo">+ Novo funcionário</button>
+    </div>
+
+    <div class="list-wrap">
+      <div class="loading-state" id="loading-state">Carregando equipe…</div>
+      <div class="empty-state" id="empty-state" hidden>Nenhum funcionário encontrado.</div>
+      <div id="lista"></div>
+    </div>
+  </div>
+
+  <div id="view-conferencia" hidden>
+    <div class="mes-tabs" id="mes-tabs"></div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Total no período</div>
+        <div class="stat-num" id="conf-stat-total">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Conferidos</div>
+        <div class="stat-num stat-good" id="conf-stat-conferidos">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Pendentes</div>
+        <div class="stat-num stat-warn" id="conf-stat-pendentes">—</div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="search-wrap">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="conf-busca" type="text" placeholder="Buscar por nome ou função...">
+      </div>
+    </div>
+
+    <div class="list-wrap">
+      <div class="loading-state" id="conf-loading-state">Carregando período…</div>
+      <div class="empty-state" id="conf-empty-state" hidden>Nenhum funcionário encontrado.</div>
+      <div id="conf-lista"></div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="modal">
+    <h2 id="modal-title">Novo funcionário</h2>
+    <div class="modal-sub" id="modal-sub">Preencha os dados abaixo.</div>
+    <form id="form-func">
+      <div class="field">
+        <label for="f-nome">Nome completo</label>
+        <input id="f-nome" required autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="f-funcao">Função</label>
+        <input id="f-funcao" required autocomplete="off" placeholder="Ex: Pedreiro, Ajudante, Pintor">
+      </div>
+      <div class="field">
+        <label for="f-pix">Chave PIX</label>
+        <input id="f-pix" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="f-status">Situação</label>
+        <select id="f-status">
+          <option value="Ativo">Ativo</option>
+          <option value="Inativo">Inativo</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="link-danger" id="btn-excluir" hidden>Excluir funcionário</button>
+        <div class="modal-actions-right">
+          <button type="button" class="btn btn-ghost" id="btn-cancelar">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btn-salvar">Salvar</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="overlay" id="ficha-overlay" hidden>
+  <div class="modal ficha-modal">
+    <div class="ficha-head">
+      <div>
+        <h2 id="ficha-nome">—</h2>
+        <div class="modal-sub" id="ficha-funcao">—</div>
+      </div>
+      <button type="button" class="pill" id="ficha-status">—</button>
+    </div>
+    <div class="ficha-periodo" id="ficha-periodo">—</div>
+    <div class="dias-scroll">
+      <table class="dias">
+        <thead>
+          <tr><th>Dia</th><th>Manhã</th><th>Tarde</th><th>Qtd.</th></tr>
+        </thead>
+        <tbody id="ficha-body"></tbody>
+      </table>
+    </div>
+    <div class="modal-actions">
+      <div></div>
+      <div class="modal-actions-right">
+        <button type="button" class="btn btn-ghost" id="btn-fechar-ficha">Fechar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script>
+// ---------------- Firebase ----------------
+const firebaseConfig = {
+  apiKey: "AIzaSyDk6dqvQZV2kJlkAX7FxpOOQVSDboRb65Q",
+  authDomain: "concretta-equipe.firebaseapp.com",
+  projectId: "concretta-equipe",
+  storageBucket: "concretta-equipe.firebasestorage.app",
+  messagingSenderId: "523832637233",
+  appId: "1:523832637233:web:9e381b6a53cd2f746ca210"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+const AVATAR_COLORS = ["#2451d6","#157a4a","#a85417","#7c3aed","#0f766e","#be185d","#4338ca","#b45309"];
+function corAvatar(nome){
+  let h = 0;
+  for(let i = 0; i < nome.length; i++) h = (h * 31 + nome.charCodeAt(i)) >>> 0;
+  return AVATAR_COLORS[h % AVATAR_COLORS.length];
+}
+function iniciais(nome){
+  const partes = nome.trim().split(/\s+/);
+  const a = partes[0] ? partes[0][0] : "";
+  const b = partes.length > 1 ? partes[partes.length - 1][0] : "";
+  return (a + b).toUpperCase();
+}
+
+let toastTimer = null;
+function toast(msg){
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 2600);
+}
+
+const SEED = [
+  {"nome":"Alex Pereira Silva","funcao":"Ajudante","pix":"99991169373"},
+  {"nome":"Carlos Rikary","funcao":"Ajudante","pix":"050.857.463-33 (CPF)"},
+  {"nome":"Dagilson Gomes da Conceição","funcao":"Pintor","pix":""},
+  {"nome":"Daniel Júlio","funcao":"Ajudante","pix":"99981576210"},
+  {"nome":"Dário Silva Dos Santos","funcao":"Pedreiro","pix":"99991781869"},
+  {"nome":"Dhonatan da Costa Oliveira","funcao":"Ajudante","pix":""},
+  {"nome":"Edison Silva de Oliveira","funcao":"Pedreiro","pix":"99991529230 (mãe - Caixa Econômica Federal)"},
+  {"nome":"Eliton Granjeira Lima","funcao":"Ajudante","pix":"63981194335"},
+  {"nome":"Esdra de Jesus Tavares","funcao":"Pedreiro","pix":"99991975223"},
+  {"nome":"Fabio Pereira de Souza","funcao":"Ajudante","pix":"098.911.723-50 (CPF)"},
+  {"nome":"Francisco Macedo Neto","funcao":"Pintor","pix":"99991542747"},
+  {"nome":"Gabriel Arcanjo de Carvalho","funcao":"Ajudante","pix":"99984273614 (mãe Cristiane Evangelista - Pague Seguro)"},
+  {"nome":"Gleison Martins","funcao":"Ajudante","pix":"62227550384 (CPF)"},
+  {"nome":"José Garcia Souza","funcao":"Pintor","pix":""},
+  {"nome":"Kleber Lucas Sousa Soares","funcao":"Pedreiro","pix":"99985198927"},
+  {"nome":"Leonardo Paixão Santos","funcao":"Pedreiro","pix":"062.644.321-05 (CPF)"},
+  {"nome":"Lucas Gomes Araujo","funcao":"Pedreiro","pix":"99984979288"},
+  {"nome":"Marlon Moura Silva","funcao":"Ajudante","pix":"marlon2023parax@gmail.com OU (99984972948)"},
+  {"nome":"Marques Sousa Silva","funcao":"Pedreiro","pix":"99984972948"},
+  {"nome":"Maurício Pereira","funcao":"Pintor","pix":"99991384517"},
+  {"nome":"Paulo Guilherme Moraes de Souza","funcao":"Pedreiro","pix":"036.085.231-97 (CPF)"},
+  {"nome":"Paulo Henrique Souza Lopes","funcao":"Ajudante","pix":"71124257195"},
+  {"nome":"Ricardo Souza Silva","funcao":"Pedreiro","pix":"63984220698"},
+  {"nome":"Samuel da Paixão Santos","funcao":"Ajudante","pix":"63984781130"},
+  {"nome":"Silvanio dos Santos Barros","funcao":"Ajudante","pix":"99981203030"},
+  {"nome":"Silvestre Pereira da Silva","funcao":"Pedreiro","pix":"99991840656"},
+  {"nome":"Valdecir Alves dos Reis","funcao":"Pedreiro","pix":""},
+  {"nome":"Wenerson Ferreira da Silva","funcao":"Pedreiro","pix":"99991594304"},
+  {"nome":"Weslen Da Silva Alves","funcao":"Pedreiro","pix":"031.899.723-11 (CPF)"},
+  {"nome":"Wesley Nunes Conceição","funcao":"Ajudante","pix":"63985135793"},
+  {"nome":"Leandro Oliveira Silva","funcao":"Carpinteiro","pix":"99984444325"},
+  {"nome":"João de Oliveira Sousa","funcao":"Pintor","pix":"99991035733"}
+];
+
+let todos = [];
+let filtro = "";
+let editandoId = null;
+
+function aplicarFiltro(){
+  const termo = filtro.trim().toLowerCase();
+  if(!termo) return todos;
+  return todos.filter(f =>
+    (f.nome || "").toLowerCase().includes(termo) ||
+    (f.funcao || "").toLowerCase().includes(termo)
+  );
+}
+
+function render(){
+  const lista = document.getElementById("lista");
+  const loading = document.getElementById("loading-state");
+  const empty = document.getElementById("empty-state");
+  loading.hidden = true;
+
+  const ativos = todos.filter(f => f.status !== "Inativo").length;
+  const inativos = todos.length - ativos;
+  document.getElementById("hero-total").textContent = todos.length;
+  document.getElementById("stat-total").textContent = todos.length;
+  document.getElementById("stat-ativos").textContent = ativos;
+  document.getElementById("stat-inativos").textContent = inativos;
+
+  const visiveis = aplicarFiltro();
+  lista.innerHTML = "";
+  empty.hidden = visiveis.length > 0;
+
+  visiveis.forEach(f => {
+    const row = document.createElement("div");
+    row.className = "emp-row";
+
+    const avatar = document.createElement("div");
+    avatar.className = "avatar";
+    avatar.style.background = corAvatar(f.nome || "?");
+    avatar.textContent = iniciais(f.nome || "?");
+
+    const info = document.createElement("div");
+    const nome = document.createElement("div");
+    nome.className = "emp-name";
+    nome.textContent = f.nome;
+    const funcao = document.createElement("div");
+    funcao.className = "emp-sub";
+    funcao.textContent = f.funcao || "—";
+    info.appendChild(nome);
+    info.appendChild(funcao);
+
+    const pill = document.createElement("button");
+    pill.className = "pill " + (f.status === "Inativo" ? "pill-inativo" : "pill-ativo");
+    pill.textContent = f.status === "Inativo" ? "Inativo" : "Ativo";
+    pill.title = "Clique para alternar";
+    pill.onclick = () => alternarStatus(f);
+
+    const actions = document.createElement("div");
+    actions.className = "row-actions";
+    const editBtn = document.createElement("button");
+    editBtn.className = "icon-btn";
+    editBtn.title = "Editar";
+    editBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+    editBtn.onclick = () => abrirModal(f);
+    actions.appendChild(editBtn);
+
+    row.appendChild(avatar);
+    row.appendChild(info);
+    row.appendChild(pill);
+    row.appendChild(actions);
+    lista.appendChild(row);
+  });
+}
+
+async function alternarStatus(f){
+  const novo = f.status === "Inativo" ? "Ativo" : "Inativo";
+  try {
+    await db.doc("funcionarios/" + f.id).update({ status: novo });
+  } catch(e){
+    toast("Não deu pra salvar agora — tenta de novo.");
+  }
+}
+
+function abrirModal(f){
+  editandoId = f ? f.id : null;
+  document.getElementById("modal-title").textContent = f ? "Editar funcionário" : "Novo funcionário";
+  document.getElementById("modal-sub").textContent = f ? "Atualize os dados abaixo." : "Preencha os dados abaixo.";
+  document.getElementById("f-nome").value = f ? f.nome || "" : "";
+  document.getElementById("f-funcao").value = f ? f.funcao || "" : "";
+  document.getElementById("f-pix").value = f ? f.pix || "" : "";
+  document.getElementById("f-status").value = f && f.status === "Inativo" ? "Inativo" : "Ativo";
+  document.getElementById("btn-excluir").hidden = !f;
+  document.getElementById("overlay").hidden = false;
+  document.getElementById("f-nome").focus();
+}
+function fecharModal(){
+  document.getElementById("overlay").hidden = true;
+  editandoId = null;
+}
+
+document.getElementById("btn-novo").onclick = () => abrirModal(null);
+document.getElementById("btn-cancelar").onclick = fecharModal;
+document.getElementById("overlay").addEventListener("click", (e) => {
+  if(e.target.id === "overlay") fecharModal();
+});
+
+document.getElementById("form-func").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const dados = {
+    nome: document.getElementById("f-nome").value.trim(),
+    funcao: document.getElementById("f-funcao").value.trim(),
+    pix: document.getElementById("f-pix").value.trim(),
+    status: document.getElementById("f-status").value
+  };
+  if(!dados.nome || !dados.funcao){ toast("Preencha nome e função."); return; }
+
+  const btn = document.getElementById("btn-salvar");
+  btn.disabled = true;
+  try {
+    if(editandoId){
+      await db.doc("funcionarios/" + editandoId).update(dados);
+      toast("Funcionário atualizado.");
+    } else {
+      await db.collection("funcionarios").add(dados);
+      toast("Funcionário cadastrado.");
+    }
+    fecharModal();
+  } catch(err){
+    toast("Não deu pra salvar agora — tenta de novo.");
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+document.getElementById("btn-excluir").onclick = async () => {
+  if(!editandoId) return;
+  if(!confirm("Remover este funcionário do cadastro?")) return;
+  try {
+    await db.doc("funcionarios/" + editandoId).delete();
+    toast("Funcionário removido.");
+    fecharModal();
+  } catch(e){
+    toast("Não deu pra remover agora — tenta de novo.");
+  }
+};
+
+document.getElementById("busca").addEventListener("input", (e) => {
+  filtro = e.target.value;
+  render();
+});
+
+document.getElementById("btn-exportar").onclick = () => {
+  const linhas = [["Nome","Função","Chave PIX","Situação"]];
+  aplicarFiltro().forEach(f => linhas.push([f.nome||"", f.funcao||"", f.pix||"", f.status||"Ativo"]));
+  const csv = linhas.map(l => l.map(v => '"' + String(v).replace(/"/g,'""') + '"').join(",")).join("\r\n");
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "equipe-concretta.csv";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast("Relatório salvo.");
+};
+
+async function seedSeVazio(colRef){
+  const snap = await colRef.limit(1).get();
+  if(!snap.empty) return;
+  for(const f of SEED){
+    await colRef.add({ nome: f.nome, funcao: f.funcao, pix: f.pix, status: "Ativo" });
+  }
+}
+
+async function iniciar(){
+  const col = db.collection("funcionarios");
+  try { await seedSeVazio(col); } catch(e) { /* outro viewer pode ter semeado ao mesmo tempo — ok */ }
+
+  col.orderBy("nome").onSnapshot(
+    (snap) => {
+      todos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      render();
+    },
+    () => {
+      document.getElementById("loading-state").hidden = false;
+      document.getElementById("loading-state").textContent = "Não deu pra carregar a equipe agora.";
+    }
+  );
+}
+
+// ---------------- Conferência de Ponto (abas de mês + grade dia-a-dia) ----------------
+
+const OBRAS = ["CRAS", "UBS", "CRECHE", "PARQUE IMPERIAL", "PRAÇA G"];
+const MARCADORES = ["SÁBADO", "DOMINGO", "FERIADO"];
+const NOMES_MESES = ["JANEIRO","FEVEREIRO","MARÇO","ABRIL","MAIO","JUNHO","JULHO","AGOSTO","SETEMBRO","OUTUBRO","NOVEMBRO","DEZEMBRO"];
+const MES_INICIO = "2026-07";
+
+function mesAtualReal(){
+  const d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+}
+function somarMeses(mesStr, n){
+  const [ano, mes] = mesStr.split("-").map(Number);
+  const d = new Date(ano, mes - 1 + n, 1);
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+}
+function infoMes(mesStr){
+  const [ano, mes] = mesStr.split("-").map(Number);
+  const diasNoMes = new Date(ano, mes, 0).getDate();
+  const nome = NOMES_MESES[mes - 1];
+  const mm = String(mes).padStart(2, "0");
+  const dd = String(diasNoMes).padStart(2, "0");
+  return { nome, ano, diasNoMes, label: nome + " / " + ano, periodo: "01–" + dd + "/" + mm + "/" + ano };
+}
+function ehMarcador(v){ return MARCADORES.includes(v); }
+
+let mesConferencia = null;
+let listaMeses = [];
+let dadosMes = {}; // { funcId: { dias: {...}, statusConferencia } }
+let filtroConf = "";
+
+document.getElementById("seg-equipe").onclick = () => mostrarSegmento("equipe");
+document.getElementById("seg-conferencia").onclick = () => mostrarSegmento("conferencia");
+
+function mostrarSegmento(qual){
+  document.getElementById("seg-equipe").classList.toggle("active", qual === "equipe");
+  document.getElementById("seg-conferencia").classList.toggle("active", qual === "conferencia");
+  document.getElementById("view-equipe").hidden = qual !== "equipe";
+  document.getElementById("view-conferencia").hidden = qual !== "conferencia";
+  if(qual === "conferencia" && !listaMeses.length) carregarMesTabs();
+}
+
+function carregarMesTabs(){
+  const atual = mesAtualReal();
+  const limite = somarMeses(atual, 4);
+  const meses = [];
+  let cursor = MES_INICIO;
+  while(cursor <= limite){
+    meses.push(cursor);
+    cursor = somarMeses(cursor, 1);
+  }
+  listaMeses = meses;
+  renderMesTabs(atual);
+  selecionarMes(atual);
+}
+
+function renderMesTabs(atual){
+  const cont = document.getElementById("mes-tabs");
+  cont.innerHTML = "";
+  listaMeses.forEach(mes => {
+    const { label } = infoMes(mes);
+    const tab = document.createElement("div");
+    tab.className = "mes-tab" + (mes === mesConferencia ? " selected" : "");
+    const nomeDiv = document.createElement("div");
+    nomeDiv.className = "mes-tab-nome";
+    nomeDiv.textContent = label;
+    const chaveDiv = document.createElement("div");
+    chaveDiv.className = "mes-tab-chave";
+    chaveDiv.textContent = mes;
+    const pill = document.createElement("span");
+    let classe = "mes-pill-futuro", texto = "PRÓXIMO";
+    if(mes === atual){ classe = "mes-pill-atual"; texto = "MÊS ATUAL"; }
+    else if(mes < atual){ classe = "mes-pill-encerrado"; texto = "ENCERRADO"; }
+    pill.className = "mes-pill " + classe;
+    pill.textContent = texto;
+    tab.appendChild(nomeDiv);
+    tab.appendChild(chaveDiv);
+    tab.appendChild(pill);
+    tab.onclick = () => selecionarMes(mes);
+    cont.appendChild(tab);
+  });
+}
+
+async function selecionarMes(mes){
+  mesConferencia = mes;
+  renderMesTabs(mesAtualReal());
+
+  const loading = document.getElementById("conf-loading-state");
+  loading.hidden = false;
+  loading.textContent = "Carregando período…";
+  document.getElementById("conf-lista").innerHTML = "";
+
+  dadosMes = {};
+  try {
+    await Promise.all(todos.map(async f => {
+      const snap = await db.doc("funcionarios/" + f.id + "/pontos/" + mes).get();
+      dadosMes[f.id] = snap.exists ? snap.data() : { dias: {}, statusConferencia: "Pendente" };
+    }));
+  } catch(e){
+    loading.textContent = "Não deu pra carregar esse período agora.";
+    return;
+  }
+  loading.hidden = true;
+  renderConfLista();
+}
+
+function contarDias(dias){
+  return Object.values(dias || {}).filter(d => (d.m && !ehMarcador(d.m)) || (d.t && !ehMarcador(d.t))).length;
+}
+
+function renderConfLista(){
+  const cont = document.getElementById("conf-lista");
+  const empty = document.getElementById("conf-empty-state");
+  cont.innerHTML = "";
+
+  let conferidos = 0;
+  todos.forEach(f => { if((dadosMes[f.id] || {}).statusConferencia === "Conferido") conferidos++; });
+  document.getElementById("conf-stat-total").textContent = todos.length;
+  document.getElementById("conf-stat-conferidos").textContent = conferidos;
+  document.getElementById("conf-stat-pendentes").textContent = todos.length - conferidos;
+
+  const termo = filtroConf.trim().toLowerCase();
+  const visiveis = todos.filter(f => !termo || (f.nome||"").toLowerCase().includes(termo) || (f.funcao||"").toLowerCase().includes(termo));
+  empty.hidden = visiveis.length > 0;
+
+  visiveis.forEach(f => {
+    const info = dadosMes[f.id] || { dias: {}, statusConferencia: "Pendente" };
+    const row = document.createElement("div");
+    row.className = "conf-row";
+
+    const avatar = document.createElement("div");
+    avatar.className = "avatar";
+    avatar.style.background = corAvatar(f.nome || "?");
+    avatar.textContent = iniciais(f.nome || "?");
+
+    const bloco = document.createElement("div");
+    const nome = document.createElement("div");
+    nome.className = "emp-name";
+    nome.textContent = f.nome;
+    const funcao = document.createElement("div");
+    funcao.className = "emp-sub";
+    funcao.textContent = f.funcao || "—";
+    bloco.appendChild(nome);
+    bloco.appendChild(funcao);
+
+    const diasBloco = document.createElement("div");
+    diasBloco.className = "conf-dias";
+    const dLbl = document.createElement("div");
+    dLbl.className = "lbl";
+    dLbl.textContent = "Dias";
+    const dVal = document.createElement("div");
+    dVal.className = "val";
+    dVal.textContent = contarDias(info.dias);
+    diasBloco.appendChild(dLbl);
+    diasBloco.appendChild(dVal);
+
+    const statusPill = document.createElement("button");
+    statusPill.className = "pill " + (info.statusConferencia === "Conferido" ? "pill-conferido" : "pill-pendente");
+    statusPill.textContent = info.statusConferencia === "Conferido" ? "Conferido" : "Pendente";
+    statusPill.onclick = () => alternarConferencia(f);
+
+    const verBtn = document.createElement("button");
+    verBtn.className = "btn";
+    verBtn.textContent = "Ver ficha";
+    verBtn.onclick = () => abrirFicha(f);
+
+    row.appendChild(avatar);
+    row.appendChild(bloco);
+    row.appendChild(diasBloco);
+    row.appendChild(statusPill);
+    row.appendChild(verBtn);
+    cont.appendChild(row);
+  });
+}
+
+document.getElementById("conf-busca").addEventListener("input", (e) => {
+  filtroConf = e.target.value;
+  renderConfLista();
+});
+
+async function garantirDocPontos(funcId, mes){
+  const ref = db.doc("funcionarios/" + funcId + "/pontos/" + mes);
+  const snap = await ref.get();
+  if(snap.exists) return ref;
+  const { diasNoMes } = infoMes(mes);
+  const [anoNum, mesNum] = mes.split("-").map(Number);
+  const dias = {};
+  for(let dia = 1; dia <= diasNoMes; dia++){
+    const wd = new Date(anoNum, mesNum - 1, dia).getDay(); // 0=domingo,6=sabado
+    if(wd === 0) dias[dia] = { m: "DOMINGO", t: "DOMINGO" };
+    else if(wd === 6) dias[dia] = { m: "SÁBADO", t: "SÁBADO" };
+  }
+  await ref.set({ dias, statusConferencia: "Pendente" });
+  return ref;
+}
+
+async function alternarConferencia(f){
+  const atual = (dadosMes[f.id] || {}).statusConferencia === "Conferido" ? "Conferido" : "Pendente";
+  const novo = atual === "Conferido" ? "Pendente" : "Conferido";
+  try {
+    const ref = await garantirDocPontos(f.id, mesConferencia);
+    await ref.update({ statusConferencia: novo });
+    const snap = await ref.get();
+    dadosMes[f.id] = snap.data();
+    renderConfLista();
+  } catch(e){
+    toast("Não deu pra salvar agora — tenta de novo.");
+  }
+}
+
+let fichaFunc = null;
+function opcoesObra(valorAtual){
+  const opts = ['<option value=""></option>']
+    .concat(OBRAS.map(o => `<option value="${o}"${valorAtual===o?" selected":""}>${o}</option>`))
+    .concat(MARCADORES.map(o => `<option value="${o}"${valorAtual===o?" selected":""}>${o}</option>`));
+  if(valorAtual && !OBRAS.includes(valorAtual) && !MARCADORES.includes(valorAtual)){
+    opts.push(`<option value="${valorAtual}" selected>${valorAtual}</option>`);
+  }
+  return opts.join("");
+}
+
+async function abrirFicha(f){
+  fichaFunc = f;
+  const info = dadosMes[f.id] || { dias: {}, statusConferencia: "Pendente" };
+  const { label, periodo, diasNoMes } = infoMes(mesConferencia);
+
+  document.getElementById("ficha-nome").textContent = f.nome;
+  document.getElementById("ficha-funcao").textContent = f.funcao || "—";
+  document.getElementById("ficha-periodo").textContent = label + " · " + periodo;
+  const statusBtn = document.getElementById("ficha-status");
+  statusBtn.className = "pill " + (info.statusConferencia === "Conferido" ? "pill-conferido" : "pill-pendente");
+  statusBtn.textContent = info.statusConferencia === "Conferido" ? "Conferido" : "Pendente";
+  statusBtn.onclick = () => alternarConferencia(f).then(() => abrirFicha(f));
+
+  const tbody = document.getElementById("ficha-body");
+  tbody.innerHTML = "";
+  for(let dia = 1; dia <= diasNoMes; dia++){
+    const diaObj = (info.dias || {})[dia] || {};
+    const tr = document.createElement("tr");
+
+    const tdDia = document.createElement("td");
+    tdDia.className = "dia-col";
+    tdDia.textContent = String(dia).padStart(2, "0");
+
+    const tdM = document.createElement("td");
+    const selM = document.createElement("select");
+    selM.className = "obra-select" + (ehMarcador(diaObj.m) ? " marcado" : "");
+    selM.innerHTML = opcoesObra(diaObj.m || "");
+    selM.onchange = () => salvarDia(dia, "m", selM.value);
+    tdM.appendChild(selM);
+
+    const tdT = document.createElement("td");
+    const selT = document.createElement("select");
+    selT.className = "obra-select" + (ehMarcador(diaObj.t) ? " marcado" : "");
+    selT.innerHTML = opcoesObra(diaObj.t || "");
+    selT.onchange = () => salvarDia(dia, "t", selT.value);
+    tdT.appendChild(selT);
+
+    const tdQtd = document.createElement("td");
+    tdQtd.className = "qtd-col";
+    const qtd = ((diaObj.m && !ehMarcador(diaObj.m) ? 1 : 0) + (diaObj.t && !ehMarcador(diaObj.t) ? 1 : 0)) * 0.5;
+    tdQtd.textContent = qtd > 0 ? qtd.toFixed(1) : "–";
+
+    tr.appendChild(tdDia);
+    tr.appendChild(tdM);
+    tr.appendChild(tdT);
+    tr.appendChild(tdQtd);
+    tbody.appendChild(tr);
+  }
+
+  document.getElementById("ficha-overlay").hidden = false;
+}
+
+async function salvarDia(dia, campo, valor){
+  if(!fichaFunc) return;
+  try {
+    const ref = await garantirDocPontos(fichaFunc.id, mesConferencia);
+    const chave = "dias." + dia + "." + campo;
+    await ref.update({ [chave]: valor });
+    const snap = await ref.get();
+    dadosMes[fichaFunc.id] = snap.data();
+    abrirFicha(fichaFunc);
+    renderConfLista();
+  } catch(e){
+    toast("Não deu pra salvar esse dia — tenta de novo.");
+  }
+}
+
+document.getElementById("btn-fechar-ficha").onclick = () => {
+  document.getElementById("ficha-overlay").hidden = true;
+  fichaFunc = null;
+};
+document.getElementById("ficha-overlay").addEventListener("click", (e) => {
+  if(e.target.id === "ficha-overlay"){
+    document.getElementById("ficha-overlay").hidden = true;
+    fichaFunc = null;
+  }
+});
+
+iniciar();
+</script>
+</body>
+</html>
