@@ -120,6 +120,11 @@ largura fixa em px nas colunas, não `auto`, sempre que fizer uma lista desse es
 "Todas as obras" + uma por obra com dias/valor daquela obra). `mesConferencia` continua compartilhado
 entre as duas telas.
 
+**Pill de pagamento (Pendente/Aprovado)** em cada linha do Fechamento — guardada por obra, não por mês
+inteiro (`funcionarios/{id}/pontos/{mes}.pagamentos.{obra}`, `statusPagamento()`/`alternarPagamento()`),
+já que uma pessoa pode aparecer em mais de uma obra no mesmo mês. **Independente do mês estar fechado** —
+fechar só trava o lançamento dos dias; aprovar pagamento é uma etapa separada, geralmente feita depois.
+
 **`carregarObras()` roda no `iniciar()`, não mais sob demanda**: antes só carregava quando a aba "Obras"
 era clicada — até lá, `OBRAS` ficava no fallback hardcoded `OBRAS_SEED`, que chegou a ficar desatualizado
 (tinha "UBS" muito depois dela virar "COLÉGIO MILITAR"). Se acontecer de novo — o dropdown de obra em
