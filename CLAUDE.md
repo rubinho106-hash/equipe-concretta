@@ -62,6 +62,13 @@ antigo baseado em Excel (`Controle_Ponto_Concretta.xlsx` + Apps Script `Código.
   — já aconteceu duas vezes (Rubens renomeando "UBS" pra "COLÉGIO MILITAR" ao vivo, coincidindo com uma
   obra nova sendo criada com o mesmo nome). Se o Rubens disser algo como "tem obra repetida na lista",
   ler a coleção `obras` inteira, achar nomes duplicados e apagar um dos docs (não afeta lançamentos).
+- **Nunca deixar um "seed se vazio" rodar sozinho no carregamento da página** depois do bootstrap
+  inicial. `seedSeVazio()`/`seedObrasSeVazio()` existem no código mas **não são mais chamadas
+  automaticamente** (só rodar na mão pelo console se um banco genuinamente vazio precisar ser semeado de
+  novo). O guard delas (`colRef.limit(1).get(); if(!snap.empty) return;`) não é confiável contra uma
+  leitura vazia espúria (rede/cache instável no load) — foi exatamente isso que aconteceu em 02/09/2026 e
+  recriou as 32 pessoas do `SEED` por cima do cadastro real, duplicando 30 funcionários e ressuscitando 2
+  que tinham sido excluídos de propósito. 66 cadastrados em vez de 34, corrigido no mesmo dia.
 - **Status Ativo/Inativo do funcionário é só informativo hoje** — não filtra nada. Um funcionário
   Inativo continua aparecendo normalmente na Conferência de Ponto e pode receber lançamento de dia igual
   um Ativo. Só afeta o pill visual, os stat cards "Ativos/Inativos" e a coluna "Situação" do CSV
