@@ -379,6 +379,36 @@
   }
   .ficha-periodo{ font-size: 11.5px; color: var(--muted); flex-shrink: 0; }
   .ficha-dica{ font-size: 10.5px; color: var(--muted); margin-top: 2px; flex-shrink: 0; }
+  .ficha-resumo{
+    flex-shrink: 0;
+    margin-top: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface-2);
+  }
+  .ficha-resumo-titulo{
+    font-size: 9.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 8px;
+  }
+  .ficha-resumo-chips{ display: flex; flex-wrap: wrap; gap: 6px; }
+  .ficha-resumo-chip{
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .ficha-resumo-chip .qtd{ font-weight: 700; }
+  .ficha-resumo-total{
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-top: 10px; padding-top: 8px;
+    border-top: 1px solid var(--line);
+  }
+  .ficha-resumo-total .lbl{ font-size: 10px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+  .ficha-resumo-total .val{ font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
   .resize-handle{ position: absolute; z-index: 5; }
   .resize-handle.rh-n, .resize-handle.rh-s{ left: 12px; right: 12px; height: 10px; cursor: ns-resize; }
   .resize-handle.rh-e, .resize-handle.rh-w{ top: 12px; bottom: 12px; width: 10px; cursor: ew-resize; }
@@ -601,6 +631,14 @@
     </div>
     <div class="ficha-periodo" id="ficha-periodo">—</div>
     <div class="ficha-dica">⤡ arraste qualquer borda ou canto pra redimensionar · ✥ arraste o topo pra mover</div>
+    <div class="ficha-resumo">
+      <div class="ficha-resumo-titulo">Resumo de dias por obra</div>
+      <div class="ficha-resumo-chips" id="ficha-resumo-chips"></div>
+      <div class="ficha-resumo-total">
+        <span class="lbl">Total de dias</span>
+        <span class="val" id="ficha-resumo-total">0.0</span>
+      </div>
+    </div>
     <div class="dias-scroll">
       <table class="dias">
         <thead>
@@ -1275,6 +1313,7 @@ async function abrirFicha(f){
   const [anoNum, mesNum] = mesConferencia.split("-").map(Number);
   const tbody = document.getElementById("ficha-body");
   tbody.innerHTML = "";
+  const porObra = {};
   for(let dia = 1; dia <= diasNoMes; dia++){
     let diaObj = (info.dias || {})[dia];
     if(!diaObj){
@@ -1310,15 +1349,32 @@ async function abrirFicha(f){
     const qtd = ((diaObj.m && !ehMarcador(diaObj.m) ? 1 : 0) + (diaObj.t && !ehMarcador(diaObj.t) ? 1 : 0)) * 0.5;
     tdQtd.textContent = qtd > 0 ? qtd.toFixed(1) : "–";
 
+    if(diaObj.m && !ehMarcador(diaObj.m)) porObra[diaObj.m] = (porObra[diaObj.m] || 0) + 0.5;
+    if(diaObj.t && !ehMarcador(diaObj.t)) porObra[diaObj.t] = (porObra[diaObj.t] || 0) + 0.5;
+
     tr.appendChild(tdDia);
     tr.appendChild(tdM);
     tr.appendChild(tdT);
     tr.appendChild(tdQtd);
     tbody.appendChild(tr);
   }
+  renderResumoFicha(porObra);
 
   document.getElementById("ficha-overlay").hidden = false;
   if(!jaAberta) posicionarFichaCentro();
+}
+
+function renderResumoFicha(porObra){
+  const nomes = Array.from(new Set([...OBRAS, ...Object.keys(porObra)]));
+  const chips = document.getElementById("ficha-resumo-chips");
+  chips.innerHTML = nomes.map(nome => {
+    const cor = corAvatar(nome);
+    const qtd = porObra[nome] || 0;
+    return `<div class="ficha-resumo-chip" style="background:${cor}1a;border-color:${cor}55;color:${cor}">`
+      + `<span>${nome}</span><span class="qtd">${qtd > 0 ? qtd.toFixed(1) : "–"}</span></div>`;
+  }).join("");
+  const total = Object.values(porObra).reduce((soma, v) => soma + v, 0);
+  document.getElementById("ficha-resumo-total").textContent = total.toFixed(1);
 }
 
 async function salvarDia(dia, campo, valor){
