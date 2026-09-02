@@ -111,15 +111,23 @@ escrever mesmo chamados direto, não só via UI).
 sua própria largura, desalinhando quando uma célula (ex: PIX longo) varia de tamanho entre linhas. Usar
 largura fixa em px nas colunas, não `auto`, sempre que fizer uma lista desse estilo.
 
-## Cadastro (34 pessoas em 02/09/2026)
+## Cadastro (32 pessoas em 02/09/2026)
 
-Os 32 originais do seed, **menos** Daniel Júlio e Valdecir Alves dos Reis (excluídos de propósito pelo
-Rubens em 02/09), **mais** 4 novos cadastrados no mesmo dia pela equipe do "Willian Ponte" (chefe de
-equipe novo no WhatsApp, não confundir com o funcionário Willian de Souza): Willian de Souza
+Os 32 originais do seed, **menos** Daniel Júlio, Valdecir Alves dos Reis, Lucas Gomes Araujo e Silvestre
+Pereira da Silva (todos excluídos de propósito pelo Rubens em 02/09 — confirmado explicitamente cada vez
+que sumiram, não é bug), **mais** 4 novos cadastrados no mesmo dia pela equipe do "Willian Ponte" (chefe
+de equipe novo no WhatsApp, não confundir com o funcionário Willian de Souza): Willian de Souza
 (Encarregado), Carlos André (Ajudante), Walison Ricardo (Carpinteiro), Ronilson da Silva (Ajudante) —
 nenhum tem PIX cadastrado ainda. **O Firestore não guarda histórico de quem foi excluído** — se precisar
 checar isso de novo, comparar a lista `todos` ao vivo contra o array `SEED` hardcoded no código (só
-serve de base pros 32 originais, não pega quem foi cadastrado depois).
+serve de base pros 32 originais, não pega quem foi cadastrado depois). Nota: o alias "Silvestre de
+Oliveira" → Silvestre Pereira da Silva (na lista de apelidos acima) ficou órfão desde essa exclusão —
+deixado como está, só volta a valer se essa pessoa for recadastrada.
+
+**Valor da diária por função (definido 02/09/2026)**: Ajudante R$100, Pedreiro/Carpinteiro/Pintor R$150,
+Encarregado R$200. Aplicado a todos os 32 via `valorDiaria` no cadastro. Usar essa tabela pra qualquer
+funcionário novo — se aparecer uma função fora dessas quatro, perguntar ao Rubens antes de inventar um
+valor.
 
 ## Lançamento diário de ponto por WhatsApp
 
