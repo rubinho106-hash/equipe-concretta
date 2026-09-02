@@ -396,6 +396,18 @@
     font-size: 12px; color: var(--muted);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
+  .fechamento-obra-header{
+    display: flex; align-items: baseline; gap: 9px;
+    padding: 14px 18px 8px;
+    border-top: 1px solid var(--line);
+  }
+  .fechamento-obra-header:first-child{ border-top: none; }
+  .fechamento-obra-header .dot{ width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .fechamento-obra-header .obra-nome{ font-size: 13px; font-weight: 700; }
+  .fechamento-obra-header .obra-sub{
+    margin-left: auto; font-size: 12px; font-weight: 600; color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
 
   .ficha-modal{
     position: fixed;
@@ -1359,7 +1371,11 @@ function contarDias(dias){
 // Conta em fracoes de 0.5 por meio-periodo (igual o resumo do cartao) --
 // mais preciso que contarDias() pra calcular pagamento, ja que um meio
 // dia nao deve contar como dia inteiro.
-function calcularTotalDias(diasObj, diasNoMes, anoNum, mesNum){
+// Quebra os dias trabalhados por obra (mesma logica do resumo do cartao),
+// pra dar pra controlar o financeiro de cada obra separado -- nao so o
+// total do funcionario somando tudo junto.
+function calcularDiasPorObra(diasObj, diasNoMes, anoNum, mesNum){
+  const porObra = {};
   let total = 0;
   for(let dia = 1; dia <= diasNoMes; dia++){
     let diaObj = (diasObj || {})[dia];
@@ -1368,10 +1384,10 @@ function calcularTotalDias(diasObj, diasNoMes, anoNum, mesNum){
       if(wd === 0 || wd === 6) continue; // fim de semana sem lancamento nao conta
       diaObj = {};
     }
-    if(diaObj.m && !ehMarcador(diaObj.m)) total += 0.5;
-    if(diaObj.t && !ehMarcador(diaObj.t)) total += 0.5;
+    if(diaObj.m && !ehMarcador(diaObj.m)){ porObra[diaObj.m] = (porObra[diaObj.m]||0) + 0.5; total += 0.5; }
+    if(diaObj.t && !ehMarcador(diaObj.t)){ porObra[diaObj.t] = (porObra[diaObj.t]||0) + 0.5; total += 0.5; }
   }
-  return total;
+  return { porObra, total };
 }
 
 function formatarMoeda(valor){
@@ -1389,6 +1405,34 @@ db.collection("fechamentos").onSnapshot((snap) => {
   if(document.getElementById("view-fechamento") && !document.getElementById("view-fechamento").hidden) renderFechamento();
 });
 
+// Monta { "CRAS": { dias, valor, linhas: [{f, dias, valor}, ...] }, ... }
+// -- um funcionario que trabalhou em mais de uma obra no mes aparece em
+// cada obra separadamente, so com os dias daquela obra especifica.
+function agruparFechamentoPorObra(){
+  const { diasNoMes } = infoMes(mesConferencia);
+  const [anoNum, mesNum] = mesConferencia.split("-").map(Number);
+  const grupos = {};
+  let totalDias = 0, totalValor = 0;
+
+  todos.filter(f => f.status !== "Inativo").forEach(f => {
+    const info = dadosMes[f.id] || { dias: {} };
+    const { porObra } = calcularDiasPorObra(info.dias, diasNoMes, anoNum, mesNum);
+    const valorDiaria = Number(f.valorDiaria) || 0;
+    Object.entries(porObra).forEach(([obra, dias]) => {
+      if(dias <= 0) return;
+      const valor = dias * valorDiaria;
+      if(!grupos[obra]) grupos[obra] = { dias: 0, valor: 0, linhas: [] };
+      grupos[obra].dias += dias;
+      grupos[obra].valor += valor;
+      grupos[obra].linhas.push({ f, dias, valor });
+      totalDias += dias;
+      totalValor += valor;
+    });
+  });
+
+  return { grupos, totalDias, totalValor };
+}
+
 function renderFechamento(){
   if(!mesConferencia) return;
   document.getElementById("fechamento-loading-state").hidden = true;
@@ -1399,10 +1443,7 @@ function renderFechamento(){
   const btnAcao = document.getElementById("btn-fechamento-acao");
   cont.innerHTML = "";
 
-  const { diasNoMes } = infoMes(mesConferencia);
-  const [anoNum, mesNum] = mesConferencia.split("-").map(Number);
   const fechado = !!mesesFechados[mesConferencia];
-
   banner.hidden = !fechado;
   if(fechado){
     banner.className = "fechamento-banner fechado";
@@ -1411,60 +1452,68 @@ function renderFechamento(){
   btnAcao.textContent = fechado ? "Reabrir mês" : "Fechar mês";
   btnAcao.className = "btn " + (fechado ? "btn-ghost" : "btn-primary");
 
-  const termo = filtroFechamento.trim().toLowerCase();
-  const linhas = todos
-    .filter(f => f.status !== "Inativo")
-    .filter(f => !termo || (f.nome||"").toLowerCase().includes(termo) || (f.funcao||"").toLowerCase().includes(termo))
-    .map(f => {
-      const info = dadosMes[f.id] || { dias: {} };
-      const dias = calcularTotalDias(info.dias, diasNoMes, anoNum, mesNum);
-      const valorDiaria = Number(f.valorDiaria) || 0;
-      return { f, dias, valor: dias * valorDiaria };
-    });
-
-  headerRow.hidden = linhas.length === 0;
-  empty.hidden = linhas.length > 0;
-
-  let totalDias = 0, totalValor = 0;
-  linhas.forEach(({ f, dias, valor }) => {
-    totalDias += dias;
-    totalValor += valor;
-
-    const row = document.createElement("div");
-    row.className = "fechamento-row";
-
-    const bloco = document.createElement("div");
-    const nome = document.createElement("div");
-    nome.className = "emp-name";
-    nome.textContent = f.nome;
-    const funcao = document.createElement("div");
-    funcao.className = "emp-sub";
-    funcao.textContent = f.funcao || "—";
-    bloco.appendChild(nome);
-    bloco.appendChild(funcao);
-
-    const diasDiv = document.createElement("div");
-    diasDiv.className = "fechamento-dias";
-    diasDiv.textContent = dias.toFixed(1);
-
-    const valorDiv = document.createElement("div");
-    valorDiv.className = "fechamento-valor";
-    valorDiv.textContent = f.valorDiaria ? formatarMoeda(valor) : "—";
-
-    const pixDiv = document.createElement("div");
-    pixDiv.className = "fechamento-pix";
-    pixDiv.textContent = f.pix || "—";
-    if(f.pix) pixDiv.title = f.pix;
-
-    row.appendChild(bloco);
-    row.appendChild(diasDiv);
-    row.appendChild(valorDiv);
-    row.appendChild(pixDiv);
-    cont.appendChild(row);
-  });
-
+  const { grupos, totalDias, totalValor } = agruparFechamentoPorObra();
   document.getElementById("fechamento-stat-dias").textContent = totalDias.toFixed(1);
   document.getElementById("fechamento-stat-valor").textContent = formatarMoeda(totalValor);
+
+  const termo = filtroFechamento.trim().toLowerCase();
+  const nomesObra = Object.keys(grupos).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  let algumaLinha = false;
+
+  nomesObra.forEach(obra => {
+    const grupo = grupos[obra];
+    const obraCasa = !termo || obra.toLowerCase().includes(termo);
+    const linhasFiltradas = grupo.linhas
+      .filter(({ f }) => obraCasa || (f.nome||"").toLowerCase().includes(termo) || (f.funcao||"").toLowerCase().includes(termo))
+      .sort((a, b) => a.f.nome.localeCompare(b.f.nome, "pt-BR"));
+    if(linhasFiltradas.length === 0) return;
+    algumaLinha = true;
+
+    const cor = corAvatar(obra);
+    const header = document.createElement("div");
+    header.className = "fechamento-obra-header";
+    header.innerHTML = `<span class="dot" style="background:${cor}"></span>`
+      + `<span class="obra-nome" style="color:${cor}">${obra}</span>`
+      + `<span class="obra-sub">${grupo.dias.toFixed(1)} dias · ${formatarMoeda(grupo.valor)}</span>`;
+    cont.appendChild(header);
+
+    linhasFiltradas.forEach(({ f, dias, valor }) => {
+      const row = document.createElement("div");
+      row.className = "fechamento-row";
+
+      const bloco = document.createElement("div");
+      const nome = document.createElement("div");
+      nome.className = "emp-name";
+      nome.textContent = f.nome;
+      const funcao = document.createElement("div");
+      funcao.className = "emp-sub";
+      funcao.textContent = f.funcao || "—";
+      bloco.appendChild(nome);
+      bloco.appendChild(funcao);
+
+      const diasDiv = document.createElement("div");
+      diasDiv.className = "fechamento-dias";
+      diasDiv.textContent = dias.toFixed(1);
+
+      const valorDiv = document.createElement("div");
+      valorDiv.className = "fechamento-valor";
+      valorDiv.textContent = f.valorDiaria ? formatarMoeda(valor) : "—";
+
+      const pixDiv = document.createElement("div");
+      pixDiv.className = "fechamento-pix";
+      pixDiv.textContent = f.pix || "—";
+      if(f.pix) pixDiv.title = f.pix;
+
+      row.appendChild(bloco);
+      row.appendChild(diasDiv);
+      row.appendChild(valorDiv);
+      row.appendChild(pixDiv);
+      cont.appendChild(row);
+    });
+  });
+
+  headerRow.hidden = !algumaLinha;
+  empty.hidden = algumaLinha;
 }
 
 document.getElementById("fechamento-busca").addEventListener("input", (e) => {
@@ -1494,14 +1543,14 @@ document.getElementById("btn-fechamento-acao").onclick = async () => {
 
 document.getElementById("btn-fechamento-csv").onclick = () => {
   if(!mesConferencia) return;
-  const { diasNoMes, label } = infoMes(mesConferencia);
-  const [anoNum, mesNum] = mesConferencia.split("-").map(Number);
-  const linhas = [["Nome","Função","Dias","Valor","Chave PIX"]];
-  todos.filter(f => f.status !== "Inativo").forEach(f => {
-    const info = dadosMes[f.id] || { dias: {} };
-    const dias = calcularTotalDias(info.dias, diasNoMes, anoNum, mesNum);
-    const valorDiaria = Number(f.valorDiaria) || 0;
-    linhas.push([f.nome||"", f.funcao||"", dias.toFixed(1), (dias*valorDiaria).toFixed(2), f.pix||""]);
+  const { grupos } = agruparFechamentoPorObra();
+  const linhas = [["Obra","Nome","Função","Dias","Valor","Chave PIX"]];
+  Object.keys(grupos).sort((a, b) => a.localeCompare(b, "pt-BR")).forEach(obra => {
+    grupos[obra].linhas
+      .sort((a, b) => a.f.nome.localeCompare(b.f.nome, "pt-BR"))
+      .forEach(({ f, dias, valor }) => {
+        linhas.push([obra, f.nome||"", f.funcao||"", dias.toFixed(1), valor.toFixed(2), f.pix||""]);
+      });
   });
   const csv = linhas.map(l => l.map(v => '"' + String(v).replace(/"/g,'""') + '"').join(",")).join("\r\n");
   const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
