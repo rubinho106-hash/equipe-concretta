@@ -114,6 +114,19 @@ escrever mesmo chamados direto, não só via UI).
 sua própria largura, desalinhando quando uma célula (ex: PIX longo) varia de tamanho entre linhas. Usar
 largura fixa em px nas colunas, não `auto`, sempre que fizer uma lista desse estilo.
 
+**Filtro de obra em vez de cards de mês**: o Fechamento não usa mais a fileira grande de cards de mês
+(essa continua só na Conferência de Ponto, `#mes-tabs`) — no lugar tem um `<select>` compacto
+(`renderFechamentoMesSelect()`) e uma fileira de cards clicáveis por obra (`renderFechamentoObrasFiltro()`,
+"Todas as obras" + uma por obra com dias/valor daquela obra). `mesConferencia` continua compartilhado
+entre as duas telas.
+
+**`carregarObras()` roda no `iniciar()`, não mais sob demanda**: antes só carregava quando a aba "Obras"
+era clicada — até lá, `OBRAS` ficava no fallback hardcoded `OBRAS_SEED`, que chegou a ficar desatualizado
+(tinha "UBS" muito depois dela virar "COLÉGIO MILITAR"). Se acontecer de novo — o dropdown de obra em
+qualquer lugar mostrando um nome que não existe mais na aba Obras — é sinal de `OBRAS` desatualizado;
+confirmar que `carregarObras()` está sendo chamado cedo o bastante e que `OBRAS_SEED` está com os nomes
+certos como fallback.
+
 ## Cadastro (32 pessoas em 02/09/2026)
 
 Os 32 originais do seed, **menos** Daniel Júlio, Valdecir Alves dos Reis, Lucas Gomes Araujo e Silvestre
