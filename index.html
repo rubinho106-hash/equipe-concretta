@@ -134,6 +134,9 @@
   .stat-num{ font-size: 24px; font-weight: 500; margin-top: 6px; color: var(--ink); }
   .stat-good{ color: var(--good-ink); }
   .stat-warn{ color: var(--warn-ink); }
+  .stat-card.filtro{ cursor: pointer; user-select: none; transition: border-color .15s, box-shadow .15s; }
+  .stat-card.filtro:hover{ border-color: var(--accent); }
+  .stat-card.filtro.active{ border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
 
   .toolbar{
     display: flex;
@@ -493,15 +496,15 @@
 
   <div id="view-equipe">
     <div class="stats-row">
-      <div class="stat-card">
+      <div class="stat-card filtro active" id="filtro-todos" data-status="todos">
         <div class="stat-label">Total cadastrado</div>
         <div class="stat-num" id="stat-total">—</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card filtro" id="filtro-ativos" data-status="Ativo">
         <div class="stat-label">Ativos</div>
         <div class="stat-num stat-good" id="stat-ativos">—</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card filtro" id="filtro-inativos" data-status="Inativo">
         <div class="stat-label">Inativos</div>
         <div class="stat-num stat-warn" id="stat-inativos">—</div>
       </div>
@@ -736,9 +739,11 @@ function toast(msg){
 // embutidos — WhatsApp, Instagram etc. — e la o clique parecia "nao fazer
 // nada"). Uso: if(!(await confirmarAcao("Remover X?"))) return;
 let confirmResolver = null;
-function confirmarAcao(mensagem, textoBotao){
+function confirmarAcao(mensagem, textoBotao, estilo){
   document.getElementById("confirm-texto").textContent = mensagem;
-  document.getElementById("confirm-ok").textContent = textoBotao || "Remover";
+  const btnOk = document.getElementById("confirm-ok");
+  btnOk.textContent = textoBotao || "Remover";
+  btnOk.className = "btn " + (estilo === "primary" ? "btn-primary" : "btn-danger");
   document.getElementById("confirm-overlay").hidden = false;
   return new Promise((resolve) => { confirmResolver = resolve; });
 }
@@ -789,16 +794,28 @@ const SEED = [
 
 let todos = [];
 let filtro = "";
+let filtroStatus = "todos"; // "todos" | "Ativo" | "Inativo"
 let editandoId = null;
 
 function aplicarFiltro(){
   const termo = filtro.trim().toLowerCase();
-  if(!termo) return todos;
-  return todos.filter(f =>
-    (f.nome || "").toLowerCase().includes(termo) ||
-    (f.funcao || "").toLowerCase().includes(termo)
-  );
+  return todos.filter(f => {
+    if(filtroStatus !== "todos"){
+      const status = f.status === "Inativo" ? "Inativo" : "Ativo";
+      if(status !== filtroStatus) return false;
+    }
+    if(!termo) return true;
+    return (f.nome || "").toLowerCase().includes(termo) || (f.funcao || "").toLowerCase().includes(termo);
+  });
 }
+
+document.querySelectorAll(".stat-card.filtro").forEach((card) => {
+  card.addEventListener("click", () => {
+    filtroStatus = card.dataset.status;
+    document.querySelectorAll(".stat-card.filtro").forEach((c) => c.classList.toggle("active", c === card));
+    render();
+  });
+});
 
 function render(){
   const lista = document.getElementById("lista");
@@ -861,8 +878,18 @@ function render(){
 
 async function alternarStatus(f){
   const novo = f.status === "Inativo" ? "Ativo" : "Inativo";
+  const pergunta = novo === "Inativo"
+    ? "Marcar " + f.nome + " como Inativo?"
+    : "Marcar " + f.nome + " como Ativo de novo?";
+  const ok = await confirmarAcao(
+    pergunta,
+    novo === "Inativo" ? "Marcar Inativo" : "Marcar Ativo",
+    novo === "Inativo" ? "danger" : "primary"
+  );
+  if(!ok) return;
   try {
     await db.doc("funcionarios/" + f.id).update({ status: novo });
+    toast(f.nome + " agora está " + novo + ".");
   } catch(e){
     toast("Não deu pra salvar agora — tenta de novo.");
   }
@@ -1240,14 +1267,18 @@ function renderConfLista(){
   const empty = document.getElementById("conf-empty-state");
   cont.innerHTML = "";
 
+  // funcionario Inativo nao aparece pra conferencia de ponto -- quem saiu
+  // da equipe nao deve receber lancamento de dia
+  const ativosFuncs = todos.filter(f => f.status !== "Inativo");
+
   let conferidos = 0;
-  todos.forEach(f => { if((dadosMes[f.id] || {}).statusConferencia === "Conferido") conferidos++; });
-  document.getElementById("conf-stat-total").textContent = todos.length;
+  ativosFuncs.forEach(f => { if((dadosMes[f.id] || {}).statusConferencia === "Conferido") conferidos++; });
+  document.getElementById("conf-stat-total").textContent = ativosFuncs.length;
   document.getElementById("conf-stat-conferidos").textContent = conferidos;
-  document.getElementById("conf-stat-pendentes").textContent = todos.length - conferidos;
+  document.getElementById("conf-stat-pendentes").textContent = ativosFuncs.length - conferidos;
 
   const termo = filtroConf.trim().toLowerCase();
-  const visiveis = todos.filter(f => !termo || (f.nome||"").toLowerCase().includes(termo) || (f.funcao||"").toLowerCase().includes(termo));
+  const visiveis = ativosFuncs.filter(f => !termo || (f.nome||"").toLowerCase().includes(termo) || (f.funcao||"").toLowerCase().includes(termo));
   empty.hidden = visiveis.length > 0;
 
   visiveis.forEach(f => {
