@@ -396,6 +396,40 @@
     font-size: 12px; color: var(--muted);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
+  .fechamento-mes-select-wrap{
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 16px;
+  }
+  .fechamento-mes-select-wrap label{
+    font-size: 10.5px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); font-weight: 700;
+  }
+  .fechamento-mes-select-wrap select{
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .obras-filtro-row{ display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+  .obra-filtro-card{
+    border: 2px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 14px;
+    min-width: 132px;
+    cursor: pointer;
+    background: var(--surface);
+    user-select: none;
+  }
+  .obra-filtro-card:hover{ border-color: #c7d3ea; }
+  .obra-filtro-card.selected{ border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .obra-filtro-card .obra-filtro-topo{ display: flex; align-items: center; gap: 6px; }
+  .obra-filtro-card .dot{ width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .obra-filtro-nome{ font-weight: 700; font-size: 13px; }
+  .obra-filtro-sub{ font-size: 10.5px; color: var(--muted); margin-top: 6px; font-variant-numeric: tabular-nums; }
+
   .fechamento-obra-header{
     display: flex; align-items: baseline; gap: 9px;
     padding: 14px 18px 8px;
@@ -607,7 +641,12 @@
   </div>
 
   <div id="view-fechamento" hidden>
-    <div class="mes-tabs" id="fechamento-mes-tabs"></div>
+    <div class="fechamento-mes-select-wrap">
+      <label for="fechamento-mes-select">Mês</label>
+      <select id="fechamento-mes-select"></select>
+    </div>
+
+    <div class="obras-filtro-row" id="fechamento-obras-filtro"></div>
 
     <div class="fechamento-banner" id="fechamento-banner" hidden></div>
 
@@ -1102,11 +1141,21 @@ async function iniciar(){
       document.getElementById("loading-state").textContent = "Não deu pra carregar a equipe agora.";
     }
   );
+
+  // carrega a lista de obras de cara (nao so quando a aba Obras e aberta)
+  // -- Conferencia e Fechamento dependem de OBRAS estar atualizada desde
+  // o inicio, senao mostram o OBRAS_SEED hardcoded (com "UBS", que ja
+  // nem existe mais) ate alguem clicar na aba Obras
+  carregarObras();
 }
 
 // ---------------- Conferência de Ponto (abas de mês + grade dia-a-dia) ----------------
 
-const OBRAS_SEED = ["CRAS", "UBS", "CRECHE", "PARQUE IMPERIAL", "PRAÇA G"];
+// so usado como fallback ate carregarObras() trazer a lista real do
+// Firestore, e pra semear um banco vazio na mao se algum dia precisar
+// (ver seedObrasSeVazio) -- "UBS" foi renomeada pra "COLÉGIO MILITAR"
+// em 02/09/2026, entao o fallback ja reflete isso
+const OBRAS_SEED = ["CRAS", "COLÉGIO MILITAR", "CRECHE", "PARQUE IMPERIAL", "PRAÇA G"];
 let OBRAS = OBRAS_SEED.slice(); // lista viva, atualizada pela colecao "obras"
 const MARCADORES = ["SÁBADO", "DOMINGO", "FERIADO"];
 const NOMES_MESES = ["JANEIRO","FEVEREIRO","MARÇO","ABRIL","MAIO","JUNHO","JULHO","AGOSTO","SETEMBRO","OUTUBRO","NOVEMBRO","DEZEMBRO"];
@@ -1141,7 +1190,6 @@ document.getElementById("seg-conferencia").onclick = () => mostrarSegmento("conf
 document.getElementById("seg-fechamento").onclick = () => mostrarSegmento("fechamento");
 document.getElementById("seg-obras").onclick = () => mostrarSegmento("obras");
 
-let obrasCarregadas = false;
 function mostrarSegmento(qual){
   document.getElementById("seg-equipe").classList.toggle("active", qual === "equipe");
   document.getElementById("seg-conferencia").classList.toggle("active", qual === "conferencia");
@@ -1153,7 +1201,6 @@ function mostrarSegmento(qual){
   document.getElementById("view-obras").hidden = qual !== "obras";
   if((qual === "conferencia" || qual === "fechamento") && !listaMeses.length) carregarMesTabs();
   else if(qual === "fechamento") renderFechamento();
-  if(qual === "obras" && !obrasCarregadas){ obrasCarregadas = true; carregarObras(); }
 }
 
 // ---------------- Obras ----------------
@@ -1304,43 +1351,53 @@ function carregarMesTabs(){
   selecionarMes(atual);
 }
 
-// Renderiza os cards de mes nos dois lugares que usam (Conferencia e
-// Fechamento) — os dois telas compartilham o mesmo mes selecionado
-// (mesConferencia), so o container do DOM muda.
-const MES_TABS_CONTAINERS = ["mes-tabs", "fechamento-mes-tabs"];
+// Cards de mes -- so na Conferencia de Ponto. O Fechamento usa um
+// seletor compacto (renderFechamentoMesSelect), pra deixar espaco pro
+// filtro de obras, que e o jeito principal de navegar por la.
 function renderMesTabs(atual){
-  MES_TABS_CONTAINERS.forEach(id => {
-    const cont = document.getElementById(id);
-    if(!cont) return;
-    cont.innerHTML = "";
-    listaMeses.forEach(mes => {
-      const { label } = infoMes(mes);
-      const tab = document.createElement("div");
-      tab.className = "mes-tab" + (mes === mesConferencia ? " selected" : "");
-      const nomeDiv = document.createElement("div");
-      nomeDiv.className = "mes-tab-nome";
-      nomeDiv.textContent = label;
-      const chaveDiv = document.createElement("div");
-      chaveDiv.className = "mes-tab-chave";
-      chaveDiv.textContent = mes;
-      const pill = document.createElement("span");
-      let classe = "mes-pill-futuro", texto = "PRÓXIMO";
-      if(mes === atual){ classe = "mes-pill-atual"; texto = "MÊS ATUAL"; }
-      else if(mes < atual){ classe = "mes-pill-encerrado"; texto = "ENCERRADO"; }
-      pill.className = "mes-pill " + classe;
-      pill.textContent = texto;
-      tab.appendChild(nomeDiv);
-      tab.appendChild(chaveDiv);
-      tab.appendChild(pill);
-      tab.onclick = () => selecionarMes(mes);
-      cont.appendChild(tab);
-    });
+  const cont = document.getElementById("mes-tabs");
+  if(!cont) return;
+  cont.innerHTML = "";
+  listaMeses.forEach(mes => {
+    const { label } = infoMes(mes);
+    const tab = document.createElement("div");
+    tab.className = "mes-tab" + (mes === mesConferencia ? " selected" : "");
+    const nomeDiv = document.createElement("div");
+    nomeDiv.className = "mes-tab-nome";
+    nomeDiv.textContent = label;
+    const chaveDiv = document.createElement("div");
+    chaveDiv.className = "mes-tab-chave";
+    chaveDiv.textContent = mes;
+    const pill = document.createElement("span");
+    let classe = "mes-pill-futuro", texto = "PRÓXIMO";
+    if(mes === atual){ classe = "mes-pill-atual"; texto = "MÊS ATUAL"; }
+    else if(mes < atual){ classe = "mes-pill-encerrado"; texto = "ENCERRADO"; }
+    pill.className = "mes-pill " + classe;
+    pill.textContent = texto;
+    tab.appendChild(nomeDiv);
+    tab.appendChild(chaveDiv);
+    tab.appendChild(pill);
+    tab.onclick = () => selecionarMes(mes);
+    cont.appendChild(tab);
   });
 }
+
+function renderFechamentoMesSelect(){
+  const sel = document.getElementById("fechamento-mes-select");
+  if(!sel) return;
+  sel.innerHTML = listaMeses.map(mes => {
+    const { label } = infoMes(mes);
+    return `<option value="${mes}"${mes===mesConferencia?" selected":""}>${label}</option>`;
+  }).join("");
+}
+document.getElementById("fechamento-mes-select").addEventListener("change", (e) => {
+  selecionarMes(e.target.value);
+});
 
 async function selecionarMes(mes){
   mesConferencia = mes;
   renderMesTabs(mesAtualReal());
+  renderFechamentoMesSelect();
 
   const loading = document.getElementById("conf-loading-state");
   loading.hidden = false;
@@ -1398,6 +1455,7 @@ function formatarMoeda(valor){
 
 let mesesFechados = {}; // { "2026-09": true, ... }
 let filtroFechamento = "";
+let filtroObraFechamento = "todas";
 
 db.collection("fechamentos").onSnapshot((snap) => {
   mesesFechados = {};
@@ -1433,6 +1491,34 @@ function agruparFechamentoPorObra(){
   return { grupos, totalDias, totalValor };
 }
 
+// Fileira de cards clicaveis pra filtrar o Fechamento por uma obra so
+// (troca a antiga fileira de mes, que virou um <select> compacto) --
+// mostra todas as obras da lista viva, mesmo as sem lancamento nesse mes.
+function renderFechamentoObrasFiltro(grupos){
+  const cont = document.getElementById("fechamento-obras-filtro");
+  const nomes = Array.from(new Set([...OBRAS, ...Object.keys(grupos)])).sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+  cont.innerHTML = "";
+
+  const cardTodas = document.createElement("div");
+  cardTodas.className = "obra-filtro-card" + (filtroObraFechamento === "todas" ? " selected" : "");
+  cardTodas.innerHTML = `<div class="obra-filtro-nome">Todas as obras</div>`;
+  cardTodas.onclick = () => { filtroObraFechamento = "todas"; renderFechamento(); };
+  cont.appendChild(cardTodas);
+
+  nomes.forEach(nome => {
+    const g = grupos[nome] || { dias: 0, valor: 0 };
+    const cor = corAvatar(nome);
+    const card = document.createElement("div");
+    card.className = "obra-filtro-card" + (filtroObraFechamento === nome ? " selected" : "");
+    card.innerHTML = `<div class="obra-filtro-topo"><span class="dot" style="background:${cor}"></span>`
+      + `<span class="obra-filtro-nome">${nome}</span></div>`
+      + `<div class="obra-filtro-sub">${g.dias.toFixed(1)} dias · ${formatarMoeda(g.valor)}</div>`;
+    card.onclick = () => { filtroObraFechamento = nome; renderFechamento(); };
+    cont.appendChild(card);
+  });
+}
+
 function renderFechamento(){
   if(!mesConferencia) return;
   document.getElementById("fechamento-loading-state").hidden = true;
@@ -1456,8 +1542,11 @@ function renderFechamento(){
   document.getElementById("fechamento-stat-dias").textContent = totalDias.toFixed(1);
   document.getElementById("fechamento-stat-valor").textContent = formatarMoeda(totalValor);
 
+  renderFechamentoObrasFiltro(grupos);
+
   const termo = filtroFechamento.trim().toLowerCase();
-  const nomesObra = Object.keys(grupos).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  let nomesObra = Object.keys(grupos).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  if(filtroObraFechamento !== "todas") nomesObra = nomesObra.filter(o => o === filtroObraFechamento);
   let algumaLinha = false;
 
   nomesObra.forEach(obra => {
