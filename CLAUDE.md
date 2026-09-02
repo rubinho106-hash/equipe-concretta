@@ -50,6 +50,11 @@ antigo baseado em Excel (`Controle_Ponto_Concretta.xlsx` + Apps Script `Código.
 - Tirar screenshot (`computer` tool) logo depois de simular drag/resize via `MouseEvent` sintético às
   vezes fecha modais sem motivo aparente — é um artefato do harness de teste, não bug do site. Rodar a
   sequência inteira (abrir + interagir + ler estado) numa única chamada de JS evita o problema.
+- **Nunca usar `confirm()`/`alert()` nativos do navegador neste site.** Navegadores embutidos (WhatsApp,
+  Instagram etc.) e alguns navegadores mobile bloqueiam esses diálogos silenciosamente — sem erro
+  visível, o clique no botão simplesmente "não faz nada". Foi assim que o botão "Excluir funcionário"
+  parou de funcionar (02/09/2026). Use a função `confirmarAcao(mensagem)` já existente no código (um
+  modal HTML próprio que retorna uma Promise<boolean>) no lugar de `confirm()`.
 
 ## Apelidos e nomes de obra (grupo do WhatsApp escreve errado/informal)
 
