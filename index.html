@@ -175,6 +175,8 @@
   .btn-primary{ background: var(--accent); color: var(--accent-ink); border-color: transparent; }
   .btn-primary:hover{ filter: brightness(1.06); border-color: transparent; }
   .btn-ghost{ background: transparent; }
+  .btn-danger{ background: transparent; border-color: var(--danger-ink); color: var(--danger-ink); }
+  .btn-danger:hover{ background: var(--danger-ink); color: var(--surface); border-color: var(--danger-ink); }
 
   .list-wrap{
     margin-top: 16px;
@@ -676,6 +678,20 @@
   </div>
 </div>
 
+<div class="overlay" id="confirm-overlay" hidden>
+  <div class="modal" style="max-width:360px">
+    <h2 id="confirm-titulo">Confirmar</h2>
+    <div class="modal-sub" id="confirm-texto">Tem certeza?</div>
+    <div class="modal-actions">
+      <div></div>
+      <div class="modal-actions-right">
+        <button type="button" class="btn btn-ghost" id="confirm-cancelar">Cancelar</button>
+        <button type="button" class="btn btn-danger" id="confirm-ok">Remover</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -714,6 +730,27 @@ function toast(msg){
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.classList.remove("show"), 2600);
 }
+
+// Modal de confirmacao proprio, no lugar do confirm() nativo do navegador
+// (confirm()/alert() sao bloqueados silenciosamente em varios navegadores
+// embutidos — WhatsApp, Instagram etc. — e la o clique parecia "nao fazer
+// nada"). Uso: if(!(await confirmarAcao("Remover X?"))) return;
+let confirmResolver = null;
+function confirmarAcao(mensagem, textoBotao){
+  document.getElementById("confirm-texto").textContent = mensagem;
+  document.getElementById("confirm-ok").textContent = textoBotao || "Remover";
+  document.getElementById("confirm-overlay").hidden = false;
+  return new Promise((resolve) => { confirmResolver = resolve; });
+}
+function fecharConfirmacao(resultado){
+  document.getElementById("confirm-overlay").hidden = true;
+  if(confirmResolver){ confirmResolver(resultado); confirmResolver = null; }
+}
+document.getElementById("confirm-ok").onclick = () => fecharConfirmacao(true);
+document.getElementById("confirm-cancelar").onclick = () => fecharConfirmacao(false);
+document.getElementById("confirm-overlay").addEventListener("click", (e) => {
+  if(e.target.id === "confirm-overlay") fecharConfirmacao(false);
+});
 
 const SEED = [
   {"nome":"Alex Pereira Silva","funcao":"Ajudante","pix":"99991169373"},
@@ -884,7 +921,7 @@ document.getElementById("form-func").addEventListener("submit", async (e) => {
 
 document.getElementById("btn-excluir").onclick = async () => {
   if(!editandoId) return;
-  if(!confirm("Remover este funcionário do cadastro?")) return;
+  if(!(await confirmarAcao("Remover este funcionário do cadastro?"))) return;
   try {
     await db.doc("funcionarios/" + editandoId).delete();
     toast("Funcionário removido.");
@@ -1102,7 +1139,7 @@ document.getElementById("form-obra").addEventListener("submit", async (e) => {
 
 document.getElementById("btn-excluir-obra").onclick = async () => {
   if(!editandoObraId) return;
-  if(!confirm("Remover esta obra da lista? Lançamentos já feitos com ela não são apagados.")) return;
+  if(!(await confirmarAcao("Remover esta obra da lista? Lançamentos já feitos com ela não são apagados."))) return;
   try {
     await db.doc("obras/" + editandoObraId).delete();
     toast("Obra removida.");
