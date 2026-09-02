@@ -359,6 +359,8 @@
   .pill-pendente{ background: var(--warn-bg); color: var(--warn-ink); }
 
   .ficha-modal{
+    position: fixed;
+    margin: 0;
     display: flex;
     flex-direction: column;
     width: 640px;
@@ -367,7 +369,6 @@
     max-height: 92vh;
     min-width: 360px;
     min-height: 320px;
-    resize: both;
     overflow: hidden;
   }
   .ficha-head{
@@ -378,6 +379,18 @@
   }
   .ficha-periodo{ font-size: 11.5px; color: var(--muted); flex-shrink: 0; }
   .ficha-dica{ font-size: 10.5px; color: var(--muted); margin-top: 2px; flex-shrink: 0; }
+  .resize-handle{ position: absolute; z-index: 5; }
+  .resize-handle.rh-n, .resize-handle.rh-s{ left: 12px; right: 12px; height: 10px; cursor: ns-resize; }
+  .resize-handle.rh-e, .resize-handle.rh-w{ top: 12px; bottom: 12px; width: 10px; cursor: ew-resize; }
+  .resize-handle.rh-n{ top: -5px; }
+  .resize-handle.rh-s{ bottom: -5px; }
+  .resize-handle.rh-e{ right: -5px; }
+  .resize-handle.rh-w{ left: -5px; }
+  .resize-handle.rh-ne, .resize-handle.rh-nw, .resize-handle.rh-se, .resize-handle.rh-sw{ width: 16px; height: 16px; }
+  .resize-handle.rh-ne{ top: -5px; right: -5px; cursor: nesw-resize; }
+  .resize-handle.rh-nw{ top: -5px; left: -5px; cursor: nwse-resize; }
+  .resize-handle.rh-se{ bottom: -5px; right: -5px; cursor: nwse-resize; }
+  .resize-handle.rh-sw{ bottom: -5px; left: -5px; cursor: nesw-resize; }
   table.dias{
     width: 100%;
     border-collapse: collapse;
@@ -571,6 +584,14 @@
 
 <div class="overlay" id="ficha-overlay" hidden>
   <div class="modal ficha-modal">
+    <div class="resize-handle rh-n" data-dir="n"></div>
+    <div class="resize-handle rh-s" data-dir="s"></div>
+    <div class="resize-handle rh-e" data-dir="e"></div>
+    <div class="resize-handle rh-w" data-dir="w"></div>
+    <div class="resize-handle rh-ne" data-dir="ne"></div>
+    <div class="resize-handle rh-nw" data-dir="nw"></div>
+    <div class="resize-handle rh-se" data-dir="se"></div>
+    <div class="resize-handle rh-sw" data-dir="sw"></div>
     <div class="ficha-head">
       <div>
         <h2 id="ficha-nome">—</h2>
@@ -579,7 +600,7 @@
       <button type="button" class="pill" id="ficha-status">—</button>
     </div>
     <div class="ficha-periodo" id="ficha-periodo">—</div>
-    <div class="ficha-dica">⤡ arraste a borda pra redimensionar · ✥ arraste o topo pra mover</div>
+    <div class="ficha-dica">⤡ arraste qualquer borda ou canto pra redimensionar · ✥ arraste o topo pra mover</div>
     <div class="dias-scroll">
       <table class="dias">
         <thead>
@@ -1238,6 +1259,7 @@ function opcoesObra(valorAtual){
 }
 
 async function abrirFicha(f){
+  const jaAberta = !document.getElementById("ficha-overlay").hidden;
   fichaFunc = f;
   const info = dadosMes[f.id] || { dias: {}, statusConferencia: "Pendente" };
   const { label, periodo, diasNoMes } = infoMes(mesConferencia);
@@ -1296,6 +1318,7 @@ async function abrirFicha(f){
   }
 
   document.getElementById("ficha-overlay").hidden = false;
+  if(!jaAberta) posicionarFichaCentro();
 }
 
 async function salvarDia(dia, campo, valor){
@@ -1316,58 +1339,111 @@ async function salvarDia(dia, campo, valor){
 function fecharFicha(){
   document.getElementById("ficha-overlay").hidden = true;
   fichaFunc = null;
-  fichaDragX = 0;
-  fichaDragY = 0;
-  aplicarPosicaoFicha();
 }
 document.getElementById("btn-fechar-ficha").onclick = fecharFicha;
 document.getElementById("ficha-overlay").addEventListener("click", (e) => {
   if(e.target.id === "ficha-overlay") fecharFicha();
 });
 
-// ---------------- Arrastar e redimensionar o cartao (ficha) ----------------
+// ---------------- Mover e redimensionar o cartao (ficha) ----------------
+// O cartao usa position:fixed com left/top/width/height controlados aqui,
+// assim da pra arrastar qualquer borda ou canto (nao so o canto inferior
+// direito) e mover pelo cabecalho, tudo com a mesma logica de geometria.
 
-let fichaDragX = 0, fichaDragY = 0;
-let arrastandoFicha = false, arrastarOrigemX = 0, arrastarOrigemY = 0;
+const FICHA_MIN_W = 360, FICHA_MIN_H = 320;
+let fichaX = 0, fichaY = 0, fichaW = 640, fichaH = 640;
+let fichaAcao = null; // "mover" ou uma direcao: "n","s","e","w","ne","nw","se","sw"
+let fichaOrigemX = 0, fichaOrigemY = 0;
+let fichaInicioX = 0, fichaInicioY = 0, fichaInicioW = 0, fichaInicioH = 0;
 
-function aplicarPosicaoFicha(){
+function aplicarGeometriaFicha(){
   const modal = document.querySelector("#ficha-overlay .ficha-modal");
-  if(modal) modal.style.transform = "translate(" + fichaDragX + "px, " + fichaDragY + "px)";
+  if(!modal) return;
+  modal.style.left = fichaX + "px";
+  modal.style.top = fichaY + "px";
+  modal.style.width = fichaW + "px";
+  modal.style.height = fichaH + "px";
 }
 
-function iniciarArrasteFicha(x, y){
-  arrastandoFicha = true;
-  arrastarOrigemX = x - fichaDragX;
-  arrastarOrigemY = y - fichaDragY;
+function posicionarFichaCentro(){
+  fichaW = Math.min(640, window.innerWidth * 0.96);
+  fichaH = Math.min(640, window.innerHeight * 0.92);
+  fichaX = (window.innerWidth - fichaW) / 2;
+  fichaY = (window.innerHeight - fichaH) / 2;
+  aplicarGeometriaFicha();
 }
-function moverArrasteFicha(x, y){
-  if(!arrastandoFicha) return;
-  fichaDragX = x - arrastarOrigemX;
-  fichaDragY = y - arrastarOrigemY;
-  aplicarPosicaoFicha();
+
+function iniciarAcaoFicha(acao, x, y){
+  fichaAcao = acao;
+  fichaOrigemX = x;
+  fichaOrigemY = y;
+  fichaInicioX = fichaX;
+  fichaInicioY = fichaY;
+  fichaInicioW = fichaW;
+  fichaInicioH = fichaH;
 }
-function pararArrasteFicha(){ arrastandoFicha = false; }
+
+function moverAcaoFicha(x, y){
+  if(!fichaAcao) return;
+  const dx = x - fichaOrigemX;
+  const dy = y - fichaOrigemY;
+
+  if(fichaAcao === "mover"){
+    fichaX = fichaInicioX + dx;
+    fichaY = fichaInicioY + dy;
+  } else {
+    if(fichaAcao.includes("e")) fichaW = Math.max(FICHA_MIN_W, fichaInicioW + dx);
+    if(fichaAcao.includes("w")){
+      const novaW = Math.max(FICHA_MIN_W, fichaInicioW - dx);
+      fichaX = fichaInicioX + (fichaInicioW - novaW);
+      fichaW = novaW;
+    }
+    if(fichaAcao.includes("s")) fichaH = Math.max(FICHA_MIN_H, fichaInicioH + dy);
+    if(fichaAcao.includes("n")){
+      const novaH = Math.max(FICHA_MIN_H, fichaInicioH - dy);
+      fichaY = fichaInicioY + (fichaInicioH - novaH);
+      fichaH = novaH;
+    }
+  }
+  aplicarGeometriaFicha();
+}
+
+function pararAcaoFicha(){ fichaAcao = null; }
 
 const fichaHead = document.querySelector(".ficha-head");
 fichaHead.addEventListener("mousedown", (e) => {
   if(e.target.closest("#ficha-status")) return;
-  iniciarArrasteFicha(e.clientX, e.clientY);
+  iniciarAcaoFicha("mover", e.clientX, e.clientY);
   e.preventDefault();
 });
-document.addEventListener("mousemove", (e) => moverArrasteFicha(e.clientX, e.clientY));
-document.addEventListener("mouseup", pararArrasteFicha);
-
 fichaHead.addEventListener("touchstart", (e) => {
   if(e.target.closest("#ficha-status")) return;
   const t = e.touches[0];
-  iniciarArrasteFicha(t.clientX, t.clientY);
+  iniciarAcaoFicha("mover", t.clientX, t.clientY);
 }, { passive: true });
+
+document.querySelectorAll("#ficha-overlay .resize-handle").forEach((handle) => {
+  const dir = handle.dataset.dir;
+  handle.addEventListener("mousedown", (e) => {
+    iniciarAcaoFicha(dir, e.clientX, e.clientY);
+    e.preventDefault();
+    e.stopPropagation();
+  });
+  handle.addEventListener("touchstart", (e) => {
+    const t = e.touches[0];
+    iniciarAcaoFicha(dir, t.clientX, t.clientY);
+    e.stopPropagation();
+  }, { passive: true });
+});
+
+document.addEventListener("mousemove", (e) => moverAcaoFicha(e.clientX, e.clientY));
+document.addEventListener("mouseup", pararAcaoFicha);
 document.addEventListener("touchmove", (e) => {
-  if(!arrastandoFicha) return;
+  if(!fichaAcao) return;
   const t = e.touches[0];
-  moverArrasteFicha(t.clientX, t.clientY);
+  moverAcaoFicha(t.clientX, t.clientY);
 }, { passive: true });
-document.addEventListener("touchend", pararArrasteFicha);
+document.addEventListener("touchend", pararAcaoFicha);
 
 iniciar();
 </script>
