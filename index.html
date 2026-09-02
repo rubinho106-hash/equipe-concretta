@@ -223,6 +223,22 @@
   }
   .icon-btn:hover{ background: var(--surface-2); color: var(--ink); }
 
+  .obra-row{
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .obra-row:last-child{ border-bottom: none; }
+  .obra-dot{
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .obra-nome{ font-weight: 600; font-size: 14px; }
+
   .empty-state, .loading-state{
     padding: 60px 20px;
     text-align: center;
@@ -409,6 +425,7 @@
   <div class="segmented">
     <button id="seg-equipe" class="active">Equipe</button>
     <button id="seg-conferencia">Conferência de Ponto</button>
+    <button id="seg-obras">Obras</button>
   </div>
 
   <div id="view-equipe">
@@ -474,6 +491,29 @@
       <div id="conf-lista"></div>
     </div>
   </div>
+
+  <div id="view-obras" hidden>
+    <div class="stats-row" style="grid-template-columns: 1fr;">
+      <div class="stat-card">
+        <div class="stat-label">Total de obras</div>
+        <div class="stat-num" id="obras-stat-total">—</div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="search-wrap">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="obras-busca" type="text" placeholder="Buscar obra...">
+      </div>
+      <button class="btn btn-primary" id="btn-nova-obra">+ Nova obra</button>
+    </div>
+
+    <div class="list-wrap">
+      <div class="loading-state" id="obras-loading-state">Carregando obras…</div>
+      <div class="empty-state" id="obras-empty-state" hidden>Nenhuma obra cadastrada.</div>
+      <div id="obras-lista"></div>
+    </div>
+  </div>
 </div>
 
 <div class="overlay" id="overlay" hidden>
@@ -535,6 +575,26 @@
         <button type="button" class="btn btn-ghost" id="btn-fechar-ficha">Fechar</button>
       </div>
     </div>
+  </div>
+</div>
+
+<div class="overlay" id="obra-overlay" hidden>
+  <div class="modal">
+    <h2 id="obra-modal-title">Nova obra</h2>
+    <div class="modal-sub">Nome como deve aparecer nos lançamentos de ponto.</div>
+    <form id="form-obra">
+      <div class="field">
+        <label for="f-obra-nome">Nome da obra</label>
+        <input id="f-obra-nome" required autocomplete="off" placeholder="Ex: CRAS, Praça G">
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="link-danger" id="btn-excluir-obra" hidden>Excluir obra</button>
+        <div class="modal-actions-right">
+          <button type="button" class="btn btn-ghost" id="btn-cancelar-obra">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btn-salvar-obra">Salvar</button>
+        </div>
+      </div>
+    </form>
   </div>
 </div>
 
@@ -803,7 +863,8 @@ async function iniciar(){
 
 // ---------------- Conferência de Ponto (abas de mês + grade dia-a-dia) ----------------
 
-const OBRAS = ["CRAS", "UBS", "CRECHE", "PARQUE IMPERIAL", "PRAÇA G"];
+const OBRAS_SEED = ["CRAS", "UBS", "CRECHE", "PARQUE IMPERIAL", "PRAÇA G"];
+let OBRAS = OBRAS_SEED.slice(); // lista viva, atualizada pela colecao "obras"
 const MARCADORES = ["SÁBADO", "DOMINGO", "FERIADO"];
 const NOMES_MESES = ["JANEIRO","FEVEREIRO","MARÇO","ABRIL","MAIO","JUNHO","JULHO","AGOSTO","SETEMBRO","OUTUBRO","NOVEMBRO","DEZEMBRO"];
 const MES_INICIO = "2026-07";
@@ -834,14 +895,149 @@ let filtroConf = "";
 
 document.getElementById("seg-equipe").onclick = () => mostrarSegmento("equipe");
 document.getElementById("seg-conferencia").onclick = () => mostrarSegmento("conferencia");
+document.getElementById("seg-obras").onclick = () => mostrarSegmento("obras");
 
+let obrasCarregadas = false;
 function mostrarSegmento(qual){
   document.getElementById("seg-equipe").classList.toggle("active", qual === "equipe");
   document.getElementById("seg-conferencia").classList.toggle("active", qual === "conferencia");
+  document.getElementById("seg-obras").classList.toggle("active", qual === "obras");
   document.getElementById("view-equipe").hidden = qual !== "equipe";
   document.getElementById("view-conferencia").hidden = qual !== "conferencia";
+  document.getElementById("view-obras").hidden = qual !== "obras";
   if(qual === "conferencia" && !listaMeses.length) carregarMesTabs();
+  if(qual === "obras" && !obrasCarregadas){ obrasCarregadas = true; carregarObras(); }
 }
+
+// ---------------- Obras ----------------
+
+let todasObras = [];
+let filtroObras = "";
+let editandoObraId = null;
+
+async function seedObrasSeVazio(colRef){
+  const snap = await colRef.limit(1).get();
+  if(!snap.empty) return;
+  for(const nome of OBRAS_SEED){
+    await colRef.add({ nome });
+  }
+}
+
+function carregarObras(){
+  const col = db.collection("obras");
+  seedObrasSeVazio(col).catch(() => {});
+  col.orderBy("nome").onSnapshot(
+    (snap) => {
+      todasObras = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      OBRAS = todasObras.map(o => o.nome);
+      renderObras();
+    },
+    () => {
+      document.getElementById("obras-loading-state").hidden = false;
+      document.getElementById("obras-loading-state").textContent = "Não deu pra carregar as obras agora.";
+    }
+  );
+}
+
+function renderObras(){
+  const lista = document.getElementById("obras-lista");
+  const loading = document.getElementById("obras-loading-state");
+  const empty = document.getElementById("obras-empty-state");
+  loading.hidden = true;
+
+  document.getElementById("obras-stat-total").textContent = todasObras.length;
+
+  const termo = filtroObras.trim().toLowerCase();
+  const visiveis = todasObras.filter(o => !termo || (o.nome || "").toLowerCase().includes(termo));
+  lista.innerHTML = "";
+  empty.hidden = visiveis.length > 0;
+
+  visiveis.forEach(o => {
+    const row = document.createElement("div");
+    row.className = "obra-row";
+
+    const dot = document.createElement("div");
+    dot.className = "obra-dot";
+    dot.style.background = corAvatar(o.nome || "?");
+
+    const nome = document.createElement("div");
+    nome.className = "obra-nome";
+    nome.textContent = o.nome;
+
+    const actions = document.createElement("div");
+    actions.className = "row-actions";
+    const editBtn = document.createElement("button");
+    editBtn.className = "icon-btn";
+    editBtn.title = "Editar";
+    editBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+    editBtn.onclick = () => abrirModalObra(o);
+    actions.appendChild(editBtn);
+
+    row.appendChild(dot);
+    row.appendChild(nome);
+    row.appendChild(actions);
+    lista.appendChild(row);
+  });
+}
+
+function abrirModalObra(o){
+  editandoObraId = o ? o.id : null;
+  document.getElementById("obra-modal-title").textContent = o ? "Editar obra" : "Nova obra";
+  document.getElementById("f-obra-nome").value = o ? o.nome || "" : "";
+  document.getElementById("btn-excluir-obra").hidden = !o;
+  document.getElementById("obra-overlay").hidden = false;
+  document.getElementById("f-obra-nome").focus();
+}
+function fecharModalObra(){
+  document.getElementById("obra-overlay").hidden = true;
+  editandoObraId = null;
+}
+
+document.getElementById("btn-nova-obra").onclick = () => abrirModalObra(null);
+document.getElementById("btn-cancelar-obra").onclick = fecharModalObra;
+document.getElementById("obra-overlay").addEventListener("click", (e) => {
+  if(e.target.id === "obra-overlay") fecharModalObra();
+});
+
+document.getElementById("form-obra").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const nome = document.getElementById("f-obra-nome").value.trim();
+  if(!nome){ toast("Preencha o nome da obra."); return; }
+
+  const btn = document.getElementById("btn-salvar-obra");
+  btn.disabled = true;
+  try {
+    if(editandoObraId){
+      await db.doc("obras/" + editandoObraId).update({ nome });
+      toast("Obra atualizada.");
+    } else {
+      await db.collection("obras").add({ nome });
+      toast("Obra cadastrada.");
+    }
+    fecharModalObra();
+  } catch(err){
+    toast("Não deu pra salvar agora — tenta de novo.");
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+document.getElementById("btn-excluir-obra").onclick = async () => {
+  if(!editandoObraId) return;
+  if(!confirm("Remover esta obra da lista? Lançamentos já feitos com ela não são apagados.")) return;
+  try {
+    await db.doc("obras/" + editandoObraId).delete();
+    toast("Obra removida.");
+    fecharModalObra();
+  } catch(e){
+    toast("Não deu pra remover agora — tenta de novo.");
+  }
+};
+
+document.getElementById("obras-busca").addEventListener("input", (e) => {
+  filtroObras = e.target.value;
+  renderObras();
+});
 
 function carregarMesTabs(){
   const atual = mesAtualReal();
