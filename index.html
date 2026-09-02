@@ -652,11 +652,11 @@
 
     <div class="stats-row">
       <div class="stat-card">
-        <div class="stat-label">Total de dias</div>
+        <div class="stat-label" id="fechamento-label-dias">Total de dias</div>
         <div class="stat-num" id="fechamento-stat-dias">—</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Total a pagar</div>
+        <div class="stat-label" id="fechamento-label-valor">Total a pagar</div>
         <div class="stat-num stat-good" id="fechamento-stat-valor">—</div>
       </div>
     </div>
@@ -1539,8 +1539,17 @@ function renderFechamento(){
   btnAcao.className = "btn " + (fechado ? "btn-ghost" : "btn-primary");
 
   const { grupos, totalDias, totalValor } = agruparFechamentoPorObra();
-  document.getElementById("fechamento-stat-dias").textContent = totalDias.toFixed(1);
-  document.getElementById("fechamento-stat-valor").textContent = formatarMoeda(totalValor);
+
+  // Os cards de total refletem a obra selecionada no filtro -- "Todas as
+  // obras" mostra a soma do mes inteiro, uma obra especifica mostra so o
+  // dela (pra bater com o subtotal que ja aparece no card daquela obra).
+  const filtrandoObra = filtroObraFechamento !== "todas";
+  const diasExibidos = filtrandoObra ? (grupos[filtroObraFechamento]?.dias || 0) : totalDias;
+  const valorExibido = filtrandoObra ? (grupos[filtroObraFechamento]?.valor || 0) : totalValor;
+  document.getElementById("fechamento-stat-dias").textContent = diasExibidos.toFixed(1);
+  document.getElementById("fechamento-stat-valor").textContent = formatarMoeda(valorExibido);
+  document.getElementById("fechamento-label-dias").textContent = filtrandoObra ? "Dias — " + filtroObraFechamento : "Total de dias";
+  document.getElementById("fechamento-label-valor").textContent = filtrandoObra ? "A pagar — " + filtroObraFechamento : "Total a pagar";
 
   renderFechamentoObrasFiltro(grupos);
 
