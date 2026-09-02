@@ -124,6 +124,14 @@ entre as duas telas.
 inteiro (`funcionarios/{id}/pontos/{mes}.pagamentos.{obra}`, `statusPagamento()`/`alternarPagamento()`),
 já que uma pessoa pode aparecer em mais de uma obra no mesmo mês. **Independente do mês estar fechado** —
 fechar só trava o lançamento dos dias; aprovar pagamento é uma etapa separada, geralmente feita depois.
+2 cards extras no topo mostram "Aprovado" e "Falta aprovar" (dias+valor, respeitando o filtro de obra) —
+"Falta aprovar" é sempre `total - aprovado`.
+
+**Cuidado extra ao testar toggles de status (Conferido/Pendente, Ativo/Inativo, Pagamento) em produção**:
+nunca assumir o estado inicial — ler antes de togglear. Já aconteceu de um teste reverter sem querer uma
+aprovação real que o Rubens tinha acabado de marcar na tela dele, porque o teste presumiu "deve estar no
+padrão" em vez de checar. Se o Rubens acabou de mandar uma print mexendo numa tela, o estado dela É real,
+não padrão.
 
 **`carregarObras()` roda no `iniciar()`, não mais sob demanda**: antes só carregava quando a aba "Obras"
 era clicada — até lá, `OBRAS` ficava no fallback hardcoded `OBRAS_SEED`, que chegou a ficar desatualizado
