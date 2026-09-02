@@ -1035,10 +1035,19 @@ async function abrirFicha(f){
   statusBtn.textContent = info.statusConferencia === "Conferido" ? "Conferido" : "Pendente";
   statusBtn.onclick = () => alternarConferencia(f).then(() => abrirFicha(f));
 
+  const [anoNum, mesNum] = mesConferencia.split("-").map(Number);
   const tbody = document.getElementById("ficha-body");
   tbody.innerHTML = "";
   for(let dia = 1; dia <= diasNoMes; dia++){
-    const diaObj = (info.dias || {})[dia] || {};
+    let diaObj = (info.dias || {})[dia];
+    if(!diaObj){
+      // dia ainda nao gravado no banco: mostra o fim de semana ja marcado
+      // (so vira gravacao de verdade quando o usuario editar algo nesse mes)
+      const wd = new Date(anoNum, mesNum - 1, dia).getDay(); // 0=domingo, 6=sabado
+      if(wd === 0) diaObj = { m: "DOMINGO", t: "DOMINGO" };
+      else if(wd === 6) diaObj = { m: "SÁBADO", t: "SÁBADO" };
+      else diaObj = {};
+    }
     const tr = document.createElement("tr");
 
     const tdDia = document.createElement("td");
