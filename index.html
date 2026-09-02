@@ -298,6 +298,8 @@
 
   .segmented{
     display: inline-flex;
+    max-width: 100%;
+    overflow-x: auto;
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: 10px;
@@ -315,6 +317,8 @@
     padding: 12px 22px;
     border-radius: 7px;
     cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
   .segmented button.active{ background: var(--accent); color: var(--accent-ink); }
 
@@ -362,6 +366,36 @@
   .conf-dias .val{ font-size: 15px; font-weight: 700; margin-top: 2px; }
   .pill-conferido{ background: var(--good-bg); color: var(--good-ink); }
   .pill-pendente{ background: var(--warn-bg); color: var(--warn-ink); }
+
+  .fechamento-banner{
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .fechamento-banner.fechado{ background: var(--warn-bg); color: var(--warn-ink); }
+  .fechamento-header-row, .fechamento-row{
+    display: grid;
+    grid-template-columns: 1fr 56px 110px 140px;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 18px;
+  }
+  .fechamento-header-row > div:not(:first-child), .fechamento-dias, .fechamento-valor, .fechamento-pix{ text-align: right; }
+  .fechamento-header-row{
+    font-size: 10px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); font-weight: 700;
+    border-bottom: 1px solid var(--line);
+  }
+  .fechamento-row{ border-bottom: 1px solid var(--line); }
+  .fechamento-row:last-child{ border-bottom: none; }
+  .fechamento-dias{ font-variant-numeric: tabular-nums; }
+  .fechamento-valor{ font-weight: 700; font-variant-numeric: tabular-nums; }
+  .fechamento-pix{
+    font-size: 12px; color: var(--muted);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
 
   .ficha-modal{
     position: fixed;
@@ -463,6 +497,7 @@
     font-size: 11.5px;
   }
   .obra-select.marcado{ color: var(--danger-ink); font-weight: 700; }
+  .obra-select:disabled, .pill:disabled{ opacity: .55; cursor: not-allowed; }
 
   [hidden]{ display: none !important; }
 
@@ -491,6 +526,7 @@
   <div class="segmented">
     <button id="seg-equipe" class="active">Lista de Funcionários</button>
     <button id="seg-conferencia">Conferência de Ponto</button>
+    <button id="seg-fechamento">Fechamento de Ponto</button>
     <button id="seg-obras">Obras</button>
   </div>
 
@@ -558,6 +594,44 @@
     </div>
   </div>
 
+  <div id="view-fechamento" hidden>
+    <div class="mes-tabs" id="fechamento-mes-tabs"></div>
+
+    <div class="fechamento-banner" id="fechamento-banner" hidden></div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Total de dias</div>
+        <div class="stat-num" id="fechamento-stat-dias">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total a pagar</div>
+        <div class="stat-num stat-good" id="fechamento-stat-valor">—</div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="search-wrap">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="fechamento-busca" type="text" placeholder="Buscar por nome ou função...">
+      </div>
+      <button class="btn" id="btn-fechamento-csv">⬇ Exportar CSV</button>
+      <button class="btn btn-primary" id="btn-fechamento-acao">Fechar mês</button>
+    </div>
+
+    <div class="list-wrap">
+      <div class="loading-state" id="fechamento-loading-state">Carregando período…</div>
+      <div class="empty-state" id="fechamento-empty-state" hidden>Nenhum funcionário encontrado.</div>
+      <div class="fechamento-header-row" id="fechamento-header-row" hidden>
+        <div>Funcionário</div>
+        <div>Dias</div>
+        <div>Valor</div>
+        <div>PIX</div>
+      </div>
+      <div id="fechamento-lista"></div>
+    </div>
+  </div>
+
   <div id="view-obras" hidden>
     <div class="stats-row" style="grid-template-columns: 1fr;">
       <div class="stat-card">
@@ -598,6 +672,10 @@
       <div class="field">
         <label for="f-pix">Chave PIX</label>
         <input id="f-pix" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="f-diaria">Valor da diária (R$)</label>
+        <input id="f-diaria" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Ex: 150.00">
       </div>
       <div class="field">
         <label for="f-status">Situação</label>
@@ -902,6 +980,7 @@ function abrirModal(f){
   document.getElementById("f-nome").value = f ? f.nome || "" : "";
   document.getElementById("f-funcao").value = f ? f.funcao || "" : "";
   document.getElementById("f-pix").value = f ? f.pix || "" : "";
+  document.getElementById("f-diaria").value = f && f.valorDiaria ? f.valorDiaria : "";
   document.getElementById("f-status").value = f && f.status === "Inativo" ? "Inativo" : "Ativo";
   document.getElementById("btn-excluir").hidden = !f;
   document.getElementById("overlay").hidden = false;
@@ -924,6 +1003,7 @@ document.getElementById("form-func").addEventListener("submit", async (e) => {
     nome: document.getElementById("f-nome").value.trim(),
     funcao: document.getElementById("f-funcao").value.trim(),
     pix: document.getElementById("f-pix").value.trim(),
+    valorDiaria: parseFloat(document.getElementById("f-diaria").value) || 0,
     status: document.getElementById("f-status").value
   };
   if(!dados.nome || !dados.funcao){ toast("Preencha nome e função."); return; }
@@ -1046,17 +1126,21 @@ let filtroConf = "";
 
 document.getElementById("seg-equipe").onclick = () => mostrarSegmento("equipe");
 document.getElementById("seg-conferencia").onclick = () => mostrarSegmento("conferencia");
+document.getElementById("seg-fechamento").onclick = () => mostrarSegmento("fechamento");
 document.getElementById("seg-obras").onclick = () => mostrarSegmento("obras");
 
 let obrasCarregadas = false;
 function mostrarSegmento(qual){
   document.getElementById("seg-equipe").classList.toggle("active", qual === "equipe");
   document.getElementById("seg-conferencia").classList.toggle("active", qual === "conferencia");
+  document.getElementById("seg-fechamento").classList.toggle("active", qual === "fechamento");
   document.getElementById("seg-obras").classList.toggle("active", qual === "obras");
   document.getElementById("view-equipe").hidden = qual !== "equipe";
   document.getElementById("view-conferencia").hidden = qual !== "conferencia";
+  document.getElementById("view-fechamento").hidden = qual !== "fechamento";
   document.getElementById("view-obras").hidden = qual !== "obras";
-  if(qual === "conferencia" && !listaMeses.length) carregarMesTabs();
+  if((qual === "conferencia" || qual === "fechamento") && !listaMeses.length) carregarMesTabs();
+  else if(qual === "fechamento") renderFechamento();
   if(qual === "obras" && !obrasCarregadas){ obrasCarregadas = true; carregarObras(); }
 }
 
@@ -1208,30 +1292,37 @@ function carregarMesTabs(){
   selecionarMes(atual);
 }
 
+// Renderiza os cards de mes nos dois lugares que usam (Conferencia e
+// Fechamento) — os dois telas compartilham o mesmo mes selecionado
+// (mesConferencia), so o container do DOM muda.
+const MES_TABS_CONTAINERS = ["mes-tabs", "fechamento-mes-tabs"];
 function renderMesTabs(atual){
-  const cont = document.getElementById("mes-tabs");
-  cont.innerHTML = "";
-  listaMeses.forEach(mes => {
-    const { label } = infoMes(mes);
-    const tab = document.createElement("div");
-    tab.className = "mes-tab" + (mes === mesConferencia ? " selected" : "");
-    const nomeDiv = document.createElement("div");
-    nomeDiv.className = "mes-tab-nome";
-    nomeDiv.textContent = label;
-    const chaveDiv = document.createElement("div");
-    chaveDiv.className = "mes-tab-chave";
-    chaveDiv.textContent = mes;
-    const pill = document.createElement("span");
-    let classe = "mes-pill-futuro", texto = "PRÓXIMO";
-    if(mes === atual){ classe = "mes-pill-atual"; texto = "MÊS ATUAL"; }
-    else if(mes < atual){ classe = "mes-pill-encerrado"; texto = "ENCERRADO"; }
-    pill.className = "mes-pill " + classe;
-    pill.textContent = texto;
-    tab.appendChild(nomeDiv);
-    tab.appendChild(chaveDiv);
-    tab.appendChild(pill);
-    tab.onclick = () => selecionarMes(mes);
-    cont.appendChild(tab);
+  MES_TABS_CONTAINERS.forEach(id => {
+    const cont = document.getElementById(id);
+    if(!cont) return;
+    cont.innerHTML = "";
+    listaMeses.forEach(mes => {
+      const { label } = infoMes(mes);
+      const tab = document.createElement("div");
+      tab.className = "mes-tab" + (mes === mesConferencia ? " selected" : "");
+      const nomeDiv = document.createElement("div");
+      nomeDiv.className = "mes-tab-nome";
+      nomeDiv.textContent = label;
+      const chaveDiv = document.createElement("div");
+      chaveDiv.className = "mes-tab-chave";
+      chaveDiv.textContent = mes;
+      const pill = document.createElement("span");
+      let classe = "mes-pill-futuro", texto = "PRÓXIMO";
+      if(mes === atual){ classe = "mes-pill-atual"; texto = "MÊS ATUAL"; }
+      else if(mes < atual){ classe = "mes-pill-encerrado"; texto = "ENCERRADO"; }
+      pill.className = "mes-pill " + classe;
+      pill.textContent = texto;
+      tab.appendChild(nomeDiv);
+      tab.appendChild(chaveDiv);
+      tab.appendChild(pill);
+      tab.onclick = () => selecionarMes(mes);
+      cont.appendChild(tab);
+    });
   });
 }
 
@@ -1243,6 +1334,8 @@ async function selecionarMes(mes){
   loading.hidden = false;
   loading.textContent = "Carregando período…";
   document.getElementById("conf-lista").innerHTML = "";
+  document.getElementById("fechamento-loading-state").hidden = false;
+  document.getElementById("fechamento-lista").innerHTML = "";
 
   dadosMes = {};
   try {
@@ -1256,11 +1349,172 @@ async function selecionarMes(mes){
   }
   loading.hidden = true;
   renderConfLista();
+  renderFechamento();
 }
 
 function contarDias(dias){
   return Object.values(dias || {}).filter(d => (d.m && !ehMarcador(d.m)) || (d.t && !ehMarcador(d.t))).length;
 }
+
+// Conta em fracoes de 0.5 por meio-periodo (igual o resumo do cartao) --
+// mais preciso que contarDias() pra calcular pagamento, ja que um meio
+// dia nao deve contar como dia inteiro.
+function calcularTotalDias(diasObj, diasNoMes, anoNum, mesNum){
+  let total = 0;
+  for(let dia = 1; dia <= diasNoMes; dia++){
+    let diaObj = (diasObj || {})[dia];
+    if(!diaObj){
+      const wd = new Date(anoNum, mesNum - 1, dia).getDay();
+      if(wd === 0 || wd === 6) continue; // fim de semana sem lancamento nao conta
+      diaObj = {};
+    }
+    if(diaObj.m && !ehMarcador(diaObj.m)) total += 0.5;
+    if(diaObj.t && !ehMarcador(diaObj.t)) total += 0.5;
+  }
+  return total;
+}
+
+function formatarMoeda(valor){
+  return (valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+// ---------------- Fechamento de Ponto ----------------
+
+let mesesFechados = {}; // { "2026-09": true, ... }
+let filtroFechamento = "";
+
+db.collection("fechamentos").onSnapshot((snap) => {
+  mesesFechados = {};
+  snap.docs.forEach(d => { if(d.data().fechado) mesesFechados[d.id] = true; });
+  if(document.getElementById("view-fechamento") && !document.getElementById("view-fechamento").hidden) renderFechamento();
+});
+
+function renderFechamento(){
+  if(!mesConferencia) return;
+  document.getElementById("fechamento-loading-state").hidden = true;
+  const cont = document.getElementById("fechamento-lista");
+  const empty = document.getElementById("fechamento-empty-state");
+  const headerRow = document.getElementById("fechamento-header-row");
+  const banner = document.getElementById("fechamento-banner");
+  const btnAcao = document.getElementById("btn-fechamento-acao");
+  cont.innerHTML = "";
+
+  const { diasNoMes } = infoMes(mesConferencia);
+  const [anoNum, mesNum] = mesConferencia.split("-").map(Number);
+  const fechado = !!mesesFechados[mesConferencia];
+
+  banner.hidden = !fechado;
+  if(fechado){
+    banner.className = "fechamento-banner fechado";
+    banner.textContent = "🔒 Este mês está fechado — a Conferência de Ponto ficou somente leitura.";
+  }
+  btnAcao.textContent = fechado ? "Reabrir mês" : "Fechar mês";
+  btnAcao.className = "btn " + (fechado ? "btn-ghost" : "btn-primary");
+
+  const termo = filtroFechamento.trim().toLowerCase();
+  const linhas = todos
+    .filter(f => f.status !== "Inativo")
+    .filter(f => !termo || (f.nome||"").toLowerCase().includes(termo) || (f.funcao||"").toLowerCase().includes(termo))
+    .map(f => {
+      const info = dadosMes[f.id] || { dias: {} };
+      const dias = calcularTotalDias(info.dias, diasNoMes, anoNum, mesNum);
+      const valorDiaria = Number(f.valorDiaria) || 0;
+      return { f, dias, valor: dias * valorDiaria };
+    });
+
+  headerRow.hidden = linhas.length === 0;
+  empty.hidden = linhas.length > 0;
+
+  let totalDias = 0, totalValor = 0;
+  linhas.forEach(({ f, dias, valor }) => {
+    totalDias += dias;
+    totalValor += valor;
+
+    const row = document.createElement("div");
+    row.className = "fechamento-row";
+
+    const bloco = document.createElement("div");
+    const nome = document.createElement("div");
+    nome.className = "emp-name";
+    nome.textContent = f.nome;
+    const funcao = document.createElement("div");
+    funcao.className = "emp-sub";
+    funcao.textContent = f.funcao || "—";
+    bloco.appendChild(nome);
+    bloco.appendChild(funcao);
+
+    const diasDiv = document.createElement("div");
+    diasDiv.className = "fechamento-dias";
+    diasDiv.textContent = dias.toFixed(1);
+
+    const valorDiv = document.createElement("div");
+    valorDiv.className = "fechamento-valor";
+    valorDiv.textContent = f.valorDiaria ? formatarMoeda(valor) : "—";
+
+    const pixDiv = document.createElement("div");
+    pixDiv.className = "fechamento-pix";
+    pixDiv.textContent = f.pix || "—";
+    if(f.pix) pixDiv.title = f.pix;
+
+    row.appendChild(bloco);
+    row.appendChild(diasDiv);
+    row.appendChild(valorDiv);
+    row.appendChild(pixDiv);
+    cont.appendChild(row);
+  });
+
+  document.getElementById("fechamento-stat-dias").textContent = totalDias.toFixed(1);
+  document.getElementById("fechamento-stat-valor").textContent = formatarMoeda(totalValor);
+}
+
+document.getElementById("fechamento-busca").addEventListener("input", (e) => {
+  filtroFechamento = e.target.value;
+  renderFechamento();
+});
+
+document.getElementById("btn-fechamento-acao").onclick = async () => {
+  if(!mesConferencia) return;
+  const fechado = !!mesesFechados[mesConferencia];
+  const { label } = infoMes(mesConferencia);
+  const pergunta = fechado
+    ? "Reabrir " + label + "? A Conferência de Ponto volta a ficar editável."
+    : "Fechar " + label + "? A Conferência de Ponto desse mês vira somente leitura até reabrir.";
+  const ok = await confirmarAcao(pergunta, fechado ? "Reabrir mês" : "Fechar mês", fechado ? "primary" : "danger");
+  if(!ok) return;
+  try {
+    await db.doc("fechamentos/" + mesConferencia).set({
+      fechado: !fechado,
+      atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    toast(fechado ? "Mês reaberto." : "Mês fechado.");
+  } catch(e){
+    toast("Não deu pra salvar agora — tenta de novo.");
+  }
+};
+
+document.getElementById("btn-fechamento-csv").onclick = () => {
+  if(!mesConferencia) return;
+  const { diasNoMes, label } = infoMes(mesConferencia);
+  const [anoNum, mesNum] = mesConferencia.split("-").map(Number);
+  const linhas = [["Nome","Função","Dias","Valor","Chave PIX"]];
+  todos.filter(f => f.status !== "Inativo").forEach(f => {
+    const info = dadosMes[f.id] || { dias: {} };
+    const dias = calcularTotalDias(info.dias, diasNoMes, anoNum, mesNum);
+    const valorDiaria = Number(f.valorDiaria) || 0;
+    linhas.push([f.nome||"", f.funcao||"", dias.toFixed(1), (dias*valorDiaria).toFixed(2), f.pix||""]);
+  });
+  const csv = linhas.map(l => l.map(v => '"' + String(v).replace(/"/g,'""') + '"').join(",")).join("\r\n");
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "fechamento-" + mesConferencia + ".csv";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast("Relatório salvo.");
+};
 
 function renderConfLista(){
   const cont = document.getElementById("conf-lista");
@@ -1353,6 +1607,7 @@ async function garantirDocPontos(funcId, mes){
 }
 
 async function alternarConferencia(f){
+  if(mesesFechados[mesConferencia]){ toast("Esse mês está fechado — reabra em Fechamento de Ponto pra editar."); return; }
   const atual = (dadosMes[f.id] || {}).statusConferencia === "Conferido" ? "Conferido" : "Pendente";
   const novo = atual === "Conferido" ? "Pendente" : "Conferido";
   try {
@@ -1391,6 +1646,13 @@ async function abrirFicha(f){
   statusBtn.textContent = info.statusConferencia === "Conferido" ? "Conferido" : "Pendente";
   statusBtn.onclick = () => alternarConferencia(f).then(() => abrirFicha(f));
 
+  const fechado = !!mesesFechados[mesConferencia];
+  statusBtn.disabled = fechado;
+  const dicaEl = document.querySelector("#ficha-overlay .ficha-dica");
+  dicaEl.textContent = fechado
+    ? "🔒 mês fechado — somente leitura"
+    : "⤡ arraste qualquer borda ou canto pra redimensionar · ✥ arraste o topo pra mover";
+
   const [anoNum, mesNum] = mesConferencia.split("-").map(Number);
   const tbody = document.getElementById("ficha-body");
   tbody.innerHTML = "";
@@ -1415,6 +1677,7 @@ async function abrirFicha(f){
     const selM = document.createElement("select");
     selM.className = "obra-select" + (ehMarcador(diaObj.m) ? " marcado" : "");
     selM.innerHTML = opcoesObra(diaObj.m || "");
+    selM.disabled = fechado;
     selM.onchange = () => salvarDia(dia, "m", selM.value);
     tdM.appendChild(selM);
 
@@ -1422,6 +1685,7 @@ async function abrirFicha(f){
     const selT = document.createElement("select");
     selT.className = "obra-select" + (ehMarcador(diaObj.t) ? " marcado" : "");
     selT.innerHTML = opcoesObra(diaObj.t || "");
+    selT.disabled = fechado;
     selT.onchange = () => salvarDia(dia, "t", selT.value);
     tdT.appendChild(selT);
 
@@ -1460,6 +1724,7 @@ function renderResumoFicha(porObra){
 
 async function salvarDia(dia, campo, valor){
   if(!fichaFunc) return;
+  if(mesesFechados[mesConferencia]){ toast("Esse mês está fechado — reabra em Fechamento de Ponto pra editar."); return; }
   try {
     const ref = await garantirDocPontos(fichaFunc.id, mesConferencia);
     const chave = "dias." + dia + "." + campo;
