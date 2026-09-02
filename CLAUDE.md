@@ -100,8 +100,11 @@ qualquer mensagem futura, é COLÉGIO MILITAR.
 ## Fechamento de Ponto (02/09/2026)
 
 4ª aba do segmentado, ao lado da Conferência de Ponto — mesmo mês selecionado (`mesConferencia`
-compartilhado). Mostra dias trabalhados × `valorDiaria` (campo novo no cadastro, R$ por dia completo) por
-funcionário, com total geral e exportar CSV. Botão "Fechar mês"/"Reabrir mês" grava
+compartilhado). **Agrupado por obra** (não soma tudo por funcionário) — `agruparFechamentoPorObra()`
+monta uma seção por obra com subtotal de dias/valor, e cada funcionário aparece uma vez em cada obra em
+que trabalhou naquele mês (dias fatiados por obra, `calcularDiasPorObra()`). Dias trabalhados ×
+`valorDiaria` (campo novo no cadastro, R$ por dia completo) = valor a pagar. Total geral no topo, busca
+filtra por obra ou por funcionário/função, CSV com coluna Obra. Botão "Fechar mês"/"Reabrir mês" grava
 `fechamentos/{AAAA-MM} = {fechado: bool}` — mês fechado trava a Conferência de Ponto daquele mês (selects
 e status Conferido/Pendente ficam `disabled` no cartão, e `salvarDia()`/`alternarConferencia()` recusam
 escrever mesmo chamados direto, não só via UI).
