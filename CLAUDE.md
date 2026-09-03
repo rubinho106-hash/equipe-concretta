@@ -227,6 +227,30 @@ linhas), quinzena 2 de setembro (15 linhas) e quinzena 2 de outubro (16 linhas, 
 caso) — todas renderizam sem scrollbar; testado também partindo de um tamanho salvo
 pequeno (400px de altura) no `localStorage`, confirmando que o card cresce mesmo assim.
 
+## Status de conferência guardado por quinzena (03/09/2026)
+
+Rubens mandou print do pill "Conferido" no topo do cartão pedindo "guardar status separado
+por quizena". `statusConferencia` deixou de ser uma string única pro mês inteiro e virou
+`{q1, q2}` (`Pendente`/`Conferido` cada). Pontos importantes:
+
+- `garantirDocPontos()` já cria o doc novo nesse formato de objeto.
+- `alternarConferencia(f, quinzena)` (ganhou o parâmetro `quinzena`) só alterna a quinzena
+  pedida, preservando a outra — grava `statusConferencia` **inteiro** de uma vez
+  (`{q1:..., q2:...}`), nunca um dot-path tipo `statusConferencia.q1`, porque um doc antigo
+  pode ter esse campo como string solta e um dot-path em cima disso quebra.
+- **Compatível com dados antigos sem migração em lote**: `statusQuinzena(info, quinzena)` e
+  `statusMesConferido(info)` leem `statusConferencia` como string (formato de antes de
+  03/09) e usam esse valor como fallback pras duas quinzenas — só vira objeto de verdade no
+  primeiro toggle que alguém fizer depois desse deploy.
+- O pill do cabeçalho do cartão (`#ficha-status`) segue a quinzena selecionada no momento
+  (`fichaQuinzena`) — populado dentro de `renderFichaConteudo()` (não mais só em
+  `abrirFicha()`), então reage a trocar de quinzena.
+- **O pill da linha na lista de Conferência de Ponto e o stat "Conferidos" do topo viraram
+  resumo do mês inteiro**: só contam "Conferido" quando as DUAS quinzenas estão conferidas
+  (`statusMesConferido()`, lógica E). Clicar nesse pill da linha agora **abre o cartão** em
+  vez de togglear direto — não dava mais pra saber qual quinzena o clique da lista queria
+  dizer.
+
 ## Lançamento diário de ponto por WhatsApp
 
 Desde 02/09/2026 o lançamento diário vai direto aqui (não mais no Excel antigo). Fluxo:
