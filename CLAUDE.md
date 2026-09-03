@@ -101,10 +101,11 @@ qualquer mensagem futura, é COLÉGIO MILITAR.
 
 4ª aba do segmentado, ao lado da Conferência de Ponto — mesmo mês selecionado (`mesConferencia`
 compartilhado). **Agrupado por obra** (não soma tudo por funcionário) — `agruparFechamentoPorObra()`
-monta uma seção por obra com subtotal de dias/valor, e cada funcionário aparece uma vez em cada obra em
-que trabalhou naquele mês (dias fatiados por obra, `calcularDiasPorObra()`). Dias trabalhados ×
-`valorDiaria` (campo novo no cadastro, R$ por dia completo) = valor a pagar. Total geral no topo, busca
-filtra por obra ou por funcionário/função, CSV com coluna Obra. Botão "Fechar mês"/"Reabrir mês" grava
+monta uma seção por obra com subtotal de dias, e cada funcionário aparece uma vez em cada obra em que
+trabalhou naquele mês (dias fatiados por obra, `calcularDiasPorObra()`). **Trabalha só com dias, sem
+nenhum valor em R$** (ver nota abaixo — teve uma fase intermediária com `valorDiaria`/"valor a pagar",
+revertida no mesmo dia). Total de dias no topo, busca filtra por obra ou por funcionário/função, CSV com
+coluna Obra. Botão "Fechar mês"/"Reabrir mês" grava
 `fechamentos/{AAAA-MM} = {fechado: bool}` — mês fechado trava a Conferência de Ponto daquele mês (selects
 e status Conferido/Pendente ficam `disabled` no cartão, e `salvarDia()`/`alternarConferencia()` recusam
 escrever mesmo chamados direto, não só via UI).
@@ -117,17 +118,28 @@ largura fixa em px nas colunas, não `auto`, sempre que fizer uma lista desse es
 **Filtro de obra em vez de cards de mês**: o Fechamento não usa mais a fileira grande de cards de mês
 (essa continua só na Conferência de Ponto, `#mes-tabs`) — no lugar tem um `<select>` compacto
 (`renderFechamentoMesSelect()`) e uma fileira de cards clicáveis por obra (`renderFechamentoObrasFiltro()`,
-"Todas as obras" + uma por obra com dias/valor daquela obra). `mesConferencia` continua compartilhado
-entre as duas telas.
+"Todas as obras" + uma por obra com os dias daquela obra). `mesConferencia` continua compartilhado entre
+as duas telas.
+
+**Sem R$ em lugar nenhum do sistema (revertido 02/09/2026, mesmo dia que foi criado)**: o Fechamento
+chegou a ter um campo "Valor da diária (R$)" no cadastro (`valorDiaria`), card "Total a pagar", coluna
+"Valor" na tabela e no CSV — Rubens pediu pra apagar tudo isso ("apagar qualquer referência a valor em
+R$, vamos trabalhar somente com dias trabalhados"). Removido da interface inteira (campo do formulário,
+card, coluna da tabela, coluna do CSV, `formatarMoeda()`, e todo cálculo de valor em
+`agruparFechamentoPorObra()`) **e também apagado do Firestore** — o campo `valorDiaria` que já estava
+gravado nos 32 `funcionarios/{id}` foi removido de vez com `FieldValue.delete()` a pedido do Rubens (não
+ficou como dado morto). Se `valorDiaria` for pedido de novo no futuro, a tabela usada em 02/09 foi:
+Ajudante R$100, Pedreiro/Carpinteiro/Pintor R$150, Encarregado R$200 (só como referência histórica, não
+está mais no banco).
 
 **Pill de pagamento (Pendente/Aprovado)** em cada linha do Fechamento — guardada por obra, não por mês
 inteiro (`funcionarios/{id}/pontos/{mes}.pagamentos.{obra}`, `statusPagamento()`/`alternarPagamento()`),
 já que uma pessoa pode aparecer em mais de uma obra no mesmo mês. **Independente do mês estar fechado** —
 fechar só trava o lançamento dos dias; aprovar pagamento é uma etapa separada, geralmente feita depois.
 2 cards extras no topo mostram "Aprovado" e "Falta aprovar" — mostram **quantidade de funcionários**
-("N de M funcionários", não soma de R$ — pedido explícito do Rubens), respeitando o filtro de obra.
-"Falta aprovar" é sempre `total - aprovado` em contagem de gente (`qtdTotal`/`qtdAprovados` em
-`agruparFechamentoPorObra()`), não em dinheiro.
+("N de M funcionários", pedido explícito do Rubens), respeitando o filtro de obra. "Falta aprovar" é
+sempre `total - aprovado` em contagem de gente (`qtdTotal`/`qtdAprovados` em
+`agruparFechamentoPorObra()`).
 
 **Cuidado extra ao testar toggles de status (Conferido/Pendente, Ativo/Inativo, Pagamento) em produção**:
 nunca assumir o estado inicial — ler antes de togglear. Já aconteceu de um teste reverter sem querer uma
