@@ -472,22 +472,25 @@
     max-height: 92vh;
     min-width: 360px;
     min-height: 320px;
+    padding: 18px 24px;
     overflow: hidden;
   }
   .ficha-head{
-    display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 4px;
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 0;
     flex-shrink: 0;
     cursor: move;
     user-select: none;
   }
-  .ficha-pix{ font-size: 11px; color: var(--muted); margin-top: 3px; font-variant-numeric: tabular-nums; }
+  .ficha-head .modal-sub{ margin-bottom: 0; }
+  .ficha-modal .modal-actions{ margin-top: 10px; }
+  .ficha-pix{ font-size: 11px; color: var(--muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
   .ficha-periodo{ font-size: 11.5px; color: var(--muted); flex-shrink: 0; }
-  .ficha-dica{ font-size: 10.5px; color: var(--muted); margin-top: 2px; flex-shrink: 0; }
-  .ficha-quinzena-toggle{ display: flex; gap: 6px; margin-top: 10px; flex-shrink: 0; }
+  .ficha-dica{ font-size: 10.5px; color: var(--muted); margin-top: 1px; flex-shrink: 0; }
+  .ficha-quinzena-toggle{ display: flex; gap: 6px; margin-top: 7px; flex-shrink: 0; }
   .ficha-quinzena-toggle button{
     flex: 1;
     font: inherit; font-size: 11px; font-weight: 600;
-    padding: 7px 8px;
+    padding: 5px 8px;
     border: 1px solid var(--line);
     border-radius: 8px;
     background: var(--surface);
@@ -497,21 +500,21 @@
   .ficha-quinzena-toggle button.active{ background: var(--accent); color: var(--accent-ink); border-color: transparent; }
   .ficha-resumo{
     flex-shrink: 0;
-    margin-top: 12px;
-    padding: 10px 12px;
+    margin-top: 8px;
+    padding: 7px 10px;
     border: 1px solid var(--line);
     border-radius: 10px;
     background: var(--surface-2);
   }
   .ficha-resumo-titulo{
     font-size: 9.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
-    color: var(--muted); margin-bottom: 8px;
+    color: var(--muted); margin-bottom: 5px;
   }
-  .ficha-resumo-chips{ display: flex; flex-wrap: wrap; gap: 6px; }
+  .ficha-resumo-chips{ display: flex; flex-wrap: wrap; gap: 5px; }
   .ficha-resumo-chip{
     display: flex; align-items: center; gap: 6px;
     flex-shrink: 0;
-    padding: 4px 10px;
+    padding: 3px 9px;
     border-radius: 999px;
     border: 1px solid transparent;
     font-size: 11px;
@@ -521,7 +524,7 @@
   .ficha-resumo-chip .qtd{ font-weight: 700; }
   .ficha-resumo-total{
     display: flex; justify-content: space-between; align-items: baseline;
-    margin-top: 10px; padding-top: 8px;
+    margin-top: 6px; padding-top: 5px;
     border-top: 1px solid var(--line);
   }
   .ficha-resumo-total .lbl{ font-size: 10px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
@@ -541,7 +544,7 @@
   table.dias{
     width: 100%;
     border-collapse: collapse;
-    margin-top: 14px;
+    margin-top: 8px;
     font-size: 12.5px;
   }
   table.dias th{
@@ -550,13 +553,13 @@
     font-size: 10.5px;
     text-transform: uppercase;
     letter-spacing: .03em;
-    padding: 7px 6px;
+    padding: 5px 6px;
     text-align: center;
     border-bottom: 1px solid var(--line);
     position: sticky; top: 0;
   }
   table.dias td{
-    padding: 4px 5px;
+    padding: 2.5px 5px;
     border-bottom: 1px solid var(--line);
     text-align: center;
   }
@@ -566,7 +569,7 @@
   .ficha-modal .modal-actions{ flex-shrink: 0; }
   .obra-select{
     width: 100%;
-    padding: 5px 4px;
+    padding: 3px 4px;
     border: 1px solid var(--line);
     border-radius: 6px;
     background: var(--surface);
@@ -1968,8 +1971,8 @@ function renderFichaConteudo(){
   renderResumoFicha(porObra);
 }
 
-document.getElementById("ficha-q1-btn").onclick = () => { fichaQuinzena = 1; renderFichaConteudo(); };
-document.getElementById("ficha-q2-btn").onclick = () => { fichaQuinzena = 2; renderFichaConteudo(); };
+document.getElementById("ficha-q1-btn").onclick = () => { fichaQuinzena = 1; renderFichaConteudo(); ajustarAlturaFichaParaConteudo(); };
+document.getElementById("ficha-q2-btn").onclick = () => { fichaQuinzena = 2; renderFichaConteudo(); ajustarAlturaFichaParaConteudo(); };
 
 function renderResumoFicha(porObra){
   const nomes = Array.from(new Set([...OBRAS, ...Object.keys(porObra)]));
@@ -2054,6 +2057,29 @@ function posicionarFichaCentro(){
   fichaX = (window.innerWidth - fichaW) / 2;
   fichaY = (window.innerHeight - fichaH) / 2;
   aplicarGeometriaFicha();
+  // cresce a altura (se precisar e couber na tela) pra abrir ja mostrando a
+  // quinzena inteira sem precisar rolar a lista de dias
+  ajustarAlturaFichaParaConteudo();
+  fichaY = (window.innerHeight - fichaH) / 2;
+  aplicarGeometriaFicha();
+}
+
+// Mede o conteudo real da lista de dias (independente da altura atual do
+// cartao, ja que .dias-scroll tem overflow-y:auto) e aumenta fichaH se
+// precisar pra caber a quinzena inteira sem rolagem interna -- nunca
+// diminui um tamanho que o usuario ja tenha deixado maior.
+function ajustarAlturaFichaParaConteudo(){
+  const modal = document.querySelector("#ficha-overlay .ficha-modal");
+  const scrollEl = document.querySelector("#ficha-overlay .dias-scroll");
+  if(!modal || !scrollEl) return;
+  const alturaFixa = modal.offsetHeight - scrollEl.offsetHeight; // cabecalho + resumo + rodape + padding
+  const alturaNecessaria = alturaFixa + scrollEl.scrollHeight + 4;
+  const novaAltura = Math.min(Math.max(fichaH, alturaNecessaria, FICHA_MIN_H), window.innerHeight * 0.92);
+  if(novaAltura !== fichaH){
+    fichaH = novaAltura;
+    fichaY = Math.min(Math.max(fichaY, 8), window.innerHeight - fichaH - 8);
+    aplicarGeometriaFicha();
+  }
 }
 
 function iniciarAcaoFicha(acao, x, y){
