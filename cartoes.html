@@ -128,7 +128,7 @@
   }
   .func-row{
     display: grid;
-    grid-template-columns: auto 1fr auto auto;
+    grid-template-columns: auto 1fr auto;
     align-items: center;
     gap: 14px;
     padding: 13px 18px;
@@ -144,9 +144,6 @@
   }
   .emp-name{ font-weight: 600; font-size: 14px; }
   .emp-sub{ font-size: 12px; color: var(--muted); margin-top: 1px; }
-  .func-dias{ text-align: center; min-width: 60px; }
-  .func-dias .lbl{ font-size: 9px; letter-spacing: .04em; color: var(--muted); text-transform: uppercase; }
-  .func-dias .val{ font-size: 14px; font-weight: 700; margin-top: 2px; font-variant-numeric: tabular-nums; }
   .btn{
     font: inherit;
     font-size: 12.5px;
@@ -380,25 +377,8 @@ function infoMes(mesStr){
   return { nome, ano, diasNoMes, label: nome + " / " + ano, periodo: "01–" + dd + "/" + mm + "/" + ano };
 }
 
-// Conta dias trabalhados (0.5 por meio-periodo) num objeto "dias" ja carregado.
-function contarDiasTrabalhados(diasObj, diasNoMes, anoNum, mesNum){
-  let total = 0;
-  for(let dia = 1; dia <= diasNoMes; dia++){
-    let diaObj = (diasObj || {})[dia];
-    if(!diaObj){
-      const wd = new Date(anoNum, mesNum - 1, dia).getDay();
-      if(wd === 0 || wd === 6) continue;
-      diaObj = {};
-    }
-    if(diaObj.m && !ehMarcador(diaObj.m)) total += 0.5;
-    if(diaObj.t && !ehMarcador(diaObj.t)) total += 0.5;
-  }
-  return total;
-}
-
 let todos = [];
 let filtro = "";
-const MES_ATUAL = mesAtualReal();
 
 async function iniciar(){
   try {
@@ -406,16 +386,6 @@ async function iniciar(){
     todos = snap.docs
       .map(d => ({ id: d.id, ...d.data() }))
       .filter(f => f.status !== "Inativo");
-
-    // carrega os dias do mes atual pra mostrar o contador na lista
-    const { diasNoMes } = infoMes(MES_ATUAL);
-    const [anoNum, mesNum] = MES_ATUAL.split("-").map(Number);
-    await Promise.all(todos.map(async f => {
-      try {
-        const p = await db.doc("funcionarios/" + f.id + "/pontos/" + MES_ATUAL).get();
-        f._dias = p.exists ? contarDiasTrabalhados(p.data().dias, diasNoMes, anoNum, mesNum) : 0;
-      } catch(e){ f._dias = 0; }
-    }));
   } catch(e){
     document.getElementById("estado-carregando").textContent = "Não deu pra carregar a equipe agora.";
     return;
@@ -453,17 +423,6 @@ function render(){
     info.appendChild(nome);
     info.appendChild(funcao);
 
-    const diasBloco = document.createElement("div");
-    diasBloco.className = "func-dias";
-    const lbl = document.createElement("div");
-    lbl.className = "lbl";
-    lbl.textContent = "Dias";
-    const val = document.createElement("div");
-    val.className = "val";
-    val.textContent = (f._dias || 0).toFixed(1);
-    diasBloco.appendChild(lbl);
-    diasBloco.appendChild(val);
-
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "btn";
@@ -472,7 +431,6 @@ function render(){
 
     row.appendChild(avatar);
     row.appendChild(info);
-    row.appendChild(diasBloco);
     row.appendChild(btn);
     lista.appendChild(row);
   });
