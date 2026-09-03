@@ -1,0 +1,585 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cartões — Equipe Concretta</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+  :root{
+    --bg: #f2f4f9;
+    --surface: #ffffff;
+    --surface-2: #f8f9fc;
+    --ink: #151b2c;
+    --muted: #626e88;
+    --line: #e2e6f0;
+    --accent: #2451d6;
+    --accent-ink: #ffffff;
+    --hero-1: #0b1330;
+    --hero-2: #1c3fb8;
+    --good-bg: #dcf3e6;
+    --good-ink: #157a4a;
+    --warn-bg: #fbe6d4;
+    --warn-ink: #a85417;
+    --danger-ink: #b3261e;
+    --shadow: 0 1px 2px rgba(20,26,50,.04), 0 8px 24px rgba(20,26,50,.06);
+    --radius: 14px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg: #0d1220;
+      --surface: #151c30;
+      --surface-2: #1a2238;
+      --ink: #eef1fb;
+      --muted: #94a1c4;
+      --line: #262f4a;
+      --accent: #6d8bff;
+      --accent-ink: #0b1330;
+      --hero-1: #070b1a;
+      --hero-2: #1a2f8c;
+      --good-bg: #113224;
+      --good-ink: #6fe0a6;
+      --warn-bg: #3a2410;
+      --warn-ink: #f0a862;
+      --danger-ink: #ff8f87;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 30px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg: #0d1220;
+    --surface: #151c30;
+    --surface-2: #1a2238;
+    --ink: #eef1fb;
+    --muted: #94a1c4;
+    --line: #262f4a;
+    --accent: #6d8bff;
+    --accent-ink: #0b1330;
+    --hero-1: #070b1a;
+    --hero-2: #1a2f8c;
+    --good-bg: #113224;
+    --good-ink: #6fe0a6;
+    --warn-bg: #3a2410;
+    --warn-ink: #f0a862;
+    --danger-ink: #ff8f87;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 30px rgba(0,0,0,.35);
+  }
+
+  *{ box-sizing: border-box; }
+  body{
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3{ margin: 0; font-family: "Archivo", "IBM Plex Sans", sans-serif; }
+
+  .page{ max-width: 720px; margin: 0 auto; padding: 24px 16px 60px; }
+
+  .hero{
+    background: linear-gradient(135deg, var(--hero-1) 0%, var(--hero-2) 130%);
+    border-radius: var(--radius);
+    padding: 24px 26px;
+    color: #f5f7ff;
+    box-shadow: var(--shadow);
+  }
+  .hero-eyebrow{
+    font-size: 11px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
+    color: #a9bdfb; margin-bottom: 8px;
+  }
+  .hero h1{ font-size: 22px; font-weight: 800; color: #fff; }
+  .hero-sub{ font-size: 13px; color: #cbd5f7; margin-top: 6px; }
+
+  .aviso{
+    margin-top: 14px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .search-wrap{
+    position: relative;
+    margin-top: 18px;
+  }
+  .search-wrap svg{ position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+  .search-wrap input{
+    width: 100%;
+    padding: 11px 14px 11px 38px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
+    font-size: 13.5px;
+  }
+  .search-wrap input:focus{ outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  .list-wrap{
+    margin-top: 14px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .func-row{
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    align-items: center;
+    gap: 14px;
+    padding: 13px 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .func-row:last-child{ border-bottom: none; }
+  .avatar{
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 12.5px; color: #fff;
+    flex-shrink: 0;
+  }
+  .emp-name{ font-weight: 600; font-size: 14px; }
+  .emp-sub{ font-size: 12px; color: var(--muted); margin-top: 1px; }
+  .func-dias{ text-align: center; min-width: 60px; }
+  .func-dias .lbl{ font-size: 9px; letter-spacing: .04em; color: var(--muted); text-transform: uppercase; }
+  .func-dias .val{ font-size: 14px; font-weight: 700; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .btn{
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    border-radius: 9px;
+    padding: 9px 13px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .btn:hover{ border-color: var(--accent); }
+
+  .estado{ padding: 60px 20px; text-align: center; color: var(--muted); font-size: 13.5px; }
+
+  .overlay{
+    position: fixed; inset: 0;
+    background: rgba(10,14,28,.5);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+    z-index: 20;
+  }
+  .modal{
+    background: var(--surface);
+    border-radius: var(--radius);
+    width: 100%; max-width: 480px;
+    padding: 22px;
+    box-shadow: var(--shadow);
+    max-height: 88vh;
+    overflow-y: auto;
+  }
+  .modal h2{ font-size: 17px; }
+  .modal-sub{ font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+
+  .mes-select-wrap{
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 16px;
+  }
+  .mes-select-wrap label{
+    font-size: 10.5px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); font-weight: 700;
+  }
+  .mes-select-wrap select{
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .status-pill{
+    display: inline-block;
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .02em;
+    margin-top: 10px;
+  }
+  .pill-conferido{ background: var(--good-bg); color: var(--good-ink); }
+  .pill-pendente{ background: var(--warn-bg); color: var(--warn-ink); }
+
+  .ficha-resumo{
+    margin-top: 16px;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface-2);
+  }
+  .ficha-resumo-titulo{
+    font-size: 9.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 8px;
+  }
+  .ficha-resumo-chips{ display: flex; flex-wrap: wrap; gap: 6px; }
+  .ficha-resumo-chip{
+    display: flex; align-items: center; gap: 6px;
+    flex-shrink: 0;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .ficha-resumo-chip .qtd{ font-weight: 700; }
+  .ficha-resumo-total{
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-top: 10px; padding-top: 8px;
+    border-top: 1px solid var(--line);
+  }
+  .ficha-resumo-total .lbl{ font-size: 10px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+  .ficha-resumo-total .val{ font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  table.dias{
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 14px;
+    font-size: 12.5px;
+  }
+  table.dias th{
+    background: var(--surface-2);
+    color: var(--muted);
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    padding: 7px 6px;
+    text-align: center;
+    border-bottom: 1px solid var(--line);
+  }
+  table.dias td{
+    padding: 6px 5px;
+    border-bottom: 1px solid var(--line);
+    text-align: center;
+  }
+  table.dias tr:last-child td{ border-bottom: none; }
+  table.dias td.dia-col{ font-weight: 700; color: var(--muted); width: 36px; }
+  table.dias td.marcado{ color: var(--danger-ink); font-weight: 700; }
+  table.dias td.vazio{ color: var(--line); }
+
+  .modal-actions{ display: flex; justify-content: flex-end; margin-top: 18px; }
+
+  [hidden]{ display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="hero">
+    <div class="hero-eyebrow">Equipe Concretta · Conferência</div>
+    <h1>Cartões da equipe</h1>
+    <div class="hero-sub">Busque seu nome e abra seu cartão pra conferir os dias lançados no mês.</div>
+  </div>
+
+  <div class="aviso">Essa página é só de consulta — dá pra ver os dias lançados de qualquer pessoa da equipe, mas não editar nada. Se algum dia estiver errado, fala com o responsável pelo ponto.</div>
+
+  <div class="search-wrap">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input id="busca" type="text" placeholder="Buscar por nome ou função...">
+  </div>
+
+  <div class="estado" id="estado-carregando">Carregando…</div>
+  <div class="estado" id="estado-vazio" hidden>Nenhum funcionário encontrado.</div>
+  <div class="list-wrap" id="lista" hidden></div>
+</div>
+
+<div class="overlay" id="ficha-overlay" hidden>
+  <div class="modal">
+    <h2 id="ficha-nome">—</h2>
+    <div class="modal-sub" id="ficha-funcao">—</div>
+
+    <div class="mes-select-wrap">
+      <label for="mes-select">Mês</label>
+      <select id="mes-select"></select>
+    </div>
+
+    <div id="status-wrap"></div>
+
+    <div class="ficha-resumo">
+      <div class="ficha-resumo-titulo">Resumo de dias por obra</div>
+      <div class="ficha-resumo-chips" id="resumo-chips"></div>
+      <div class="ficha-resumo-total">
+        <span class="lbl">Total de dias</span>
+        <span class="val" id="resumo-total">0.0</span>
+      </div>
+    </div>
+
+    <table class="dias">
+      <thead>
+        <tr><th>Dia</th><th>Manhã</th><th>Tarde</th></tr>
+      </thead>
+      <tbody id="dias-body"></tbody>
+    </table>
+
+    <div class="modal-actions">
+      <button type="button" class="btn" id="btn-fechar-ficha">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script>
+// ---------------- Firebase (mesmo projeto do index.html) ----------------
+const firebaseConfig = {
+  apiKey: "AIzaSyDk6dqvQZV2kJlkAX7FxpOOQVSDboRb65Q",
+  authDomain: "concretta-equipe.firebaseapp.com",
+  projectId: "concretta-equipe",
+  storageBucket: "concretta-equipe.firebasestorage.app",
+  messagingSenderId: "523832637233",
+  appId: "1:523832637233:web:9e381b6a53cd2f746ca210"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+const AVATAR_COLORS = ["#2451d6","#157a4a","#a85417","#7c3aed","#0f766e","#be185d","#4338ca","#b45309"];
+function corAvatar(nome){
+  let h = 0;
+  for(let i = 0; i < nome.length; i++) h = (h * 31 + nome.charCodeAt(i)) >>> 0;
+  return AVATAR_COLORS[h % AVATAR_COLORS.length];
+}
+function iniciais(nome){
+  const partes = nome.trim().split(/\s+/);
+  const a = partes[0] ? partes[0][0] : "";
+  const b = partes.length > 1 ? partes[partes.length - 1][0] : "";
+  return (a + b).toUpperCase();
+}
+
+const NOMES_MESES = ["JANEIRO","FEVEREIRO","MARÇO","ABRIL","MAIO","JUNHO","JULHO","AGOSTO","SETEMBRO","OUTUBRO","NOVEMBRO","DEZEMBRO"];
+const MES_INICIO = "2026-07";
+const MARCADORES = ["SÁBADO", "DOMINGO", "FERIADO"];
+function ehMarcador(v){ return MARCADORES.includes(v); }
+
+function mesAtualReal(){
+  const d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+}
+function somarMeses(mesStr, n){
+  const [ano, mes] = mesStr.split("-").map(Number);
+  const d = new Date(ano, mes - 1 + n, 1);
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+}
+function infoMes(mesStr){
+  const [ano, mes] = mesStr.split("-").map(Number);
+  const diasNoMes = new Date(ano, mes, 0).getDate();
+  const nome = NOMES_MESES[mes - 1];
+  const mm = String(mes).padStart(2, "0");
+  const dd = String(diasNoMes).padStart(2, "0");
+  return { nome, ano, diasNoMes, label: nome + " / " + ano, periodo: "01–" + dd + "/" + mm + "/" + ano };
+}
+
+// Conta dias trabalhados (0.5 por meio-periodo) num objeto "dias" ja carregado.
+function contarDiasTrabalhados(diasObj, diasNoMes, anoNum, mesNum){
+  let total = 0;
+  for(let dia = 1; dia <= diasNoMes; dia++){
+    let diaObj = (diasObj || {})[dia];
+    if(!diaObj){
+      const wd = new Date(anoNum, mesNum - 1, dia).getDay();
+      if(wd === 0 || wd === 6) continue;
+      diaObj = {};
+    }
+    if(diaObj.m && !ehMarcador(diaObj.m)) total += 0.5;
+    if(diaObj.t && !ehMarcador(diaObj.t)) total += 0.5;
+  }
+  return total;
+}
+
+let todos = [];
+let filtro = "";
+const MES_ATUAL = mesAtualReal();
+
+async function iniciar(){
+  try {
+    const snap = await db.collection("funcionarios").orderBy("nome").get();
+    todos = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(f => f.status !== "Inativo");
+
+    // carrega os dias do mes atual pra mostrar o contador na lista
+    const { diasNoMes } = infoMes(MES_ATUAL);
+    const [anoNum, mesNum] = MES_ATUAL.split("-").map(Number);
+    await Promise.all(todos.map(async f => {
+      try {
+        const p = await db.doc("funcionarios/" + f.id + "/pontos/" + MES_ATUAL).get();
+        f._dias = p.exists ? contarDiasTrabalhados(p.data().dias, diasNoMes, anoNum, mesNum) : 0;
+      } catch(e){ f._dias = 0; }
+    }));
+  } catch(e){
+    document.getElementById("estado-carregando").textContent = "Não deu pra carregar a equipe agora.";
+    return;
+  }
+  document.getElementById("estado-carregando").hidden = true;
+  render();
+}
+
+function render(){
+  const lista = document.getElementById("lista");
+  const vazio = document.getElementById("estado-vazio");
+  const termo = filtro.trim().toLowerCase();
+  const visiveis = todos.filter(f => !termo || (f.nome||"").toLowerCase().includes(termo) || (f.funcao||"").toLowerCase().includes(termo));
+
+  lista.hidden = visiveis.length === 0;
+  vazio.hidden = visiveis.length > 0;
+  lista.innerHTML = "";
+
+  visiveis.forEach(f => {
+    const row = document.createElement("div");
+    row.className = "func-row";
+
+    const avatar = document.createElement("div");
+    avatar.className = "avatar";
+    avatar.style.background = corAvatar(f.nome || "?");
+    avatar.textContent = iniciais(f.nome || "?");
+
+    const info = document.createElement("div");
+    const nome = document.createElement("div");
+    nome.className = "emp-name";
+    nome.textContent = f.nome;
+    const funcao = document.createElement("div");
+    funcao.className = "emp-sub";
+    funcao.textContent = f.funcao || "—";
+    info.appendChild(nome);
+    info.appendChild(funcao);
+
+    const diasBloco = document.createElement("div");
+    diasBloco.className = "func-dias";
+    const lbl = document.createElement("div");
+    lbl.className = "lbl";
+    lbl.textContent = "Dias";
+    const val = document.createElement("div");
+    val.className = "val";
+    val.textContent = (f._dias || 0).toFixed(1);
+    diasBloco.appendChild(lbl);
+    diasBloco.appendChild(val);
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btn";
+    btn.textContent = "Abrir Cartão";
+    btn.onclick = () => abrirFicha(f);
+
+    row.appendChild(avatar);
+    row.appendChild(info);
+    row.appendChild(diasBloco);
+    row.appendChild(btn);
+    lista.appendChild(row);
+  });
+}
+
+document.getElementById("busca").addEventListener("input", (e) => {
+  filtro = e.target.value;
+  render();
+});
+
+let fichaFunc = null;
+
+async function abrirFicha(f){
+  fichaFunc = f;
+  document.getElementById("ficha-nome").textContent = f.nome;
+  document.getElementById("ficha-funcao").textContent = f.funcao || "—";
+
+  const atual = mesAtualReal();
+  const limite = somarMeses(atual, 1);
+  const meses = [];
+  let cursor = MES_INICIO;
+  while(cursor <= limite){
+    meses.push(cursor);
+    cursor = somarMeses(cursor, 1);
+  }
+  const sel = document.getElementById("mes-select");
+  sel.innerHTML = meses.map(m => {
+    const { label } = infoMes(m);
+    return `<option value="${m}"${m===atual?" selected":""}>${label}</option>`;
+  }).join("");
+  sel.onchange = () => carregarMes(sel.value);
+
+  document.getElementById("ficha-overlay").hidden = false;
+  await carregarMes(atual);
+}
+
+async function carregarMes(mes){
+  if(!fichaFunc) return;
+  const { diasNoMes } = infoMes(mes);
+  const [anoNum, mesNum] = mes.split("-").map(Number);
+
+  let info = { dias: {}, statusConferencia: "Pendente" };
+  try {
+    const snap = await db.doc("funcionarios/" + fichaFunc.id + "/pontos/" + mes).get();
+    if(snap.exists) info = snap.data();
+  } catch(e){ /* sem lancamento nesse mes ainda -- fica no padrao vazio */ }
+
+  const statusWrap = document.getElementById("status-wrap");
+  statusWrap.innerHTML = `<span class="status-pill ${info.statusConferencia === "Conferido" ? "pill-conferido" : "pill-pendente"}">`
+    + (info.statusConferencia === "Conferido" ? "Conferido" : "Pendente") + "</span>";
+
+  const tbody = document.getElementById("dias-body");
+  tbody.innerHTML = "";
+  const porObra = {};
+  let total = 0;
+
+  for(let dia = 1; dia <= diasNoMes; dia++){
+    let diaObj = (info.dias || {})[dia];
+    if(!diaObj){
+      const wd = new Date(anoNum, mesNum - 1, dia).getDay();
+      if(wd === 0) diaObj = { m: "DOMINGO", t: "DOMINGO" };
+      else if(wd === 6) diaObj = { m: "SÁBADO", t: "SÁBADO" };
+      else diaObj = {};
+    }
+
+    const tr = document.createElement("tr");
+    const tdDia = document.createElement("td");
+    tdDia.className = "dia-col";
+    tdDia.textContent = String(dia).padStart(2, "0");
+
+    const tdM = document.createElement("td");
+    tdM.textContent = diaObj.m || "—";
+    tdM.className = diaObj.m ? (ehMarcador(diaObj.m) ? "marcado" : "") : "vazio";
+
+    const tdT = document.createElement("td");
+    tdT.textContent = diaObj.t || "—";
+    tdT.className = diaObj.t ? (ehMarcador(diaObj.t) ? "marcado" : "") : "vazio";
+
+    if(diaObj.m && !ehMarcador(diaObj.m)){ porObra[diaObj.m] = (porObra[diaObj.m]||0) + 0.5; total += 0.5; }
+    if(diaObj.t && !ehMarcador(diaObj.t)){ porObra[diaObj.t] = (porObra[diaObj.t]||0) + 0.5; total += 0.5; }
+
+    tr.appendChild(tdDia);
+    tr.appendChild(tdM);
+    tr.appendChild(tdT);
+    tbody.appendChild(tr);
+  }
+
+  const chips = document.getElementById("resumo-chips");
+  const nomesObra = Object.keys(porObra).sort((a,b)=>a.localeCompare(b,"pt-BR"));
+  chips.innerHTML = nomesObra.length ? nomesObra.map(nome => {
+    const cor = corAvatar(nome);
+    return `<div class="ficha-resumo-chip" style="background:${cor}1a;border-color:${cor}55;color:${cor}">`
+      + `<span>${nome}</span><span class="qtd">${porObra[nome].toFixed(1)}</span></div>`;
+  }).join("") : `<span style="color:var(--muted);font-size:12px">Nenhum dia lançado ainda nesse mês.</span>`;
+  document.getElementById("resumo-total").textContent = total.toFixed(1);
+}
+
+function fecharFicha(){
+  document.getElementById("ficha-overlay").hidden = true;
+  fichaFunc = null;
+}
+document.getElementById("btn-fechar-ficha").onclick = fecharFicha;
+document.getElementById("ficha-overlay").addEventListener("click", (e) => {
+  if(e.target.id === "ficha-overlay") fecharFicha();
+});
+
+iniciar();
+</script>
+</body>
+</html>
