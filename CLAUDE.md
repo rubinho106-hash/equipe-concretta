@@ -140,6 +140,30 @@ qualquer lugar mostrando um nome que não existe mais na aba Obras — é sinal 
 confirmar que `carregarObras()` está sendo chamado cedo o bastante e que `OBRAS_SEED` está com os nomes
 certos como fallback.
 
+## Segunda página: funcionario.html (para teste, 02/09/2026)
+
+Página separada, só-leitura, pra funcionário conferir o próprio cartão antes do fechamento — não faz
+parte do `index.html`, é um arquivo HTML autocontido próprio (mesmo tema/CSS copiado, sem import de
+módulo — decisão deliberada, ver "Análise de arquitetura recebida" abaixo). Lê `?id=<funcId>` da URL,
+mostra só os dados daquele funcionário (mês, resumo por obra, tabela de dias em texto puro). **Zero
+chamada de escrita no Firestore no arquivo inteiro.** Sem PIX, sem valor a pagar. Link de cada
+funcionário sai do botão "Copiar link" (ícone de corrente) na Lista de Funcionários.
+
+**Limitação de privacidade conhecida e aceita**: como as regras do Firestore continuam abertas (sem
+Auth), o link "só-leitura" impede editar pela UI mas não impede alguém trocar o `?id=` na URL e ver o
+cartão de outra pessoa — é por obscuridade, não uma trava de verdade. Rubens foi avisado disso antes de
+pedir pra construir mesmo assim.
+
+## Análise de arquitetura recebida 02/09/2026 — NÃO IMPLEMENTAR sem ordem explícita
+
+Rubens mandou uma proposta grande (modularizar `index.html` em `css/`/`js/`/`components/`, páginas
+admin/funcionário separadas, Firebase Authentication, Cloud Functions pra escritas sensíveis, e um
+projeto futuro de GPS+biometria pro funcionário bater ponto sozinho) e disse explicitamente **"não vamos
+mexer em nada até segunda ordem"**. Nada disso foi implementado ainda, exceto a página `funcionario.html`
+acima (que ele liberou especificamente, "para teste", depois da análise). Se uma sessão futura for
+trabalhar nisso: reconfirmar com o Rubens que a ordem foi dada de verdade — não presumir que uma análise
+antiga já é permissão.
+
 ## Cadastro (32 pessoas em 02/09/2026)
 
 Os 32 originais do seed, **menos** Daniel Júlio, Valdecir Alves dos Reis, Lucas Gomes Araujo e Silvestre
