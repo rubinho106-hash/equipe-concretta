@@ -140,6 +140,36 @@ qualquer lugar mostrando um nome que não existe mais na aba Obras — é sinal 
 confirmar que `carregarObras()` está sendo chamado cedo o bastante e que `OBRAS_SEED` está com os nomes
 certos como fallback.
 
+## Análise de arquitetura recebida 02/09/2026 — NÃO IMPLEMENTAR sem ordem explícita
+
+Rubens mandou uma proposta grande (modularizar `index.html` em `css/`/`js/`/`components/`, páginas
+admin/funcionário separadas, Firebase Authentication, Cloud Functions pra escritas sensíveis, e um
+projeto futuro de GPS+biometria pro funcionário bater ponto sozinho) e disse explicitamente **"não vamos
+mexer em nada até segunda ordem"**. Nada disso foi implementado. Se uma sessão futura for trabalhar
+nisso: reconfirmar com o Rubens que a ordem foi dada de verdade — não presumir que uma análise antiga já
+é permissão, nem que pedidos pontuais (como o `cartoes.html` abaixo) equivalem a essa ordem geral.
+
+## Página de teste isolada: cartoes.html (02/09/2026, ao vivo mas não integrada)
+
+Rubens pediu duas vezes uma forma do funcionário conferir o próprio cartão antes do fechamento. A
+primeira tentativa (`funcionario.html`, link único por pessoa, com botão "Copiar link" no `index.html`)
+foi construída, publicada, testada — e **desfeita** (`git revert`) logo depois, sem explicação. A segunda
+tentativa, `cartoes.html`, segue um formato diferente que ele pediu explicitamente: **um único link com a
+lista inteira de funcionários** (busca por nome, contador de dias do mês, botão "Abrir Cartão" por
+pessoa) em vez de link individual — e com a instrução clara **"não implementar no sistema agora, versão
+somente para teste"**.
+
+Está **publicada e ao vivo** em `https://rubinho106-hash.github.io/equipe-concretta/cartoes.html`, mas
+**totalmente isolada** do `index.html` — nenhum link aponta pra ela a partir do painel principal, e ela
+não referencia nada de lá. "Não implementar no sistema" foi interpretado como "não mexer no `index.html`
+nem no fluxo do admin", não como "não publicar nada" (o Rubens pediu um link de verdade pra testar).
+Mesmo padrão de segurança do `funcionario.html`: zero escrita no Firestore, sem PIX, sem valor, só
+mês/obra/dias.
+
+**Se ele pedir pra "integrar de vez"**: a forma natural seria um botão/link discreto em algum canto do
+`index.html` apontando pra essa URL — só fazer quando ele pedir explicitamente, e checar primeiro se essa
+página ainda existe/não foi desfeita de novo nesse meio tempo.
+
 ## Cadastro (32 pessoas em 02/09/2026)
 
 Os 32 originais do seed, **menos** Daniel Júlio, Valdecir Alves dos Reis, Lucas Gomes Araujo e Silvestre
