@@ -233,12 +233,13 @@
   }
   .ficha-resumo-chip .qtd{ font-weight: 700; }
   .ficha-resumo-total{
-    display: flex; justify-content: space-between; align-items: baseline;
+    display: flex; gap: 10px;
     margin-top: 10px; padding-top: 8px;
     border-top: 1px solid var(--line);
   }
-  .ficha-resumo-total .lbl{ font-size: 10px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
-  .ficha-resumo-total .val{ font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .ficha-resumo-total .quinzena{ flex: 1; text-align: center; }
+  .ficha-resumo-total .lbl{ font-size: 9.5px; letter-spacing: .03em; text-transform: uppercase; color: var(--muted); }
+  .ficha-resumo-total .val{ font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 2px; }
 
   table.dias{
     width: 100%;
@@ -308,8 +309,14 @@
       <div class="ficha-resumo-titulo">Resumo de dias por obra</div>
       <div class="ficha-resumo-chips" id="resumo-chips"></div>
       <div class="ficha-resumo-total">
-        <span class="lbl">Total de dias</span>
-        <span class="val" id="resumo-total">0.0</span>
+        <div class="quinzena">
+          <div class="lbl" id="resumo-q1-lbl">1ª quinzena (01–15)</div>
+          <div class="val" id="resumo-q1">0.0</div>
+        </div>
+        <div class="quinzena">
+          <div class="lbl" id="resumo-q2-lbl">2ª quinzena (16–30)</div>
+          <div class="val" id="resumo-q2">0.0</div>
+        </div>
       </div>
     </div>
 
@@ -485,7 +492,7 @@ async function carregarMes(mes){
   const tbody = document.getElementById("dias-body");
   tbody.innerHTML = "";
   const porObra = {};
-  let total = 0;
+  let totalQ1 = 0, totalQ2 = 0;
 
   for(let dia = 1; dia <= diasNoMes; dia++){
     let diaObj = (info.dias || {})[dia];
@@ -509,8 +516,11 @@ async function carregarMes(mes){
     tdT.textContent = diaObj.t || "—";
     tdT.className = diaObj.t ? (ehMarcador(diaObj.t) ? "marcado" : "") : "vazio";
 
-    if(diaObj.m && !ehMarcador(diaObj.m)){ porObra[diaObj.m] = (porObra[diaObj.m]||0) + 0.5; total += 0.5; }
-    if(diaObj.t && !ehMarcador(diaObj.t)){ porObra[diaObj.t] = (porObra[diaObj.t]||0) + 0.5; total += 0.5; }
+    // dias 01-15 = 1a quinzena, 16 ate o fim do mes = 2a quinzena
+    let diaQtd = 0;
+    if(diaObj.m && !ehMarcador(diaObj.m)){ porObra[diaObj.m] = (porObra[diaObj.m]||0) + 0.5; diaQtd += 0.5; }
+    if(diaObj.t && !ehMarcador(diaObj.t)){ porObra[diaObj.t] = (porObra[diaObj.t]||0) + 0.5; diaQtd += 0.5; }
+    if(dia <= 15) totalQ1 += diaQtd; else totalQ2 += diaQtd;
 
     tr.appendChild(tdDia);
     tr.appendChild(tdM);
@@ -525,7 +535,9 @@ async function carregarMes(mes){
     return `<div class="ficha-resumo-chip" style="background:${cor}1a;border-color:${cor}55;color:${cor}">`
       + `<span>${nome}</span><span class="qtd">${porObra[nome].toFixed(1)}</span></div>`;
   }).join("") : `<span style="color:var(--muted);font-size:12px">Nenhum dia lançado ainda nesse mês.</span>`;
-  document.getElementById("resumo-total").textContent = total.toFixed(1);
+  document.getElementById("resumo-q1").textContent = totalQ1.toFixed(1);
+  document.getElementById("resumo-q2").textContent = totalQ2.toFixed(1);
+  document.getElementById("resumo-q2-lbl").textContent = "2ª quinzena (16–" + String(diasNoMes).padStart(2,"0") + ")";
 }
 
 function fecharFicha(){
