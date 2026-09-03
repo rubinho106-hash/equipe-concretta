@@ -200,6 +200,33 @@ Encarregado R$200. Aplicado a todos os 32 via `valorDiaria` no cadastro. Usar es
 funcionário novo — se aparecer uma função fora dessas quatro, perguntar ao Rubens antes de inventar um
 valor.
 
+## Filtro de quinzena no cartão do admin (03/09/2026)
+
+O cartão (ficha) da Conferência de Ponto ganhou um toggle "1ª quinzena (01–15)" /
+"2ª quinzena (16–fim do mês, rótulo se ajusta a 28/29/30/31)" logo acima do resumo por
+obra. `fichaQuinzena` (module-level, `1` ou `2`) controla o intervalo de dias que
+`renderFichaConteudo()` desenha (extraída de dentro de `abrirFicha()` — essa função
+agora só popula cabeçalho/PIX/status e chama `renderFichaConteudo()`). Sempre abre na
+1ª quinzena (reset em `abrirFicha()` quando `!jaAberta`, ou seja, card recém-aberto,
+não numa re-renderização depois de salvar um dia).
+
+**Ajuste no mesmo dia — cartão tem que abrir mostrando a quinzena inteira sem rolar**:
+o card por padrão (640×640, ou o tamanho salvo de uma sessão anterior) não tinha altura
+suficiente pra caber as 15/16 linhas da quinzena sem scroll interno. Corrigido com
+`ajustarAlturaFichaParaConteudo()` — mede o conteúdo real da lista de dias
+(`scrollEl.scrollHeight`, que dá o tamanho natural mesmo com `overflow-y:auto`
+cortando visualmente) e cresce `fichaH` até caber tudo, respeitando o teto de `92vh`
+(`.ficha-modal{ max-height: 92vh }`) e nunca encolhendo um tamanho que já seja maior
+(seja o padrão, seja salvo de antes). Roda em dois pontos: dentro de
+`posicionarFichaCentro()` (abertura nova) e nos dois `onclick` dos botões de quinzena
+(trocar de quinzena também pode mudar a contagem de linhas — quinzena 2 de um mês de
+31 dias tem 16 linhas). Também precisou compactar CSS (paddings/margens do cabeçalho,
+do "Resumo de dias por obra" e das linhas da tabela) — sem isso, mesmo crescendo até
+92vh não sobrava espaço pra 15-16 linhas em telas comuns. Testado: quinzena 1 (15
+linhas), quinzena 2 de setembro (15 linhas) e quinzena 2 de outubro (16 linhas, pior
+caso) — todas renderizam sem scrollbar; testado também partindo de um tamanho salvo
+pequeno (400px de altura) no `localStorage`, confirmando que o card cresce mesmo assim.
+
 ## Lançamento diário de ponto por WhatsApp
 
 Desde 02/09/2026 o lançamento diário vai direto aqui (não mais no Excel antigo). Fluxo:
