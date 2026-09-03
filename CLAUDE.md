@@ -124,8 +124,10 @@ entre as duas telas.
 inteiro (`funcionarios/{id}/pontos/{mes}.pagamentos.{obra}`, `statusPagamento()`/`alternarPagamento()`),
 já que uma pessoa pode aparecer em mais de uma obra no mesmo mês. **Independente do mês estar fechado** —
 fechar só trava o lançamento dos dias; aprovar pagamento é uma etapa separada, geralmente feita depois.
-2 cards extras no topo mostram "Aprovado" e "Falta aprovar" (dias+valor, respeitando o filtro de obra) —
-"Falta aprovar" é sempre `total - aprovado`.
+2 cards extras no topo mostram "Aprovado" e "Falta aprovar" — mostram **quantidade de funcionários**
+("N de M funcionários", não soma de R$ — pedido explícito do Rubens), respeitando o filtro de obra.
+"Falta aprovar" é sempre `total - aprovado` em contagem de gente (`qtdTotal`/`qtdAprovados` em
+`agruparFechamentoPorObra()`), não em dinheiro.
 
 **Cuidado extra ao testar toggles de status (Conferido/Pendente, Ativo/Inativo, Pagamento) em produção**:
 nunca assumir o estado inicial — ler antes de togglear. Já aconteceu de um teste reverter sem querer uma
@@ -149,26 +151,24 @@ mexer em nada até segunda ordem"**. Nada disso foi implementado. Se uma sessão
 nisso: reconfirmar com o Rubens que a ordem foi dada de verdade — não presumir que uma análise antiga já
 é permissão, nem que pedidos pontuais (como o `cartoes.html` abaixo) equivalem a essa ordem geral.
 
-## Página de teste isolada: cartoes.html (02/09/2026, ao vivo mas não integrada)
+## cartoes.html — implantada oficialmente (02/09/2026)
 
 Rubens pediu duas vezes uma forma do funcionário conferir o próprio cartão antes do fechamento. A
 primeira tentativa (`funcionario.html`, link único por pessoa, com botão "Copiar link" no `index.html`)
 foi construída, publicada, testada — e **desfeita** (`git revert`) logo depois, sem explicação. A segunda
-tentativa, `cartoes.html`, segue um formato diferente que ele pediu explicitamente: **um único link com a
-lista inteira de funcionários** (busca por nome, contador de dias do mês, botão "Abrir Cartão" por
-pessoa) em vez de link individual — e com a instrução clara **"não implementar no sistema agora, versão
-somente para teste"**.
+tentativa, `cartoes.html`, segue um formato diferente: **um único link com a lista inteira de
+funcionários** (busca por nome, botão "Abrir Cartão" por pessoa, mês selecionável dentro do cartão,
+resumo por obra dividido em 1ª/2ª quinzena) em vez de link individual. Foi construída primeiro como
+página **isolada** ("não implementar no sistema agora, versão somente para teste"), testada, ajustada
+(removida a coluna "Dias" da lista, total virou 2 quinzenas) — e depois **implantada de vez**: Rubens
+confirmou com "IMPLANTAR" quando perguntei se quer formalizar.
 
-Está **publicada e ao vivo** em `https://rubinho106-hash.github.io/equipe-concretta/cartoes.html`, mas
-**totalmente isolada** do `index.html` — nenhum link aponta pra ela a partir do painel principal, e ela
-não referencia nada de lá. "Não implementar no sistema" foi interpretado como "não mexer no `index.html`
-nem no fluxo do admin", não como "não publicar nada" (o Rubens pediu um link de verdade pra testar).
-Mesmo padrão de segurança do `funcionario.html`: zero escrita no Firestore, sem PIX, sem valor, só
-mês/obra/dias.
-
-**Se ele pedir pra "integrar de vez"**: a forma natural seria um botão/link discreto em algum canto do
-`index.html` apontando pra essa URL — só fazer quando ele pedir explicitamente, e checar primeiro se essa
-página ainda existe/não foi desfeita de novo nesse meio tempo.
+Está **publicada, ao vivo, e agora oficialmente parte do sistema**:
+`https://rubinho106-hash.github.io/equipe-concretta/cartoes.html`, com um link discreto (`.hero-link`,
+ícone de corrente) no topo do `index.html`, logo abaixo do subtítulo do hero, abrindo `cartoes.html` numa
+aba nova. Mesmo padrão de segurança de antes: zero escrita no Firestore, sem PIX, sem valor, só
+mês/obra/dias — e a mesma limitação de privacidade (regras do Firestore abertas, então é obscuridade por
+URL, não uma trava de verdade — Rubens já foi avisado disso).
 
 ## Cadastro (32 pessoas em 02/09/2026)
 
