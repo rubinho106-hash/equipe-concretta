@@ -1505,8 +1505,8 @@ function agruparFechamentoPorObra(){
   const { diasNoMes } = infoMes(mesConferencia);
   const [anoNum, mesNum] = mesConferencia.split("-").map(Number);
   const grupos = {};
-  let totalDias = 0, totalValor = 0;
-  let diasAprovados = 0, valorAprovado = 0;
+  let totalDias = 0, totalValor = 0, qtdTotal = 0;
+  let diasAprovados = 0, valorAprovado = 0, qtdAprovados = 0;
 
   todos.filter(f => f.status !== "Inativo").forEach(f => {
     const info = dadosMes[f.id] || { dias: {} };
@@ -1515,25 +1515,29 @@ function agruparFechamentoPorObra(){
     Object.entries(porObra).forEach(([obra, dias]) => {
       if(dias <= 0) return;
       const valor = dias * valorDiaria;
-      if(!grupos[obra]) grupos[obra] = { dias: 0, valor: 0, diasAprovados: 0, valorAprovado: 0, linhas: [] };
+      if(!grupos[obra]) grupos[obra] = { dias: 0, valor: 0, diasAprovados: 0, valorAprovado: 0, qtdTotal: 0, qtdAprovados: 0, linhas: [] };
       grupos[obra].dias += dias;
       grupos[obra].valor += valor;
+      grupos[obra].qtdTotal += 1;
       grupos[obra].linhas.push({ f, dias, valor });
       totalDias += dias;
       totalValor += valor;
+      qtdTotal += 1;
       // separa o que ja foi aprovado do que ainda ta pendente -- a
       // "subtracao" (o que falta aprovar) e so total menos aprovado,
       // calculada na hora de exibir, nao precisa guardar os dois.
       if(statusPagamento(f, obra) === "Aprovado"){
         grupos[obra].diasAprovados += dias;
         grupos[obra].valorAprovado += valor;
+        grupos[obra].qtdAprovados += 1;
         diasAprovados += dias;
         valorAprovado += valor;
+        qtdAprovados += 1;
       }
     });
   });
 
-  return { grupos, totalDias, totalValor, diasAprovados, valorAprovado };
+  return { grupos, totalDias, totalValor, qtdTotal, diasAprovados, valorAprovado, qtdAprovados };
 }
 
 // Status de pagamento por funcionario+obra (nao por mes inteiro, ja que
@@ -1608,7 +1612,7 @@ function renderFechamento(){
   btnAcao.textContent = fechado ? "Reabrir mês" : "Fechar mês";
   btnAcao.className = "btn " + (fechado ? "btn-ghost" : "btn-primary");
 
-  const { grupos, totalDias, totalValor, diasAprovados, valorAprovado } = agruparFechamentoPorObra();
+  const { grupos, totalDias, totalValor, qtdTotal, diasAprovados, valorAprovado, qtdAprovados } = agruparFechamentoPorObra();
 
   // Os cards de total refletem a obra selecionada no filtro -- "Todas as
   // obras" mostra a soma do mes inteiro, uma obra especifica mostra so o
@@ -1617,21 +1621,22 @@ function renderFechamento(){
   const grupoAtivo = filtrandoObra ? grupos[filtroObraFechamento] : null;
   const diasExibidos = filtrandoObra ? (grupoAtivo?.dias || 0) : totalDias;
   const valorExibido = filtrandoObra ? (grupoAtivo?.valor || 0) : totalValor;
-  const diasAprovExibidos = filtrandoObra ? (grupoAtivo?.diasAprovados || 0) : diasAprovados;
-  const valorAprovExibido = filtrandoObra ? (grupoAtivo?.valorAprovado || 0) : valorAprovado;
+  const qtdTotalExibida = filtrandoObra ? (grupoAtivo?.qtdTotal || 0) : qtdTotal;
+  const qtdAprovExibida = filtrandoObra ? (grupoAtivo?.qtdAprovados || 0) : qtdAprovados;
   // "a subtracao" pedida pelo Rubens: o que ainda falta aprovar e sempre
-  // total menos aprovado, tanto em dias quanto em valor.
-  const diasFalta = diasExibidos - diasAprovExibidos;
-  const valorFalta = valorExibido - valorAprovExibido;
+  // o total de funcionarios menos os ja aprovados.
+  const qtdFalta = qtdTotalExibida - qtdAprovExibida;
 
   document.getElementById("fechamento-stat-dias").textContent = diasExibidos.toFixed(1);
   document.getElementById("fechamento-stat-valor").textContent = formatarMoeda(valorExibido);
   document.getElementById("fechamento-label-dias").textContent = filtrandoObra ? "Dias — " + filtroObraFechamento : "Total de dias";
   document.getElementById("fechamento-label-valor").textContent = filtrandoObra ? "A pagar — " + filtroObraFechamento : "Total a pagar";
-  document.getElementById("fechamento-stat-aprovado").textContent = formatarMoeda(valorAprovExibido);
-  document.getElementById("fechamento-sub-aprovado").textContent = diasAprovExibidos.toFixed(1) + " dias";
-  document.getElementById("fechamento-stat-falta").textContent = formatarMoeda(valorFalta);
-  document.getElementById("fechamento-sub-falta").textContent = diasFalta.toFixed(1) + " dias";
+  // Aprovado/Falta aprovar mostram quantidade de funcionarios, nao soma
+  // de valor -- pedido explicito do Rubens.
+  document.getElementById("fechamento-stat-aprovado").textContent = qtdAprovExibida + " de " + qtdTotalExibida;
+  document.getElementById("fechamento-sub-aprovado").textContent = "funcionários";
+  document.getElementById("fechamento-stat-falta").textContent = qtdFalta + " de " + qtdTotalExibida;
+  document.getElementById("fechamento-sub-falta").textContent = "funcionários";
 
   renderFechamentoObrasFiltro(grupos);
 
