@@ -1226,7 +1226,7 @@ function ehMarcador(v){ return MARCADORES.includes(v); }
 
 let mesConferencia = null;
 let listaMeses = [];
-let dadosMes = {}; // { funcId: { dias: {...}, statusConferencia } }
+let dadosMes = {}; // { funcId: { dias: {...}, statusConferencia: {q1,q2} } }
 let filtroConf = "";
 
 document.getElementById("seg-equipe").onclick = () => mostrarSegmento("equipe");
@@ -1454,7 +1454,7 @@ async function selecionarMes(mes){
   try {
     await Promise.all(todos.map(async f => {
       const snap = await db.doc("funcionarios/" + f.id + "/pontos/" + mes).get();
-      dadosMes[f.id] = snap.exists ? snap.data() : { dias: {}, statusConferencia: "Pendente" };
+      dadosMes[f.id] = snap.exists ? snap.data() : { dias: {}, statusConferencia: { q1: "Pendente", q2: "Pendente" } };
     }));
   } catch(e){
     loading.textContent = "Não deu pra carregar esse período agora.";
@@ -1753,6 +1753,21 @@ document.getElementById("btn-fechamento-csv").onclick = () => {
   toast("Relatório salvo.");
 };
 
+// Status de conferencia agora e guardado por quinzena: statusConferencia
+// vira {q1, q2} em vez de uma string unica pro mes inteiro. Documentos
+// gravados antes de 03/09/2026 ainda tem statusConferencia como string --
+// lida aqui como fallback pras duas quinzenas, ate alguem togglear alguma
+// (dai vira objeto {q1,q2} de verdade, sem precisar migrar nada em lote).
+function statusQuinzena(info, quinzena){
+  const sc = (info || {}).statusConferencia;
+  if(sc && typeof sc === "object") return sc["q" + quinzena] === "Conferido" ? "Conferido" : "Pendente";
+  return sc === "Conferido" ? "Conferido" : "Pendente";
+}
+// "Conferido" no resumo do mes (lista/stats) exige as duas quinzenas conferidas
+function statusMesConferido(info){
+  return statusQuinzena(info, 1) === "Conferido" && statusQuinzena(info, 2) === "Conferido";
+}
+
 function renderConfLista(){
   const cont = document.getElementById("conf-lista");
   const empty = document.getElementById("conf-empty-state");
@@ -1763,7 +1778,7 @@ function renderConfLista(){
   const ativosFuncs = todos.filter(f => f.status !== "Inativo");
 
   let conferidos = 0;
-  ativosFuncs.forEach(f => { if((dadosMes[f.id] || {}).statusConferencia === "Conferido") conferidos++; });
+  ativosFuncs.forEach(f => { if(statusMesConferido(dadosMes[f.id] || {})) conferidos++; });
   document.getElementById("conf-stat-total").textContent = ativosFuncs.length;
   document.getElementById("conf-stat-conferidos").textContent = conferidos;
   document.getElementById("conf-stat-pendentes").textContent = ativosFuncs.length - conferidos;
@@ -1773,7 +1788,7 @@ function renderConfLista(){
   empty.hidden = visiveis.length > 0;
 
   visiveis.forEach(f => {
-    const info = dadosMes[f.id] || { dias: {}, statusConferencia: "Pendente" };
+    const info = dadosMes[f.id] || { dias: {}, statusConferencia: {} };
     const row = document.createElement("div");
     row.className = "conf-row";
 
@@ -1803,10 +1818,14 @@ function renderConfLista(){
     diasBloco.appendChild(dLbl);
     diasBloco.appendChild(dVal);
 
+    // Resumo do mes inteiro (as duas quinzenas) -- clicar abre o cartao,
+    // ja que agora e la que da pra ver/togglear cada quinzena separado
+    const conferidoTotal = statusMesConferido(info);
     const statusPill = document.createElement("button");
-    statusPill.className = "pill " + (info.statusConferencia === "Conferido" ? "pill-conferido" : "pill-pendente");
-    statusPill.textContent = info.statusConferencia === "Conferido" ? "Conferido" : "Pendente";
-    statusPill.onclick = () => alternarConferencia(f);
+    statusPill.className = "pill " + (conferidoTotal ? "pill-conferido" : "pill-pendente");
+    statusPill.textContent = conferidoTotal ? "Conferido" : "Pendente";
+    statusPill.title = "Conferido = as duas quinzenas conferidas. Clique pra abrir o cartão e conferir cada uma.";
+    statusPill.onclick = () => abrirFicha(f);
 
     const verBtn = document.createElement("button");
     verBtn.className = "btn";
@@ -1839,17 +1858,26 @@ async function garantirDocPontos(funcId, mes){
     if(wd === 0) dias[dia] = { m: "DOMINGO", t: "DOMINGO" };
     else if(wd === 6) dias[dia] = { m: "SÁBADO", t: "SÁBADO" };
   }
-  await ref.set({ dias, statusConferencia: "Pendente" });
+  await ref.set({ dias, statusConferencia: { q1: "Pendente", q2: "Pendente" } });
   return ref;
 }
 
-async function alternarConferencia(f){
+// quinzena: 1 ou 2 -- so alterna o status daquela quinzena, mantendo a outra
+// como estava (grava o objeto {q1,q2} inteiro de uma vez so, nunca um
+// dot-path em cima de statusConferencia, ja que um doc antigo pode ter esse
+// campo como string solta e o update() nao faz merge profundo mesmo assim).
+async function alternarConferencia(f, quinzena){
   if(mesesFechados[mesConferencia]){ toast("Esse mês está fechado — reabra em Fechamento de Ponto pra editar."); return; }
-  const atual = (dadosMes[f.id] || {}).statusConferencia === "Conferido" ? "Conferido" : "Pendente";
+  const info = dadosMes[f.id] || { dias: {}, statusConferencia: {} };
+  const atual = statusQuinzena(info, quinzena);
   const novo = atual === "Conferido" ? "Pendente" : "Conferido";
+  const statusFinal = {
+    q1: quinzena === 1 ? novo : statusQuinzena(info, 1),
+    q2: quinzena === 2 ? novo : statusQuinzena(info, 2),
+  };
   try {
     const ref = await garantirDocPontos(f.id, mesConferencia);
-    await ref.update({ statusConferencia: novo });
+    await ref.update({ statusConferencia: statusFinal });
     const snap = await ref.get();
     dadosMes[f.id] = snap.data();
     renderConfLista();
@@ -1876,20 +1904,14 @@ async function abrirFicha(f){
   fichaFunc = f;
   if(!jaAberta) fichaQuinzena = 1; // toda abertura nova comeca na 1a quinzena
 
-  const info = dadosMes[f.id] || { dias: {}, statusConferencia: "Pendente" };
   const { label, periodo } = infoMes(mesConferencia);
 
   document.getElementById("ficha-nome").textContent = f.nome;
   document.getElementById("ficha-funcao").textContent = f.funcao || "—";
   document.getElementById("ficha-pix").textContent = "PIX: " + (f.pix || "—");
   document.getElementById("ficha-periodo").textContent = label + " · " + periodo;
-  const statusBtn = document.getElementById("ficha-status");
-  statusBtn.className = "pill " + (info.statusConferencia === "Conferido" ? "pill-conferido" : "pill-pendente");
-  statusBtn.textContent = info.statusConferencia === "Conferido" ? "Conferido" : "Pendente";
-  statusBtn.onclick = () => alternarConferencia(f).then(() => abrirFicha(f));
 
   const fechado = !!mesesFechados[mesConferencia];
-  statusBtn.disabled = fechado;
   const dicaEl = document.querySelector("#ficha-overlay .ficha-dica");
   dicaEl.textContent = fechado
     ? "🔒 mês fechado — somente leitura"
@@ -1905,7 +1927,7 @@ async function abrirFicha(f){
 // na abertura quanto ao trocar de quinzena (nao precisa reler o Firestore).
 function renderFichaConteudo(){
   if(!fichaFunc) return;
-  const info = dadosMes[fichaFunc.id] || { dias: {}, statusConferencia: "Pendente" };
+  const info = dadosMes[fichaFunc.id] || { dias: {}, statusConferencia: {} };
   const { diasNoMes } = infoMes(mesConferencia);
   const [anoNum, mesNum] = mesConferencia.split("-").map(Number);
   const fechado = !!mesesFechados[mesConferencia];
@@ -1915,6 +1937,15 @@ function renderFichaConteudo(){
   btnQ2.textContent = "2ª quinzena (16–" + String(diasNoMes).padStart(2, "0") + ")";
   btnQ1.classList.toggle("active", fichaQuinzena === 1);
   btnQ2.classList.toggle("active", fichaQuinzena === 2);
+
+  // status de conferencia e por quinzena -- o pill do cabecalho segue a
+  // quinzena selecionada no momento, nao o mes inteiro
+  const statusBtn = document.getElementById("ficha-status");
+  const statusAtual = statusQuinzena(info, fichaQuinzena);
+  statusBtn.className = "pill " + (statusAtual === "Conferido" ? "pill-conferido" : "pill-pendente");
+  statusBtn.textContent = statusAtual === "Conferido" ? "Conferido" : "Pendente";
+  statusBtn.disabled = fechado;
+  statusBtn.onclick = () => alternarConferencia(fichaFunc, fichaQuinzena).then(() => { renderFichaConteudo(); });
 
   const diaInicio = fichaQuinzena === 1 ? 1 : 16;
   const diaFim = fichaQuinzena === 1 ? 15 : diasNoMes;
