@@ -1008,6 +1008,12 @@ function render(){
 
     const actions = document.createElement("div");
     actions.className = "row-actions";
+    const linkBtn = document.createElement("button");
+    linkBtn.className = "icon-btn";
+    linkBtn.title = "Copiar link do cartão desse funcionário (só leitura)";
+    linkBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
+    linkBtn.onclick = () => copiarLinkFuncionario(f);
+    actions.appendChild(linkBtn);
     const editBtn = document.createElement("button");
     editBtn.className = "icon-btn";
     editBtn.title = "Editar";
@@ -1021,6 +1027,16 @@ function render(){
     row.appendChild(actions);
     lista.appendChild(row);
   });
+}
+
+async function copiarLinkFuncionario(f){
+  const url = new URL("funcionario.html?id=" + encodeURIComponent(f.id), location.href).href;
+  try {
+    await navigator.clipboard.writeText(url);
+    toast("Link do cartão de " + f.nome + " copiado.");
+  } catch(e){
+    toast("Não deu pra copiar — o link é: " + url);
+  }
 }
 
 async function alternarStatus(f){
