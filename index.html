@@ -396,12 +396,12 @@
   .fechamento-banner.fechado{ background: var(--warn-bg); color: var(--warn-ink); }
   .fechamento-header-row, .fechamento-row{
     display: grid;
-    grid-template-columns: 1fr 56px 110px 116px 140px;
+    grid-template-columns: 1fr 56px 116px 140px;
     align-items: center;
     gap: 14px;
     padding: 12px 18px;
   }
-  .fechamento-header-row > div:not(:first-child), .fechamento-dias, .fechamento-valor, .fechamento-pix{ text-align: right; }
+  .fechamento-header-row > div:not(:first-child), .fechamento-dias, .fechamento-pix{ text-align: right; }
   .fechamento-status{ display: flex; justify-content: flex-end; }
   .fechamento-header-row{
     font-size: 10px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); font-weight: 700;
@@ -410,7 +410,6 @@
   .fechamento-row{ border-bottom: 1px solid var(--line); }
   .fechamento-row:last-child{ border-bottom: none; }
   .fechamento-dias{ font-variant-numeric: tabular-nums; }
-  .fechamento-valor{ font-weight: 700; font-variant-numeric: tabular-nums; }
   .fechamento-pix{
     font-size: 12px; color: var(--muted);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -674,14 +673,10 @@
 
     <div class="fechamento-banner" id="fechamento-banner" hidden></div>
 
-    <div class="stats-row stats-row-4">
+    <div class="stats-row">
       <div class="stat-card">
         <div class="stat-label" id="fechamento-label-dias">Total de dias</div>
         <div class="stat-num" id="fechamento-stat-dias">—</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label" id="fechamento-label-valor">Total a pagar</div>
-        <div class="stat-num" id="fechamento-stat-valor">—</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Aprovado</div>
@@ -710,7 +705,6 @@
       <div class="fechamento-header-row" id="fechamento-header-row" hidden>
         <div>Funcionário</div>
         <div>Dias</div>
-        <div>Valor</div>
         <div>Pagamento</div>
         <div>PIX</div>
       </div>
@@ -758,10 +752,6 @@
       <div class="field">
         <label for="f-pix">Chave PIX</label>
         <input id="f-pix" autocomplete="off">
-      </div>
-      <div class="field">
-        <label for="f-diaria">Valor da diária (R$)</label>
-        <input id="f-diaria" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Ex: 150.00">
       </div>
       <div class="field">
         <label for="f-status">Situação</label>
@@ -1066,7 +1056,6 @@ function abrirModal(f){
   document.getElementById("f-nome").value = f ? f.nome || "" : "";
   document.getElementById("f-funcao").value = f ? f.funcao || "" : "";
   document.getElementById("f-pix").value = f ? f.pix || "" : "";
-  document.getElementById("f-diaria").value = f && f.valorDiaria ? f.valorDiaria : "";
   document.getElementById("f-status").value = f && f.status === "Inativo" ? "Inativo" : "Ativo";
   document.getElementById("btn-excluir").hidden = !f;
   document.getElementById("overlay").hidden = false;
@@ -1089,7 +1078,6 @@ document.getElementById("form-func").addEventListener("submit", async (e) => {
     nome: document.getElementById("f-nome").value.trim(),
     funcao: document.getElementById("f-funcao").value.trim(),
     pix: document.getElementById("f-pix").value.trim(),
-    valorDiaria: parseFloat(document.getElementById("f-diaria").value) || 0,
     status: document.getElementById("f-status").value
   };
   if(!dados.nome || !dados.funcao){ toast("Preencha nome e função."); return; }
@@ -1482,10 +1470,6 @@ function calcularDiasPorObra(diasObj, diasNoMes, anoNum, mesNum){
   return { porObra, total };
 }
 
-function formatarMoeda(valor){
-  return (valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-
 // ---------------- Fechamento de Ponto ----------------
 
 let mesesFechados = {}; // { "2026-09": true, ... }
@@ -1498,46 +1482,41 @@ db.collection("fechamentos").onSnapshot((snap) => {
   if(document.getElementById("view-fechamento") && !document.getElementById("view-fechamento").hidden) renderFechamento();
 });
 
-// Monta { "CRAS": { dias, valor, linhas: [{f, dias, valor}, ...] }, ... }
-// -- um funcionario que trabalhou em mais de uma obra no mes aparece em
-// cada obra separadamente, so com os dias daquela obra especifica.
+// Monta { "CRAS": { dias, linhas: [{f, dias}, ...] }, ... } -- um
+// funcionario que trabalhou em mais de uma obra no mes aparece em cada
+// obra separadamente, so com os dias daquela obra especifica. Trabalha
+// so com dias, sem nenhum valor/R$ (removido a pedido do Rubens).
 function agruparFechamentoPorObra(){
   const { diasNoMes } = infoMes(mesConferencia);
   const [anoNum, mesNum] = mesConferencia.split("-").map(Number);
   const grupos = {};
-  let totalDias = 0, totalValor = 0, qtdTotal = 0;
-  let diasAprovados = 0, valorAprovado = 0, qtdAprovados = 0;
+  let totalDias = 0, qtdTotal = 0;
+  let diasAprovados = 0, qtdAprovados = 0;
 
   todos.filter(f => f.status !== "Inativo").forEach(f => {
     const info = dadosMes[f.id] || { dias: {} };
     const { porObra } = calcularDiasPorObra(info.dias, diasNoMes, anoNum, mesNum);
-    const valorDiaria = Number(f.valorDiaria) || 0;
     Object.entries(porObra).forEach(([obra, dias]) => {
       if(dias <= 0) return;
-      const valor = dias * valorDiaria;
-      if(!grupos[obra]) grupos[obra] = { dias: 0, valor: 0, diasAprovados: 0, valorAprovado: 0, qtdTotal: 0, qtdAprovados: 0, linhas: [] };
+      if(!grupos[obra]) grupos[obra] = { dias: 0, diasAprovados: 0, qtdTotal: 0, qtdAprovados: 0, linhas: [] };
       grupos[obra].dias += dias;
-      grupos[obra].valor += valor;
       grupos[obra].qtdTotal += 1;
-      grupos[obra].linhas.push({ f, dias, valor });
+      grupos[obra].linhas.push({ f, dias });
       totalDias += dias;
-      totalValor += valor;
       qtdTotal += 1;
       // separa o que ja foi aprovado do que ainda ta pendente -- a
       // "subtracao" (o que falta aprovar) e so total menos aprovado,
       // calculada na hora de exibir, nao precisa guardar os dois.
       if(statusPagamento(f, obra) === "Aprovado"){
         grupos[obra].diasAprovados += dias;
-        grupos[obra].valorAprovado += valor;
         grupos[obra].qtdAprovados += 1;
         diasAprovados += dias;
-        valorAprovado += valor;
         qtdAprovados += 1;
       }
     });
   });
 
-  return { grupos, totalDias, totalValor, qtdTotal, diasAprovados, valorAprovado, qtdAprovados };
+  return { grupos, totalDias, qtdTotal, diasAprovados, qtdAprovados };
 }
 
 // Status de pagamento por funcionario+obra (nao por mes inteiro, ja que
@@ -1581,13 +1560,13 @@ function renderFechamentoObrasFiltro(grupos){
   cont.appendChild(cardTodas);
 
   nomes.forEach(nome => {
-    const g = grupos[nome] || { dias: 0, valor: 0 };
+    const g = grupos[nome] || { dias: 0 };
     const cor = corAvatar(nome);
     const card = document.createElement("div");
     card.className = "obra-filtro-card" + (filtroObraFechamento === nome ? " selected" : "");
     card.innerHTML = `<div class="obra-filtro-topo"><span class="dot" style="background:${cor}"></span>`
       + `<span class="obra-filtro-nome">${nome}</span></div>`
-      + `<div class="obra-filtro-sub">${g.dias.toFixed(1)} dias · ${formatarMoeda(g.valor)}</div>`;
+      + `<div class="obra-filtro-sub">${g.dias.toFixed(1)} dias</div>`;
     card.onclick = () => { filtroObraFechamento = nome; renderFechamento(); };
     cont.appendChild(card);
   });
@@ -1612,7 +1591,7 @@ function renderFechamento(){
   btnAcao.textContent = fechado ? "Reabrir mês" : "Fechar mês";
   btnAcao.className = "btn " + (fechado ? "btn-ghost" : "btn-primary");
 
-  const { grupos, totalDias, totalValor, qtdTotal, diasAprovados, valorAprovado, qtdAprovados } = agruparFechamentoPorObra();
+  const { grupos, totalDias, qtdTotal, diasAprovados, qtdAprovados } = agruparFechamentoPorObra();
 
   // Os cards de total refletem a obra selecionada no filtro -- "Todas as
   // obras" mostra a soma do mes inteiro, uma obra especifica mostra so o
@@ -1620,7 +1599,6 @@ function renderFechamento(){
   const filtrandoObra = filtroObraFechamento !== "todas";
   const grupoAtivo = filtrandoObra ? grupos[filtroObraFechamento] : null;
   const diasExibidos = filtrandoObra ? (grupoAtivo?.dias || 0) : totalDias;
-  const valorExibido = filtrandoObra ? (grupoAtivo?.valor || 0) : totalValor;
   const qtdTotalExibida = filtrandoObra ? (grupoAtivo?.qtdTotal || 0) : qtdTotal;
   const qtdAprovExibida = filtrandoObra ? (grupoAtivo?.qtdAprovados || 0) : qtdAprovados;
   // "a subtracao" pedida pelo Rubens: o que ainda falta aprovar e sempre
@@ -1628,9 +1606,7 @@ function renderFechamento(){
   const qtdFalta = qtdTotalExibida - qtdAprovExibida;
 
   document.getElementById("fechamento-stat-dias").textContent = diasExibidos.toFixed(1);
-  document.getElementById("fechamento-stat-valor").textContent = formatarMoeda(valorExibido);
   document.getElementById("fechamento-label-dias").textContent = filtrandoObra ? "Dias — " + filtroObraFechamento : "Total de dias";
-  document.getElementById("fechamento-label-valor").textContent = filtrandoObra ? "A pagar — " + filtroObraFechamento : "Total a pagar";
   // Aprovado/Falta aprovar mostram quantidade de funcionarios, nao soma
   // de valor -- pedido explicito do Rubens.
   document.getElementById("fechamento-stat-aprovado").textContent = qtdAprovExibida + " de " + qtdTotalExibida;
@@ -1659,10 +1635,10 @@ function renderFechamento(){
     header.className = "fechamento-obra-header";
     header.innerHTML = `<span class="dot" style="background:${cor}"></span>`
       + `<span class="obra-nome" style="color:${cor}">${obra}</span>`
-      + `<span class="obra-sub">${grupo.dias.toFixed(1)} dias · ${formatarMoeda(grupo.valor)}</span>`;
+      + `<span class="obra-sub">${grupo.dias.toFixed(1)} dias</span>`;
     cont.appendChild(header);
 
-    linhasFiltradas.forEach(({ f, dias, valor }) => {
+    linhasFiltradas.forEach(({ f, dias }) => {
       const row = document.createElement("div");
       row.className = "fechamento-row";
 
@@ -1679,10 +1655,6 @@ function renderFechamento(){
       const diasDiv = document.createElement("div");
       diasDiv.className = "fechamento-dias";
       diasDiv.textContent = dias.toFixed(1);
-
-      const valorDiv = document.createElement("div");
-      valorDiv.className = "fechamento-valor";
-      valorDiv.textContent = f.valorDiaria ? formatarMoeda(valor) : "—";
 
       const statusDiv = document.createElement("div");
       statusDiv.className = "fechamento-status";
@@ -1701,7 +1673,6 @@ function renderFechamento(){
 
       row.appendChild(bloco);
       row.appendChild(diasDiv);
-      row.appendChild(valorDiv);
       row.appendChild(statusDiv);
       row.appendChild(pixDiv);
       cont.appendChild(row);
@@ -1740,12 +1711,12 @@ document.getElementById("btn-fechamento-acao").onclick = async () => {
 document.getElementById("btn-fechamento-csv").onclick = () => {
   if(!mesConferencia) return;
   const { grupos } = agruparFechamentoPorObra();
-  const linhas = [["Obra","Nome","Função","Dias","Valor","Pagamento","Chave PIX"]];
+  const linhas = [["Obra","Nome","Função","Dias","Pagamento","Chave PIX"]];
   Object.keys(grupos).sort((a, b) => a.localeCompare(b, "pt-BR")).forEach(obra => {
     grupos[obra].linhas
       .sort((a, b) => a.f.nome.localeCompare(b.f.nome, "pt-BR"))
-      .forEach(({ f, dias, valor }) => {
-        linhas.push([obra, f.nome||"", f.funcao||"", dias.toFixed(1), valor.toFixed(2), statusPagamento(f, obra), f.pix||""]);
+      .forEach(({ f, dias }) => {
+        linhas.push([obra, f.nome||"", f.funcao||"", dias.toFixed(1), statusPagamento(f, obra), f.pix||""]);
       });
   });
   const csv = linhas.map(l => l.map(v => '"' + String(v).replace(/"/g,'""') + '"').join(",")).join("\r\n");
