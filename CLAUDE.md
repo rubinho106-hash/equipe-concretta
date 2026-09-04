@@ -418,8 +418,9 @@ funcionários ativos, do Passo 4) e a busca já bastam.
 - Exibido como linha extra ("Obra: X") sob a função, na Lista de Funcionários — só aparece
   se o campo estiver preenchido, sem alterar as outras telas (Apontamentos, Conferência de
   Ponto) que também listam funcionário.
-- **Puramente informativo por enquanto**: nenhuma tela usa esse campo pra filtrar ou
-  restringir nada ainda — nem o Apontador, nem a Conferência de Ponto. É só cadastro.
+- **Informativo, nunca restritivo**: usado pra filtrar exibição (Lista de Funcionários, ver
+  seção abaixo, e o Apontador, ver "Equipe da obra" mais abaixo) — nenhuma tela usa pra
+  restringir quem pode ser lançado/editado em nenhuma obra.
 - Testado local e ao vivo: setei "CRECHE" em Alex Pereira Silva, confirmei que grava, que
   reabrir o modal mostra o valor certo, e que a lista mostra "Obra: CRECHE" — revertido pra
   vazio nos dois ambientes depois.
@@ -449,6 +450,32 @@ Total/Ativos/Inativos.
   IMPERIAL 4 / PRAÇA G 4 / Sem obra 2 — clicar CRECHE filtrou pra exatamente os 12, clicar de
   novo voltou pra todos, "Sem obra" mostrou os 2 sem o campo preenchido (Carlos Rikary e
   Dagilson Gomes da Conceição, ambos Inativos).
+
+## `apontador.html` usa "Obra padrão" pra agrupar — "Equipe da obra" (commit `4ed3709`, 04/09/2026)
+
+Rubens mandou print do Apontador aberto em COLÉGIO MILITAR reclamando "NAO ESTA FILTRANDO
+LISTA DE FUNCIONARIO PRO OBRA" — o grupo "Equipe provável" só olhava `ultimaObraNome` (último
+lançamento real), nunca o `obraPadrao` recém-criado. Como ninguém tinha lançamento recente
+em COLÉGIO MILITAR ainda, o grupo ficava vazio e todo mundo aparecia junto, sem separação —
+exatamente o cenário que gerou a reclamação original que levou ao campo `obraPadrao`, só que
+o campo nunca tinha sido ligado ao Apontador de fato (a implementação anterior só criou o
+campo em si, ver seção acima).
+
+Corrigido em `render()`: o grupo (renomeado de "Equipe provável" pra **"Equipe da obra"**)
+agora entra por dois sinais, nenhum dos dois restringe quem pode ser tocado (a busca sempre
+enxerga todo mundo, grupo "Outros funcionários ativos" continua existindo pra isso):
+
+```
+provavel = filtrados.filter(f => f.ultimaObraNome===obra.value || f.obraPadrao===obra.value)
+```
+
+Ordenação: quem tem lançamento real recente nessa obra vem primeiro (mais recente no topo,
+mesma lógica de antes); quem entrou só pelo `obraPadrao` cadastrado (sem lançamento ainda)
+vem depois, em ordem alfabética. Testado local contra dado real de produção (só leitura):
+COLÉGIO MILITAR mostrou corretamente os 4 cadastrados (Carlos André, Leonardo Paixão Santos,
+Ronilson da Silva, Willian de Souza) em "Equipe da obra", resto em "Outros"; trocando pra
+CRECHE a lista trocou junto, mostrando os cadastrados de lá. Nada foi gravado durante o
+teste (só troca de obra no `<select>`, sem clicar em nenhum funcionário).
 
 ## Fechamento de Ponto (02/09/2026) — HISTÓRICO, removido em 03/09/2026 (ver seção acima)
 
