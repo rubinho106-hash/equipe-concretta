@@ -97,7 +97,36 @@ qualquer mensagem futura, é COLÉGIO MILITAR.
 - "Silvestre de Oliveira" → Silvestre Pereira da Silva
 - "Edson Silva" → Edison Silva de Oliveira
 
-## Fechamento de Ponto (02/09/2026)
+## "Banco de Dados" (antiga aba "Fechamento de Ponto") — estado atual (03/09/2026)
+
+Rubens pediu pra esvaziar essa 4ª aba ("trocar texto Fechamento de Ponto... e limpar todo
+código pra darmos outra funcionalidade") e renomeá-la — via `AskUserQuestion`, confirmou:
+renomear o botão da aba pra **"Banco de Dados"**, e apagar todo o conteúdo antigo de
+aprovação de pagamento por obra (tudo descrito na seção "Fechamento de Ponto (02/09/2026)"
+logo abaixo, mantida só como histórico). O que sobrou na tela, a pedido explícito dele:
+
+- Seletor de mês (`fechamento-mes-select`).
+- Botão **"Fechar mês"/"Reabrir mês"** + banner de aviso — continuam funcionando
+  exatamente como antes, gravando `fechamentos/{AAAA-MM} = {fechado: bool}`.
+
+Tudo o mais (filtro de obras clicável, os 3 stat cards Dias/Aprovado/Falta aprovar, busca,
+tabela funcionário+obra com pill de pagamento, exportar CSV) foi removido do HTML/CSS/JS —
+`agruparFechamentoPorObra()`, `calcularDiasPorObra()`, `statusPagamento()`,
+`alternarPagamento()`, `renderFechamentoObrasFiltro()` não existem mais no código.
+`renderFechamento()` ficou só a lógica do banner+botão. **Os dados já gravados no
+Firestore continuam intactos** (campo `pagamentos` nos docs de `pontos/{mes}`) — só não
+tem mais tela pra ver/editar; se precisar reaproveitar, o dado histórico ainda está lá.
+
+**Por que manteve a trava de mês fechado**: a Conferência de Ponto ainda depende de
+`mesesFechados` pra travar edição de um mês já fechado (`alternarConferencia()`/
+`salvarDia()` checam isso antes de escrever) — remover a trava exigiria também tocar
+naquela tela, que não foi pedido.
+
+IDs internos (`seg-fechamento`, `view-fechamento`, `fechamento-*`) continuam com o nome
+antigo no código — só o texto visível do botão da aba mudou. Não renomear esses IDs sem
+necessidade real, pra não gerar um diff gigante à toa.
+
+## Fechamento de Ponto (02/09/2026) — HISTÓRICO, removido em 03/09/2026 (ver seção acima)
 
 4ª aba do segmentado, ao lado da Conferência de Ponto — mesmo mês selecionado (`mesConferencia`
 compartilhado). **Agrupado por obra** (não soma tudo por funcionário) — `agruparFechamentoPorObra()`
