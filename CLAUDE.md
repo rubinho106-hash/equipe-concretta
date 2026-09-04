@@ -279,14 +279,42 @@ lançamento de teste gravou com o `funcId` correto (conferido contra o id real d
 Pereira Silva), trocar de obra mantém a lista completa de 26 (comportamento esperado),
 sem erro no console em nenhum dos dois ambientes.
 
+## Passo 4 do roadmap — "Equipe provável" no Apontador (commit `a222989`, 04/09/2026)
+
+Dois arquivos mudaram juntos:
+
+**`index.html` — `salvarDia()` ganhou um efeito colateral novo**: toda vez que um período
+recebe uma obra real (não marcador, não FALTA, não vazio), também grava
+`ultimaObraId`/`ultimaObraNome`/`ultimaObraData` no doc do **funcionário** (não no doc de
+pontos) — write "fire-and-forget" com `.catch(() => {})`, nunca trava o salvamento do dia
+se falhar. Como obra nunca teve ID próprio nesse sistema (é só texto em todo canto —
+`dias.dia.m/t`, o array `OBRAS`, etc.), `ultimaObraId` guarda por enquanto o mesmo valor de
+`ultimaObraNome` (redundante de propósito, pra não inventar um conceito de "obra com ID"
+que não existe em nenhum outro lugar do código). Esses 3 campos nunca são lidos como fonte
+de verdade — só servem de sugestão de ordenação.
+
+**`apontador.html` — grupo "Equipe provável"**: ao selecionar uma obra, `render()` separa
+`todos` em dois grupos — quem tem `ultimaObraNome === obra.value` (ordenado por
+`ultimaObraData` decrescente, mais recente primeiro) vai pro topo sob o cabeçalho "Equipe
+provável"; o resto fica em "Outros funcionários ativos" logo abaixo. Se ninguém bater com a
+obra selecionada, os cabeçalhos somem e a lista volta a ser simples (nunca fica um grupo
+vazio visível). Ganhou também um campo de busca (`#buscaFunc`, filtra por nome, incide nos
+dois grupos) — o resumo/estatísticas do rodapé continuam calculados sobre os 26 Ativos
+inteiros, a busca é só pra achar alguém mais rápido na lista, não é filtro de relatório.
+
+Testado local e ao vivo (nos dois ambientes): lançamento real no cartão do admin (Alex
+Pereira Silva → CRAS local; Carlos André → PARQUE IMPERIAL em produção) gravou o cache
+certo, o Apontador mostrou a pessoa em "Equipe provável" ao abrir a obra correspondente,
+obra sem ninguém no cache mostrou lista simples sem cabeçalhos, busca filtrando certo.
+Dados de teste revertidos nos dois ambientes (cache apagado com `FieldValue.delete()`, dia
+de teste limpo) depois de cada verificação.
+
 **Ainda não implementado dessa mesma análise** (roadmap, aguardando os próximos passos):
-Passo 4 (ordenar/agrupar "equipe provável" usando `ultimaObraId`/`ultimaObraNome`/
-`ultimaObraData`, campos de cache no funcionário — sugestão de ordenação, nunca trava);
-Passo 5 (gravar de verdade em `pontos/{AAAA-MM}`); Passo 6 ("Marcar todos" já existe no
-protótipo/local, falta integrar com Firestore); Passo 7 ("Fechar Dia" por Data+Obra, numa
-coleção nova, sem relação com o antigo `fechamentos/{mês}` já removido); Passo 8
-(auditoria de quem lançou); Firebase Authentication (site continua com Firestore aberto,
-`allow read, write: if true`).
+Passo 5 (gravar de verdade em `pontos/{AAAA-MM}` a partir do Apontador, trocando o
+`localStorage`); Passo 6 ("Marcar todos" já existe no Apontador, falta integrar com
+Firestore); Passo 7 ("Fechar Dia" por Data+Obra, numa coleção nova, sem relação com o
+antigo `fechamentos/{mês}` já removido); Passo 8 (auditoria de quem lançou); Firebase
+Authentication (site continua com Firestore aberto, `allow read, write: if true`).
 
 ## Fechamento de Ponto (02/09/2026) — HISTÓRICO, removido em 03/09/2026 (ver seção acima)
 
