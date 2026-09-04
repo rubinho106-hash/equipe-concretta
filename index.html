@@ -770,6 +770,12 @@
         <input id="f-funcao" required autocomplete="off" placeholder="Ex: Pedreiro, Ajudante, Pintor">
       </div>
       <div class="field">
+        <label for="f-obra">Obra padrão</label>
+        <select id="f-obra">
+          <option value="">— nenhuma —</option>
+        </select>
+      </div>
+      <div class="field">
         <label for="f-pix">Chave PIX</label>
         <input id="f-pix" autocomplete="off">
       </div>
@@ -1027,6 +1033,12 @@ function render(){
     funcao.textContent = f.funcao || "—";
     info.appendChild(nome);
     info.appendChild(funcao);
+    if(f.obraPadrao){
+      const obraSub = document.createElement("div");
+      obraSub.className = "emp-sub";
+      obraSub.textContent = "Obra: " + f.obraPadrao;
+      info.appendChild(obraSub);
+    }
 
     const pill = document.createElement("button");
     pill.className = "pill " + (f.status === "Inativo" ? "pill-inativo" : "pill-ativo");
@@ -1076,6 +1088,15 @@ function abrirModal(f){
   document.getElementById("modal-sub").textContent = f ? "Atualize os dados abaixo." : "Preencha os dados abaixo.";
   document.getElementById("f-nome").value = f ? f.nome || "" : "";
   document.getElementById("f-funcao").value = f ? f.funcao || "" : "";
+  const selObra = document.getElementById("f-obra");
+  const obraAtual = f ? f.obraPadrao || "" : "";
+  let optsObra = '<option value="">— nenhuma —</option>'
+    + OBRAS.map(o => `<option value="${o}">${o}</option>`).join("");
+  if(obraAtual && !OBRAS.includes(obraAtual)){
+    optsObra += `<option value="${obraAtual}">${obraAtual}</option>`;
+  }
+  selObra.innerHTML = optsObra;
+  selObra.value = obraAtual;
   document.getElementById("f-pix").value = f ? f.pix || "" : "";
   document.getElementById("f-status").value = f && f.status === "Inativo" ? "Inativo" : "Ativo";
   document.getElementById("btn-excluir").hidden = !f;
@@ -1098,6 +1119,7 @@ document.getElementById("form-func").addEventListener("submit", async (e) => {
   const dados = {
     nome: document.getElementById("f-nome").value.trim(),
     funcao: document.getElementById("f-funcao").value.trim(),
+    obraPadrao: document.getElementById("f-obra").value,
     pix: document.getElementById("f-pix").value.trim(),
     status: document.getElementById("f-status").value
   };
