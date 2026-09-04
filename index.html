@@ -370,6 +370,39 @@
   .mes-pill-encerrado{ background: var(--surface-2); color: var(--muted); }
   .mes-pill-futuro{ background: var(--surface-2); color: var(--muted); }
 
+  .banco-meses-grid{ display: flex; flex-wrap: wrap; gap: 14px; margin-top: 16px; }
+  .mini-cal-card{
+    border: 2px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 14px;
+    width: 208px;
+    cursor: pointer;
+    background: var(--surface);
+    user-select: none;
+  }
+  .mini-cal-card:hover{ border-color: #c7d3ea; }
+  .mini-cal-card.selected{ border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .mini-cal-head{
+    display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+  .mini-cal-nome{ font-weight: 700; font-size: 12px; }
+  .mini-cal-head .mes-pill{ padding: 2px 8px; font-size: 8.5px; }
+  .mini-cal-semana, .mini-cal-dias{
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+  }
+  .mini-cal-semana{ margin-bottom: 3px; }
+  .mini-cal-semana span{
+    font-size: 9px; font-weight: 700; text-align: center; color: var(--muted);
+  }
+  .mini-cal-dias span{
+    font-size: 10px; text-align: center; padding: 3px 0;
+    color: var(--ink); font-variant-numeric: tabular-nums;
+  }
+  .mini-cal-dias span.vazio{ visibility: hidden; }
+  .mini-cal-dias span.fds{ color: var(--muted); }
+
   .conf-row{
     display: grid;
     grid-template-columns: auto 1fr auto auto;
@@ -598,9 +631,13 @@
   <!-- Aba "Banco de Dados" (id/nomes internos ainda dizem "fechamento" --
        era a antiga aba "Fechamento de Ponto". Esvaziada por completo a
        pedido do Rubens em 03/09/2026 (inclusive a trava de mês fechado que
-       tinha sobrado numa limpeza anterior) -- fica pronta pra receber
-       outra funcionalidade do zero. Ver CLAUDE.md. -->
-  <div id="view-fechamento" hidden></div>
+       tinha sobrado numa limpeza anterior). Primeiro passo da funcionalidade
+       nova, adicionado depois: cards de mês em grade de mini-calendário,
+       só pra selecionar o mês por enquanto (sem conteúdo dentro ainda) --
+       ver CLAUDE.md. -->
+  <div id="view-fechamento" hidden>
+    <div class="banco-meses-grid" id="banco-meses-grid"></div>
+  </div>
 
   <div id="view-obras" hidden>
     <div class="stats-row" style="grid-template-columns: 1fr;">
@@ -1113,7 +1150,8 @@ function mostrarSegmento(qual){
   document.getElementById("view-conferencia").hidden = qual !== "conferencia";
   document.getElementById("view-fechamento").hidden = qual !== "fechamento";
   document.getElementById("view-obras").hidden = qual !== "obras";
-  if(qual === "conferencia" && !listaMeses.length) carregarMesTabs();
+  if((qual === "conferencia" || qual === "fechamento") && !listaMeses.length) carregarMesTabs();
+  else if(qual === "fechamento") renderBancoMesesGrid();
 }
 
 // ---------------- Obras ----------------
@@ -1264,8 +1302,10 @@ function carregarMesTabs(){
   selecionarMes(atual);
 }
 
-// Cards de mes -- so na Conferencia de Ponto (a aba "Banco de Dados" nao
-// usa mais mes nenhum, ficou vazia).
+// Cards de mes da Conferencia de Ponto (fileira grande, com chave AAAA-MM
+// e pill Atual/Proximo/Encerrado). A aba "Banco de Dados" tem sua propria
+// grade de cards (renderBancoMesesGrid, visual de mini-calendario) --
+// ambas compartilham o mesmo mesConferencia/listaMeses.
 function renderMesTabs(atual){
   const cont = document.getElementById("mes-tabs");
   if(!cont) return;
@@ -1294,9 +1334,72 @@ function renderMesTabs(atual){
   });
 }
 
+const DIAS_SEMANA_ABREV = ["D","S","T","Q","Q","S","S"];
+
+// Cards da aba "Banco de Dados" -- primeira peça da funcionalidade nova
+// que vai substituir o antigo "Fechamento de Ponto" (ainda sem conteúdo
+// dentro do mês selecionado, só marca qual mês está ativo por enquanto,
+// igual selecionarMes() já faz pra Conferência de Ponto). Visual pedido
+// pelo Rubens: cada card mostra uma prévia de mini-calendário (grade de
+// dias) em vez do card retangular simples usado em renderMesTabs().
+function renderBancoMesesGrid(){
+  const cont = document.getElementById("banco-meses-grid");
+  if(!cont) return;
+  const atual = mesAtualReal();
+  cont.innerHTML = "";
+
+  listaMeses.forEach(mes => {
+    const { nome, ano, diasNoMes } = infoMes(mes);
+    const [anoNum, mesNum] = mes.split("-").map(Number);
+    const primeiroDiaSemana = new Date(anoNum, mesNum - 1, 1).getDay(); // 0=domingo
+
+    const card = document.createElement("div");
+    card.className = "mini-cal-card" + (mes === mesConferencia ? " selected" : "");
+    card.onclick = () => selecionarMes(mes);
+
+    let classe = "mes-pill-futuro", texto = "PRÓXIMO";
+    if(mes === atual){ classe = "mes-pill-atual"; texto = "MÊS ATUAL"; }
+    else if(mes < atual){ classe = "mes-pill-encerrado"; texto = "ENCERRADO"; }
+
+    const head = document.createElement("div");
+    head.className = "mini-cal-head";
+    head.innerHTML = `<span class="mini-cal-nome">${nome} / ${ano}</span>`
+      + `<span class="mes-pill ${classe}">${texto}</span>`;
+    card.appendChild(head);
+
+    const semana = document.createElement("div");
+    semana.className = "mini-cal-semana";
+    DIAS_SEMANA_ABREV.forEach(d => {
+      const s = document.createElement("span");
+      s.textContent = d;
+      semana.appendChild(s);
+    });
+    card.appendChild(semana);
+
+    const grade = document.createElement("div");
+    grade.className = "mini-cal-dias";
+    for(let i = 0; i < primeiroDiaSemana; i++){
+      const vazio = document.createElement("span");
+      vazio.className = "vazio";
+      grade.appendChild(vazio);
+    }
+    for(let dia = 1; dia <= diasNoMes; dia++){
+      const wd = new Date(anoNum, mesNum - 1, dia).getDay();
+      const el = document.createElement("span");
+      el.textContent = dia;
+      if(wd === 0 || wd === 6) el.className = "fds";
+      grade.appendChild(el);
+    }
+    card.appendChild(grade);
+
+    cont.appendChild(card);
+  });
+}
+
 async function selecionarMes(mes){
   mesConferencia = mes;
   renderMesTabs(mesAtualReal());
+  renderBancoMesesGrid();
 
   const loading = document.getElementById("conf-loading-state");
   loading.hidden = false;
