@@ -241,14 +241,52 @@ multiplicava o Total por 2 sem trazer informação nova. Mesma razão de sempre:
 gestão de dias, não de valor nem de unidade intermediária (o mesmo motivo que já tinha
 derrubado o R$ antes). Testado ao vivo: Weslen/CRECHE mostra só "CRECHE 1,0" + "Total 1,0".
 
-**Ainda não implementado dessa mesma análise** (aguardando decisão/próximo passo do
-Rubens): app do Apontador (`apontador.html`) integrado ao Firestore real — hoje só existe
-um protótipo isolado em `localStorage` (não faz parte deste repo, está em
-`C:\Users\rubin\Downloads\concretta_apontador_protecao_data_futura.html`, tema visual já
-alinhado ao sistema e sem o status "Transferido"); campos de cache
-`ultimaObraId`/`ultimaObraNome`/`ultimaObraData` no funcionário (sugestão de ordenação pro
-apontador, nunca trava); "Fechar Dia" por Data+Obra (não por mês); Firebase Authentication
-(site continua com Firestore aberto, `allow read, write: if true`).
+## `apontador.html` — Passo 3 do roadmap (commit `0781f92`, 04/09/2026)
+
+Primeiro arquivo real do Apontador dentro do repo (`D:\SITE CONCRETTA\apontador.html`) —
+antes só existia o protótipo isolado em
+`C:\Users\rubin\Downloads\concretta_apontador_protecao_data_futura.html` (localStorage
+puro, funcionários hardcoded). Esse passo especificamente troca os dados fixos por dados
+reais do Firestore, mantendo tudo o mais do protótipo igual (tema, modelo de status
+full/morning/afternoon/absent, regra `complementar()` sem "Transferido", proteção de data
+futura):
+
+- **Firebase**: mesmo `firebaseConfig` de `index.html`/`cartoes.html` (mesmo projeto
+  `concretta-equipe`).
+- **`OBRAS`** vem de `db.collection("obras")` (populando o `<select>` de Obra) e **`todos`**
+  vem de `db.collection("funcionarios")` filtrado a `status !== "Inativo"` — mesmo padrão
+  de leitura já usado em `cartoes.html` (`.get()` único, não `onSnapshot` — a página é pra
+  uso rápido de uma sessão, não fica aberta acompanhando mudanças ao vivo).
+- **Funcionário passa a ser identificado por `funcId`** (o id real do doc no Firestore),
+  não mais por nome — resolve um risco que eu já tinha levantado na análise do protótipo
+  (nomes iguais/parecidos colidindo). Os registros no `localStorage` agora são
+  `{funcId, nome, obra, data, status}`.
+- **A lista de funcionários mostra TODOS os Ativos, em qualquer obra selecionada** — sem
+  filtro de "pertence a essa obra" (isso já é o comportamento final decidido: "o apontador
+  continua podendo tocar em qualquer funcionário"). Falta só a ordenação por "equipe
+  provável" no topo — isso é o Passo 4, ainda não feito.
+
+**O que esse passo NÃO faz ainda** (de propósito, é o Passo 5): os lançamentos continuam
+gravando em `localStorage`, exatamente como o protótipo — ainda não escrevem em
+`funcionarios/{id}/pontos/{AAAA-MM}` no Firestore. Por isso **esse arquivo ainda não tem
+link a partir do `index.html`** — não está pronto pra uso real (um lançamento feito aqui
+hoje não aparece no cartão do admin nem na tela Apontamentos), só acessível direto pela
+URL pra teste/acompanhamento do desenvolvimento.
+
+Testado localmente e ao vivo: 26 funcionários Ativos carregados certo (bate com o total
+real), 5 obras reais no dropdown (COLÉGIO MILITAR/CRAS/CRECHE/PARQUE IMPERIAL/PRAÇA G),
+lançamento de teste gravou com o `funcId` correto (conferido contra o id real do Alex
+Pereira Silva), trocar de obra mantém a lista completa de 26 (comportamento esperado),
+sem erro no console em nenhum dos dois ambientes.
+
+**Ainda não implementado dessa mesma análise** (roadmap, aguardando os próximos passos):
+Passo 4 (ordenar/agrupar "equipe provável" usando `ultimaObraId`/`ultimaObraNome`/
+`ultimaObraData`, campos de cache no funcionário — sugestão de ordenação, nunca trava);
+Passo 5 (gravar de verdade em `pontos/{AAAA-MM}`); Passo 6 ("Marcar todos" já existe no
+protótipo/local, falta integrar com Firestore); Passo 7 ("Fechar Dia" por Data+Obra, numa
+coleção nova, sem relação com o antigo `fechamentos/{mês}` já removido); Passo 8
+(auditoria de quem lançou); Firebase Authentication (site continua com Firestore aberto,
+`allow read, write: if true`).
 
 ## Fechamento de Ponto (02/09/2026) — HISTÓRICO, removido em 03/09/2026 (ver seção acima)
 
