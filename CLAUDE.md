@@ -397,10 +397,17 @@ inteiros em qualquer obra selecionada (não existe "pertence à obra"), achou co
 gente discutiu 3 alternativas. Ele escolheu "Cadastro de equipe da obra" e perguntou como
 apontar quem vai pra uma obra diferente da equipe dele — a resposta combinada foi: esse
 cadastro é só um **filtro/sugestão de exibição**, nunca uma restrição de escrita. Esse
-commit implementa a primeira metade (o campo em si); a segunda metade (usar o campo pra
-agrupar a lista do `apontador.html`, junto com o sinal automático `ultimaObraNome` do
-Passo 4 e um índice de afinidade por recência/frequência dos últimos 15 dias úteis) **ainda
-não foi implementada** — segue em discussão de desenho, ver próxima seção.
+commit implementa o campo em si.
+
+Chegamos a desenhar (e validar com dado real da planilha antiga) um índice de afinidade por
+obra baseado em recência/frequência dos últimos 15 dias úteis, pra decidir quem aparece em
+destaque — o Rubens decidiu **descartar essa ideia** por ser complexa demais pro ganho: o
+`apontador.html` já tem busca por nome (`#buscaFunc`) que enxerga a lista inteira de Ativos
+sem nenhuma restrição por obra/equipe (confirmado lendo `render()`: `filtrados` vem sempre de
+`todos`, só filtrado pelo termo digitado) — isso já resolve "funcionário foi pra outra obra,
+como aponto o dia dele": busca o nome e lança normalmente, mesma mecânica de sempre. Sem
+fórmula, sem corte de score, sem grupo novo — o que já existe (Equipe provável / Outros
+funcionários ativos, do Passo 4) e a busca já bastam.
 
 - Campo novo `obraPadrao` no modal "Editar/Novo funcionário" (`index.html`), opcional
   (`— nenhuma —` por padrão), populado dinamicamente a partir do array vivo `OBRAS` (mesmo
@@ -416,35 +423,6 @@ não foi implementada** — segue em discussão de desenho, ver próxima seção
 - Testado local e ao vivo: setei "CRECHE" em Alex Pereira Silva, confirmei que grava, que
   reabrir o modal mostra o valor certo, e que a lista mostra "Obra: CRECHE" — revertido pra
   vazio nos dois ambientes depois.
-
-## Índice de afinidade por obra (15 dias úteis) — EM DISCUSSÃO, não implementado
-
-Próximo passo combinado pro `apontador.html`: em vez de só usar `ultimaObraNome` (só o
-último lançamento) pra decidir quem aparece em destaque, calcular um score por
-recência+frequência olhando os 15 dias úteis (sáb/dom sempre pulados; feriado só conta como
-não-útil se a maioria dos funcionários ativos tiver `FERIADO` marcado naquele dia — não
-existe calendário de feriado separado, é um marcador por pessoa) **anteriores à data
-selecionada** (nunca "hoje" — importante pra lançamento retroativo continuar correto, e o
-próprio dia selecionado nunca entra no cálculo, pra evitar circularidade):
-
-```
-presença integral = 1,0   |   presença meio período = 0,5
-peso: D-1..D-3 = 3   |   D-4..D-7 = 2   |   D-8..D-15 = 1
-score = soma(presença × peso) por obra, dentro da janela
-```
-
-Validado com dado real da planilha antiga de agosto (`Controle_Ponto_Concretta_2026-08.xlsx`,
-aba "FP Eliton Lima", que alternou entre CRECHE e PRAÇA G) — com data selecionada 28/08/2026
-o score deu CRECHE=13, PRAÇA G=10: a fórmula corretamente prioriza CRECHE (trabalhado nos 2
-dias imediatamente anteriores) mesmo com frequência empatada nas duas obras — confirma que
-recência funciona como esperado e que uma pessoa pode legitimamente pontuar alto em mais de
-uma obra ao mesmo tempo (ex: quem circula de verdade entre duas obras).
-
-Ainda em aberto antes de implementar: (1) corte de score pros 3 grupos "Equipe
-sugerida"/"Prováveis"/"Outros ativos" (proposta: ≥3 / 0<x<3 / 0); (2) janela cruzando virada
-de mês exige carregar também `pontos/{mês-anterior}` (`dadosMes` hoje só guarda um mês por
-vez); (3) se os ☑/☐ do mockup são só indicador visual (mantendo clique→modal atual) ou
-seleção em lote de verdade.
 
 ## Fechamento de Ponto (02/09/2026) — HISTÓRICO, removido em 03/09/2026 (ver seção acima)
 
