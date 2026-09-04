@@ -45,6 +45,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .secondary{background:var(--surface-2);color:var(--ink);border:1px solid var(--line)}
 
 .emp-list{margin-top:12px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.grupo-titulo{font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin:16px 2px 0}
 .emp{display:flex;align-items:center;gap:12px;width:100%;border:0;border-bottom:1px solid var(--line);background:var(--surface);color:var(--ink);padding:13px 14px;font-size:15px;text-align:left;cursor:pointer}
 .emp:last-child{border-bottom:0}
 .emp:hover:not(:disabled){background:var(--surface-2)}
@@ -111,7 +112,11 @@ button:disabled{opacity:.45;cursor:not-allowed}
 
     <div id="fechadoBanner" class="closed-banner" style="display:none">Dia fechado. Os lançamentos estão bloqueados até reabrir.</div>
 
-    <div id="funcionarios" class="emp-list">
+    <div style="margin-top:12px">
+      <input id="buscaFunc" type="text" placeholder="🔍 Buscar funcionário...">
+    </div>
+
+    <div id="funcionarios">
       <div style="padding:16px;color:var(--muted)">Carregando equipe…</div>
     </div>
 
@@ -290,25 +295,70 @@ function complementar(statusA, statusB){
   return (pa==="m"&&pb==="t")||(pa==="t"&&pb==="m");
 }
 
+function montaLinhaFuncionario(f){
+  const r=regObraFunc(f.id);
+  const st=labelStatus(r);
+  const b=document.createElement("button");
+  b.className="emp";b.type="button";b.disabled=isFechado();
+  b.innerHTML=`<span class="emp-avatar" style="background:${corAvatar(f.nome)}">${iniciais(f.nome)}</span>`
+    +`<span class="emp-name">${f.nome}</span><span class="status ${st.cls}">${st.txt}</span>`;
+  b.addEventListener("click",()=>abrir(f));
+  return b;
+}
+
 function render(){
-  lista.innerHTML="";
+  const termoBusca=(document.getElementById("buscaFunc").value||"").trim().toLowerCase();
   document.getElementById("count").textContent=`${todos.length} funcionário${todos.length===1?"":"s"}`;
 
-  todos.forEach(f=>{
-    const r=regObraFunc(f.id);
-    const st=labelStatus(r);
-    const b=document.createElement("button");
-    b.className="emp";b.type="button";b.disabled=isFechado();
-    b.innerHTML=`<span class="emp-avatar" style="background:${corAvatar(f.nome)}">${iniciais(f.nome)}</span>`
-      +`<span class="emp-name">${f.nome}</span><span class="status ${st.cls}">${st.txt}</span>`;
-    b.addEventListener("click",()=>abrir(f));
-    lista.appendChild(b);
-  });
+  lista.innerHTML="";
 
   if(!todos.length){
     lista.innerHTML='<div style="padding:16px;color:var(--muted)">Nenhum funcionário ativo cadastrado.</div>';
+  } else {
+    const filtrados=termoBusca
+      ? todos.filter(f=>f.nome.toLowerCase().includes(termoBusca))
+      : todos;
+
+    if(!filtrados.length){
+      lista.innerHTML='<div style="padding:16px;color:var(--muted)">Nenhum funcionário encontrado.</div>';
+    } else {
+      // "Equipe provável" -- quem teve o ultimo lancamento real
+      // (ultimaObraNome, gravado pelo cartao do admin em salvarDia()) na
+      // mesma obra selecionada. So sugestao de ordenacao pra achar mais
+      // rapido quem provavelmente esta nessa obra hoje -- nunca restringe
+      // quem pode ser tocado, todo mundo aparece em algum dos dois grupos.
+      const provavel=filtrados
+        .filter(f=>f.ultimaObraNome===obra.value)
+        .sort((a,b)=>(b.ultimaObraData||"").localeCompare(a.ultimaObraData||""));
+      const provavelIds=new Set(provavel.map(f=>f.id));
+      const outros=filtrados.filter(f=>!provavelIds.has(f.id));
+
+      if(provavel.length){
+        const tituloProvavel=document.createElement("div");
+        tituloProvavel.className="grupo-titulo";
+        tituloProvavel.textContent="Equipe provável";
+        lista.appendChild(tituloProvavel);
+
+        const listaProvavel=document.createElement("div");
+        listaProvavel.className="emp-list";
+        provavel.forEach(f=>listaProvavel.appendChild(montaLinhaFuncionario(f)));
+        lista.appendChild(listaProvavel);
+
+        const tituloOutros=document.createElement("div");
+        tituloOutros.className="grupo-titulo";
+        tituloOutros.textContent="Outros funcionários ativos";
+        lista.appendChild(tituloOutros);
+      }
+
+      const listaOutros=document.createElement("div");
+      listaOutros.className="emp-list";
+      outros.forEach(f=>listaOutros.appendChild(montaLinhaFuncionario(f)));
+      lista.appendChild(listaOutros);
+    }
   }
 
+  // resumo/estatisticas continuam sobre TODOS os funcionarios -- a busca
+  // e so pra achar alguem na lista, nao e um filtro de relatorio.
   const regs=todos.map(f=>regObraFunc(f.id));
   const full=regs.filter(r=>r&&r.status==="full").length;
   const half=regs.filter(r=>r&&(r.status==="morning"||r.status==="afternoon")).length;
@@ -413,6 +463,7 @@ data.addEventListener("change",()=>{
   dataValidaParaLancamento();
   render();
 });
+document.getElementById("buscaFunc").addEventListener("input",render);
 
 iniciarDados();
 </script>

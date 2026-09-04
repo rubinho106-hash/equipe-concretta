@@ -1984,6 +1984,20 @@ async function salvarDia(dia, campo, valor){
     dadosMes[fichaFunc.id] = snap.data();
     abrirFicha(fichaFunc);
     renderConfLista();
+
+    // Cache de conveniencia pro Apontador sugerir a "equipe provavel" de
+    // cada obra (Passo 4 do roadmap) -- so grava quando o lancamento e uma
+    // obra real (nao marcador, nao FALTA, nao vazio). Nunca e lido como
+    // fonte de verdade em lugar nenhum, so ordena/agrupa visualmente; se
+    // falhar, nao deve travar o salvamento do dia (por isso o catch mudo).
+    if(valor && !ehMarcador(valor)){
+      const dataLancamento = mesConferencia + "-" + String(dia).padStart(2, "0");
+      db.doc("funcionarios/" + fichaFunc.id).update({
+        ultimaObraId: valor,
+        ultimaObraNome: valor,
+        ultimaObraData: dataLancamento
+      }).catch(() => {});
+    }
   } catch(e){
     toast("Não deu pra salvar esse dia — tenta de novo.");
   }
