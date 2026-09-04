@@ -132,32 +132,76 @@ IDs internos (`seg-fechamento`, `view-fechamento`) continuam com o nome antigo n
 só o texto visível do botão da aba mudou. Não renomear esses IDs sem
 necessidade real, pra não gerar um diff gigante à toa.
 
-**Primeiro passo da funcionalidade nova, mesmo dia — cards de mês em mini-calendário**:
-Rubens mandou print dos cards de mês retangulares da Conferência de Ponto pedindo pra
-"criar cards na aba banco de dados, cada card sera responsavel por armazenar os dias
-lançados". Como isso é o início de algo maior e ainda vago, usei `AskUserQuestion` duas
-vezes antes de codar: (1) visual igual ao `.mes-tab` já existente ou diferente? →
-diferente; (2) o que aparece dentro de um mês selecionado? → nada ainda, só marcar qual
-mês está ativo, o conteúdo vem depois. Uma segunda pergunta fechou o visual: **grade de
-mini-calendário** (não só nome do mês, uma prévia com os dias do mês numa grade tipo
-calendário de verdade).
+**Primeiro passo (SUBSTITUÍDO no mesmo dia) — cards de mês em mini-calendário**: antes da
+tela "Apontamentos" (seção abaixo), o primeiro passo tinha sido só uma grade de cards de
+mês em estilo mini-calendário, clicáveis pra selecionar o mês, sem nenhum conteúdo dentro
+ainda (`renderBancoMesesGrid()`). Rubens mandou uma imagem de referência completa (tela
+"Apontamentos" de outro sistema) horas depois pedindo pra apagar os cards e substituir por
+aquilo — `renderBancoMesesGrid()`, `.mini-cal-*`, e o compartilhamento de `mesConferencia`
+com a Conferência de Ponto foram todos removidos/revertidos nessa substituição. Só ficou
+como nota histórica; ver a seção "Apontamentos" abaixo pro estado atual.
 
-Implementado em `renderBancoMesesGrid()` — pra cada mês de `listaMeses`, monta um card
-`.mini-cal-card` com cabeçalho (nome do mês/ano + pill Atual/Próximo/Encerrado, mesmas
-classes `.mes-pill-*` já usadas em `renderMesTabs()`) e uma grade de 7 colunas (D S T Q Q
-S S) com os dias do mês posicionados no dia da semana correto (células vazias antes do
-dia 1, calculadas com `new Date(ano, mes-1, 1).getDay()`), fim de semana com cor mais
-apagada (`.fds`). Clicar num card chama `selecionarMes(mes)` — a mesma função que a
-Conferência de Ponto usa, então **o mês selecionado é compartilhado entre as duas abas**
-(igual já acontecia com o antigo Fechamento): trocar de mês em uma reflete
-imediatamente na outra. `mostrarSegmento()` voltou a chamar `carregarMesTabs()`/
-`renderBancoMesesGrid()` ao entrar na aba "fechamento" (tinha sido simplificado pra só
-"conferencia" na limpeza anterior, já que a aba não usava mês nenhum até agora).
+## "Apontamentos" — tela definitiva da aba Banco de Dados (commit `3b8ff77`, 03/09/2026)
 
-Testado ao vivo: grade renderiza com os dias no dia da semana certo (conferido setembro/
-2026 começando numa terça), clicar num mês diferente sincroniza com a Conferência de
-Ponto e vice-versa, sem erro no console. **Ainda sem conteúdo dentro do mês selecionado**
-— próximo passo, quando o Rubens definir o que "armazenar os dias lançados" deve mostrar.
+Rubens mandou uma imagem de referência (mockup completo de outro sistema, com título
+"Apontamentos", filtros Funcionário/Obra/Período + botão Consultar, card resumo do
+funcionário, grade tipo calendário, tabela de lançamentos e resumo por obra) pedindo pra
+"apagar cards banco de dados e substituir por isso". Como o mockup tinha elementos que não
+existem no sistema (login com avatar de usuário, "Faltas"/"Transferido" como estados,
+"Lançado por"/horário de auditoria, campo de observação por dia), usei `AskUserQuestion`
+duas vezes antes de implementar, pra não inventar dado nenhum:
+
+- **Avatar/usuário logado** ("Rubens Gomes / Administrador") → **fora**, o site não tem
+  login.
+- **"Faltas"** → **adicionado** como novo marcador `FALTA` (junto de SÁBADO/DOMINGO/
+  FERIADO em `MARCADORES`, tanto em `index.html` quanto em `cartoes.html`) — aparece
+  como opção normal no dropdown de obra de qualquer dia, em qualquer lugar que já usa
+  `opcoesObra()`/`ehMarcador()` (cartão do admin incluído).
+- **"Transferido"** → **não implementado**, não ficou claro o que seria diferente de só
+  ter obras diferentes de manhã e de tarde no mesmo dia (que já é suportado).
+- **"Lançado por" / "Horário" / campo de Observação por dia** → **fora**, exigiriam login
+  individual (que não existe) e um novo campo no schema — a tabela "Lançamentos
+  detalhados" ficou só com Data/Obra/Período/Valor, dados 100% reais.
+
+**O que a tela faz**: filtros Funcionário (só Ativos, sem "Todos" — precisa escolher um
+pra consultar), Obra ("Todas" ou uma específica) e Período (mês, reaproveitando
+`listaMeses`/`infoMes()`). Botão "Consultar" busca direto no Firestore
+(`funcionarios/{id}/pontos/{mes}`, sob demanda, sem cache) e chama
+`renderApontResultado(f, mes, info, obraFiltro)`, que:
+
+1. Classifica cada dia do mês em `d` (dia inteiro, 1.0) / `m` (manhã, 0.5) / `t` (tarde,
+   0.5) / `f` (falta, 0.0) / `vazio` (sem lançamento) — aplicando o filtro de obra por
+   período: um período só "conta" se a obra bater com o filtro (marcadores como FALTA
+   continuam valendo mesmo com filtro de obra ativo, já que não são obra). Quando manhã e
+   tarde têm obras reais **diferentes** no mesmo dia, mostra as duas juntas separadas por
+   "/" em vez de inventar um estado "transferido".
+2. Renderiza: card resumo do funcionário (avatar/função/situação + mini-stats Dias
+   inteiros/Meio período/Faltas/Total no mês), grade tipo calendário (linhas Dia/Semana/
+   Obra/Período, células de período coloridas por tipo — `.cel-periodo.tipo-d/m/t/f`),
+   legenda, tabela "Lançamentos detalhados" (só dias com lançamento real), "Resumo por
+   obra" (Períodos/Total por obra) e uma caixa de observações com dicas reais do sistema
+   (não as fictícias do mockup).
+
+**Independente do `mesConferencia`/`dadosMes` da Conferência de Ponto** — os filtros dessa
+tela são próprios, consultados sob demanda no botão "Consultar", sem sincronizar com a
+outra aba (diferente do antigo Fechamento e da tentativa anterior com mini-calendário, que
+compartilhavam `mesConferencia`). `calcularListaMeses()` foi extraída de
+`carregarMesTabs()` só pra popular o `<select>` de Período sem disparar a carga pesada de
+dados de todos os funcionários que só a Conferência de Ponto precisa.
+
+**Bug pego no teste, corrigido antes de publicar**: `mostrarSegmento()` decidia se a
+Conferência de Ponto precisava inicializar checando `!listaMeses.length` — funcionava
+antes porque só a própria Conferência populava `listaMeses`. Com a nova tela populando
+`listaMeses` por conta própria (via `calcularListaMeses()`), visitar "Banco de Dados"
+antes de "Conferência de Ponto" deixava essa travada em "Carregando período…" pra sempre
+(mesConferencia nunca era setado). Corrigido trocando a checagem pra `!mesConferencia`, o
+estado que realmente importa. Reproduzido e reverificado localmente e ao vivo (visitando
+as abas nessa ordem) antes de considerar resolvido.
+
+Testado com dados reais: Alex Pereira Silva (CRECHE dia 1) e Weslen Da Silva Alves
+bateram certo nos números; lançamento de teste `FALTA` no dia 10 do Weslen apareceu
+correto na grade/tabela E no cartão do admin (revertido depois); filtro de obra que não
+bate zera tudo corretamente; mês sem documento no Firestore (Janeiro/2027) não quebra.
 
 ## Fechamento de Ponto (02/09/2026) — HISTÓRICO, removido em 03/09/2026 (ver seção acima)
 
