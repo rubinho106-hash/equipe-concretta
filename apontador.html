@@ -364,7 +364,13 @@ function equipeDaObra(lista){
 
 function render(){
   const termoBusca=(document.getElementById("buscaFunc").value||"").trim().toLowerCase();
-  document.getElementById("count").textContent=`${todos.length} funcionário${todos.length===1?"":"s"}`;
+  // "equipe" (sem filtro de busca) e a base de tudo que e resumo/contagem
+  // dessa obra -- contador do topo, os 4 cards de status e o gate do
+  // "Fechar dia". Antes isso somava os 26 Ativos da empresa inteira,
+  // sempre mostrando "26 pendentes" mesmo numa obra com 4 cadastrados de
+  // verdade (nunca zerava, "Fechar dia" ficava preso pra sempre).
+  const equipe=equipeDaObra(todos);
+  document.getElementById("count").textContent=`${equipe.length} funcionário${equipe.length===1?"":"s"}`;
 
   lista.innerHTML="";
 
@@ -419,10 +425,11 @@ function render(){
     }
   }
 
-  // resumo/estatisticas continuam sobre TODOS os funcionarios -- a busca
-  // e so pra achar alguem na lista, nao e um filtro de relatorio.
+  // resumo/estatisticas sao sobre a equipe da obra (nao os 26 Ativos da
+  // empresa) -- a busca e so pra achar alguem na lista, nao e um filtro
+  // de relatorio, mas o relatorio em si agora e por obra, nao global.
   let full=0, half=0, absent=0, pending=0, total=0;
-  todos.forEach(f=>{
+  equipe.forEach(f=>{
     const st=statusParaExibir(f.id);
     if(st.cls==="full") full++;
     else if(st.cls==="half") half++;
@@ -439,11 +446,11 @@ function render(){
 
   const fechado=isFechado();
   document.getElementById("fechadoBanner").style.display=fechado?"block":"none";
-  document.getElementById("todosDia").disabled=fechado||!equipeDaObra(todos).length;
+  document.getElementById("todosDia").disabled=fechado||!equipe.length;
   document.getElementById("limparDia").disabled=fechado;
   document.getElementById("fecharDia").style.display=fechado?"none":"inline-block";
   document.getElementById("reabrirDia").style.display=fechado?"inline-block":"none";
-  document.getElementById("fecharDia").disabled=pending>0||!todos.length;
+  document.getElementById("fecharDia").disabled=pending>0||!equipe.length;
 }
 
 function abrir(f){
@@ -586,7 +593,7 @@ document.getElementById("todosDia").addEventListener("click",async ()=>{
 
 document.getElementById("fecharDia").addEventListener("click",async ()=>{
   if(!dataValidaParaLancamento())return;
-  const pendentes=todos.filter(f=>statusParaExibir(f.id).cls==="pending");
+  const pendentes=equipeDaObra(todos).filter(f=>statusParaExibir(f.id).cls==="pending");
   if(pendentes.length){
     alert("Ainda existem funcionários pendentes.");
     return;
