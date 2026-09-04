@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>Concretta • Apontador</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --bg:#f2f4f9;--surface:#ffffff;--surface-2:#f8f9fc;--ink:#151b2c;--muted:#626e88;--line:#e2e6f0;
+  --accent:#2451d6;--accent-ink:#ffffff;
+  --hero-1:#0b1330;--hero-2:#1c3fb8;
+  --good-bg:#dcf3e6;--good-ink:#157a4a;
+  --warn-bg:#fbe6d4;--warn-ink:#a85417;
+  --danger-ink:#b3261e;
+  --shadow:0 1px 2px rgba(20,26,50,.04), 0 8px 24px rgba(20,26,50,.06);
+  --radius:14px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"IBM Plex Sans",system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:760px;margin:auto;padding:16px 14px 40px}
+
+.hero{
+  background:linear-gradient(135deg, var(--hero-1) 0%, var(--hero-2) 130%);
+  border-radius:var(--radius);
+  padding:22px 24px;
+  color:#f5f7ff;
+}
+.hero-eyebrow{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#a9bdfb;margin-bottom:8px}
+.hero h1{margin:0;font-size:24px;font-weight:800;color:#fff}
+.hero-sub{font-size:13px;color:#cbd5f7;margin-top:6px}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-top:14px;box-shadow:var(--shadow)}
+label{display:block;color:var(--muted);font-size:11px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;margin:8px 0 6px}
+select,input{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);font:inherit;font-size:15px}
+select:focus,input:focus{outline:2px solid var(--accent);outline-offset:1px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+
+button{font:inherit;border:0;border-radius:9px;padding:11px 14px;font-weight:700;font-size:13.5px;color:#fff;cursor:pointer}
+button:disabled{opacity:.45;cursor:not-allowed}
+.primary{background:var(--accent)}
+.success{background:var(--good-ink)}
+.danger{background:var(--danger-ink)}
+.secondary{background:var(--surface-2);color:var(--ink);border:1px solid var(--line)}
+
+.emp-list{margin-top:12px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.emp{display:flex;align-items:center;gap:12px;width:100%;border:0;border-bottom:1px solid var(--line);background:var(--surface);color:var(--ink);padding:13px 14px;font-size:15px;text-align:left;cursor:pointer}
+.emp:last-child{border-bottom:0}
+.emp:hover:not(:disabled){background:var(--surface-2)}
+.emp-avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#fff;flex-shrink:0}
+.emp-name{min-width:0;flex:1;font-weight:600}
+
+.status{font-size:11px;font-weight:700;letter-spacing:.02em;white-space:nowrap;padding:6px 12px;border-radius:999px;background:var(--surface-2);color:var(--muted)}
+.status.full{color:var(--good-ink);background:var(--good-bg)}
+.status.half{color:var(--warn-ink);background:var(--warn-bg)}
+.status.absent{color:var(--danger-ink);background:rgba(179,38,30,.12)}
+
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+.sum{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:10px;text-align:center}
+.sum b{display:block;font-size:19px;color:var(--ink)}
+.sum span{font-size:10.5px;color:var(--muted);letter-spacing:.02em;text-transform:uppercase}
+
+.notice{margin-top:12px;padding:12px 14px;border-radius:10px;background:var(--surface-2);border:1px solid var(--line);font-size:13px}
+.notice b{color:var(--ink)}
+
+.modal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;align-items:center;justify-content:center;padding:18px;z-index:100}
+.modal{width:min(420px,100%);background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px;box-shadow:0 20px 50px rgba(15,23,42,.25)}
+.modal h3{margin:0 0 2px;font-size:18px;color:var(--ink)}
+.modal .sub{color:var(--muted);font-size:12.5px}
+.choices{display:grid;gap:8px;margin-top:14px}
+.choice{border:0;border-radius:10px;padding:14px;font-size:14.5px;font-weight:700;color:#fff}
+.fullbtn{background:var(--good-ink)}
+.halfbtn{background:var(--warn-ink)}
+.absentbtn{background:var(--danger-ink)}
+.cancelbtn{background:var(--surface-2);color:var(--ink);border:1px solid var(--line)}
+
+.closed-banner{margin-top:12px;padding:12px 14px;border-radius:10px;background:var(--warn-bg);border:1px solid #f0c49a;color:var(--warn-ink);font-size:13px;font-weight:600}
+
+@media(max-width:620px){
+  .grid{grid-template-columns:1fr}
+  .summary{grid-template-columns:repeat(2,1fr)}
+  .emp{font-size:15.5px;padding:15px 14px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <div class="hero-eyebrow">GESTÃO DE PONTO · CONCRETTA</div>
+    <h1>Apontador</h1>
+    <div class="hero-sub">Lançamento rápido por obra e exceções</div>
+  </div>
+
+  <div class="card">
+    <div class="grid">
+      <div>
+        <label>Obra</label>
+        <select id="obra"></select>
+      </div>
+      <div>
+        <label>Data</label>
+        <input id="data" type="date">
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:14px">
+      <button id="todosDia" class="success">✓ Marcar todos — Dia inteiro</button>
+      <span id="count" class="status">0 funcionários</span>
+    </div>
+
+    <div id="fechadoBanner" class="closed-banner" style="display:none">Dia fechado. Os lançamentos estão bloqueados até reabrir.</div>
+
+    <div id="funcionarios" class="emp-list">
+      <div style="padding:16px;color:var(--muted)">Carregando equipe…</div>
+    </div>
+
+    <div class="summary">
+      <div class="sum"><b id="sFull">0</b><span>Inteiros</span></div>
+      <div class="sum"><b id="sHalf">0</b><span>Meio período</span></div>
+      <div class="sum"><b id="sAbsent">0</b><span>Faltas</span></div>
+      <div class="sum"><b id="sPending">0</b><span>Pendentes</span></div>
+    </div>
+
+    <div class="notice">
+      <b>Total equivalente:</b> <span id="totalDiarias">0</span> diária(s)
+    </div>
+
+    <div class="row" style="margin-top:14px">
+      <button id="fecharDia" class="success" disabled>Fechar dia</button>
+      <button id="reabrirDia" class="secondary" style="display:none">Reabrir dia</button>
+      <button id="limparDia" class="danger">Limpar lançamentos</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="backdrop">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalNome">
+    <h3 id="modalNome">Funcionário</h3>
+    <div class="sub">Selecione a situação</div>
+    <div class="choices">
+      <button class="choice fullbtn" data-status="full">Dia inteiro • 1 diária</button>
+      <button class="choice halfbtn" data-status="morning">Manhã • 0,5 diária</button>
+      <button class="choice halfbtn" data-status="afternoon">Tarde • 0,5 diária</button>
+      <button class="choice absentbtn" data-status="absent">Falta • 0</button>
+      <button class="choice cancelbtn" id="cancelar">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script>
+// ---------------- Firebase (mesmo projeto do index.html/cartoes.html) ----------------
+const firebaseConfig = {
+  apiKey: "AIzaSyDk6dqvQZV2kJlkAX7FxpOOQVSDboRb65Q",
+  authDomain: "concretta-equipe.firebaseapp.com",
+  projectId: "concretta-equipe",
+  storageBucket: "concretta-equipe.firebasestorage.app",
+  messagingSenderId: "523832637233",
+  appId: "1:523832637233:web:9e381b6a53cd2f746ca210"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// PASSO 3 do roadmap (04/09/2026): esse arquivo deixou de ser o protótipo
+// com dados fixos (Downloads/concretta_apontador_protecao_data_futura.html)
+// e passou a carregar funcionários e obras de verdade do Firestore. Ainda
+// NÃO grava os lançamentos lá -- isso é o passo 5. Por enquanto os
+// lançamentos continuam em localStorage, exatamente como no protótipo, só
+// que agora identificados pelo id real do funcionário (não mais pelo
+// nome, que podia colidir). "Equipe provável" (ordenar quem trabalhou na
+// obra por último) é o passo 4, ainda não feito -- por ora mostra todos
+// os Ativos, em qualquer ordem que vierem do Firestore.
+
+// Mesma lógica de corAvatar()/iniciais() do site principal -- paleta
+// idêntica, então o mesmo funcionário cai na mesma cor em todo canto.
+const AVATAR_COLORS = ["#2451d6","#157a4a","#a85417","#7c3aed","#0f766e","#be185d","#4338ca","#b45309"];
+function corAvatar(nome){
+  let h = 0;
+  for(let i = 0; i < nome.length; i++) h = (h * 31 + nome.charCodeAt(i)) >>> 0;
+  return AVATAR_COLORS[h % AVATAR_COLORS.length];
+}
+function iniciais(nome){
+  const partes = nome.trim().split(/\s+/);
+  const a = partes[0] ? partes[0][0] : "";
+  const b = partes.length > 1 ? partes[partes.length - 1][0] : "";
+  return (a + b).toUpperCase();
+}
+
+const KEY="concretta_apontamentos_v3";
+const KEY_FECHADOS="concretta_fechados_v3";
+
+const obra=document.getElementById("obra");
+const data=document.getElementById("data");
+const lista=document.getElementById("funcionarios");
+const backdrop=document.getElementById("backdrop");
+const modalNome=document.getElementById("modalNome");
+let atual=null; // funcionário (objeto {id, nome, ...}) com o modal aberto
+
+let OBRAS = [];
+let todos = []; // funcionários Ativos, [{id, nome, funcao, status, ...}]
+
+async function iniciarDados(){
+  try {
+    const [obrasSnap, funcSnap] = await Promise.all([
+      db.collection("obras").orderBy("nome").get(),
+      db.collection("funcionarios").orderBy("nome").get()
+    ]);
+    OBRAS = obrasSnap.docs.map(d => d.data().nome);
+    todos = funcSnap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(f => f.status !== "Inativo");
+  } catch(e){
+    lista.innerHTML = '<div style="padding:16px;color:var(--danger-ink)">Não deu pra carregar os dados agora — recarregue a página.</div>';
+    return;
+  }
+
+  obra.innerHTML = "";
+  OBRAS.forEach(o=>{
+    const op=document.createElement("option");
+    op.value=o;op.textContent=o;obra.appendChild(op);
+  });
+
+  render();
+}
+
+function dataLocalHoje(){
+  const agora = new Date();
+  const ano = agora.getFullYear();
+  const mes = String(agora.getMonth() + 1).padStart(2, "0");
+  const dia = String(agora.getDate()).padStart(2, "0");
+  return `${ano}-${mes}-${dia}`;
+}
+data.value = dataLocalHoje();
+data.max = dataLocalHoje();
+
+function getRegs(){return JSON.parse(localStorage.getItem(KEY)||"[]")}
+function setRegs(v){localStorage.setItem(KEY,JSON.stringify(v))}
+function getFechados(){return JSON.parse(localStorage.getItem(KEY_FECHADOS)||"[]")}
+function setFechados(v){localStorage.setItem(KEY_FECHADOS,JSON.stringify(v))}
+function chave(){return obra.value+"|"+data.value}
+function isFechado(){return getFechados().includes(chave())}
+
+// Identifica por funcId (id real do doc no Firestore), não mais por nome
+// -- evita ambiguidade se dois funcionários tiverem nome igual/parecido.
+function regObraFunc(funcId){
+  return getRegs().find(x=>x.funcId===funcId&&x.data===data.value&&x.obra===obra.value);
+}
+function labelStatus(r){
+  if(!r)return {txt:"Não lançado",cls:"pending"};
+  if(r.status==="full")return {txt:"Dia inteiro • 1",cls:"full"};
+  if(r.status==="morning")return {txt:"Manhã • 0,5",cls:"half"};
+  if(r.status==="afternoon")return {txt:"Tarde • 0,5",cls:"half"};
+  if(r.status==="absent")return {txt:"Falta • 0",cls:"absent"};
+  return {txt:"Não lançado",cls:"pending"};
+}
+function valor(r){
+  if(!r)return 0;
+  if(r.status==="full")return 1;
+  if(r.status==="morning"||r.status==="afternoon")return .5;
+  return 0;
+}
+function dataValidaParaLancamento(){
+  const hoje = dataLocalHoje();
+  if(data.value > hoje){
+    data.value = hoje;
+    alert("Não é permitido lançar ponto em data futura. A data foi ajustada para hoje.");
+    return false;
+  }
+  return true;
+}
+
+// Qual periodo do dia um status ocupa -- 'm' (manha) e 't' (tarde) sao os
+// unicos que deixam a outra metade do dia livre pra outra obra. "full" e
+// "absent" tomam o dia inteiro conceitualmente, entao nunca sao
+// complementares com nada.
+function sitPeriodo(status){
+  if(status==="morning")return "m";
+  if(status==="afternoon")return "t";
+  return "dia";
+}
+// Dois status sao complementares quando um ocupa a manha e o outro a
+// tarde -- nesse caso o funcionario pode ter um lancamento de meio
+// periodo em cada obra no mesmo dia, sem que isso seja tratado como
+// conflito (mesmo modelo do cartão do admin: sem "Transferido", a obra de
+// cada periodo fica explicita).
+function complementar(statusA, statusB){
+  const pa=sitPeriodo(statusA), pb=sitPeriodo(statusB);
+  return (pa==="m"&&pb==="t")||(pa==="t"&&pb==="m");
+}
+
+function render(){
+  lista.innerHTML="";
+  document.getElementById("count").textContent=`${todos.length} funcionário${todos.length===1?"":"s"}`;
+
+  todos.forEach(f=>{
+    const r=regObraFunc(f.id);
+    const st=labelStatus(r);
+    const b=document.createElement("button");
+    b.className="emp";b.type="button";b.disabled=isFechado();
+    b.innerHTML=`<span class="emp-avatar" style="background:${corAvatar(f.nome)}">${iniciais(f.nome)}</span>`
+      +`<span class="emp-name">${f.nome}</span><span class="status ${st.cls}">${st.txt}</span>`;
+    b.addEventListener("click",()=>abrir(f));
+    lista.appendChild(b);
+  });
+
+  if(!todos.length){
+    lista.innerHTML='<div style="padding:16px;color:var(--muted)">Nenhum funcionário ativo cadastrado.</div>';
+  }
+
+  const regs=todos.map(f=>regObraFunc(f.id));
+  const full=regs.filter(r=>r&&r.status==="full").length;
+  const half=regs.filter(r=>r&&(r.status==="morning"||r.status==="afternoon")).length;
+  const absent=regs.filter(r=>r&&r.status==="absent").length;
+  const pending=regs.filter(r=>!r).length;
+  const total=regs.reduce((s,r)=>s+valor(r),0);
+
+  document.getElementById("sFull").textContent=full;
+  document.getElementById("sHalf").textContent=half;
+  document.getElementById("sAbsent").textContent=absent;
+  document.getElementById("sPending").textContent=pending;
+  document.getElementById("totalDiarias").textContent=total.toLocaleString("pt-BR");
+
+  const fechado=isFechado();
+  document.getElementById("fechadoBanner").style.display=fechado?"block":"none";
+  document.getElementById("todosDia").disabled=fechado||!todos.length;
+  document.getElementById("limparDia").disabled=fechado;
+  document.getElementById("fecharDia").style.display=fechado?"none":"inline-block";
+  document.getElementById("reabrirDia").style.display=fechado?"inline-block":"none";
+  document.getElementById("fecharDia").disabled=pending>0||!todos.length;
+}
+
+function abrir(f){
+  if(!dataValidaParaLancamento())return;
+  if(isFechado())return;
+  atual=f;modalNome.textContent=f.nome;backdrop.style.display="flex";
+}
+function fecharModal(){atual=null;backdrop.style.display="none"}
+
+function aplicar(status){
+  if(!atual)return;
+  let arr=getRegs();
+
+  // regra global: um funcionário por dia em apenas uma obra -- EXCETO
+  // quando os dois lancamentos sao complementares (um de manha, outro de
+  // tarde), caso em que a pessoa trabalhou meio periodo em cada uma e os
+  // dois registros coexistem, cada um com sua obra explicita.
+  const outro=arr.find(x=>x.funcId===atual.id&&x.data===data.value&&x.obra!==obra.value);
+  if(outro && complementar(outro.status, status)){
+    arr=arr.filter(x=>!(x.funcId===atual.id&&x.data===data.value&&x.obra===obra.value));
+  } else if(outro){
+    const ok=confirm(`${atual.nome} já possui lançamento na obra ${outro.obra} nesta data.\n\nDeseja mover o funcionário para ${obra.value}?`);
+    if(!ok){fecharModal();return;}
+    arr=arr.filter(x=>!(x.funcId===atual.id&&x.data===data.value));
+  } else {
+    arr=arr.filter(x=>!(x.funcId===atual.id&&x.data===data.value&&x.obra===obra.value));
+  }
+
+  arr.push({funcId:atual.id, nome:atual.nome, obra:obra.value, data:data.value, status});
+  setRegs(arr);fecharModal();render();
+}
+
+document.querySelectorAll("[data-status]").forEach(b=>{
+  b.addEventListener("click",()=>aplicar(b.dataset.status));
+});
+document.getElementById("cancelar").addEventListener("click",fecharModal);
+backdrop.addEventListener("click",e=>{if(e.target===backdrop)fecharModal()});
+
+document.getElementById("todosDia").addEventListener("click",()=>{
+  if(!dataValidaParaLancamento())return;
+  if(isFechado())return;
+  let arr=getRegs();
+  let conflitos=[];
+
+  todos.forEach(f=>{
+    const outro=arr.find(x=>x.funcId===f.id&&x.data===data.value&&x.obra!==obra.value);
+    if(outro){conflitos.push(`${f.nome} (${outro.obra})`);return;}
+    arr=arr.filter(x=>!(x.funcId===f.id&&x.data===data.value&&x.obra===obra.value));
+    arr.push({funcId:f.id, nome:f.nome, obra:obra.value, data:data.value, status:"full"});
+  });
+
+  setRegs(arr);
+  if(conflitos.length){
+    alert("Alguns funcionários não foram alterados porque já estão lançados em outra obra:\n\n"+conflitos.join("\n"));
+  }
+  render();
+});
+
+document.getElementById("fecharDia").addEventListener("click",()=>{
+  if(!dataValidaParaLancamento())return;
+  const pendentes=todos.filter(f=>!regObraFunc(f.id));
+  if(pendentes.length){
+    alert("Ainda existem funcionários pendentes.");
+    return;
+  }
+  if(!confirm(`Fechar o dia ${data.value.split("-").reverse().join("/")} da obra ${obra.value}?\n\nDepois disso os lançamentos ficarão bloqueados.`))return;
+  const f=getFechados(); if(!f.includes(chave()))f.push(chave()); setFechados(f);render();
+});
+
+document.getElementById("reabrirDia").addEventListener("click",()=>{
+  if(!confirm("Reabrir este dia para permitir correções?"))return;
+  setFechados(getFechados().filter(x=>x!==chave()));render();
+});
+
+document.getElementById("limparDia").addEventListener("click",()=>{
+  if(!confirm("Apagar todos os lançamentos desta obra nesta data?"))return;
+  setRegs(getRegs().filter(x=>!(x.obra===obra.value&&x.data===data.value)));render();
+});
+
+obra.addEventListener("change",render);
+data.addEventListener("change",()=>{
+  dataValidaParaLancamento();
+  render();
+});
+
+iniciarDados();
+</script>
+</body>
+</html>
