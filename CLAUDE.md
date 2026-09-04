@@ -557,6 +557,38 @@ Corrigido em dois níveis:
 gravação) e nunca apagado (na remoção). Qualquer futura ação que remova um lançamento
 precisa lembrar de checar/limpar esse cache também, senão o problema volta por outra porta.
 
+## "Marcar todos" virou "Marcar equipe" — só afeta quem está cadastrado na obra (commit `be7605e`, 04/09/2026)
+
+Rubens confirmou que o teste do CRAS era mesmo teste (pediu reverter) e definiu a regra:
+**"SO DEVE MARCAR OS DOIS QUE ESTAO CADASTRADOS. CASO TENHA ALGUEM DE OUTRA OBRA FAZER A
+BUSCA PELO NOME NO CAMPO E MARCAR INDIVIDUALMENTE"** — ou seja, "Marcar todos" (que sempre
+aplicou aos 26 Ativos inteiros) devia passar a afetar só a "Equipe da obra" (cadastrados via
+`obraPadrao` + quem tem lançamento recente ali); qualquer um fora disso continua acessível
+via busca, marcado um por um.
+
+Implementado:
+- Extraída a lógica de filtro/ordenação da "Equipe da obra" (que já existia dentro de
+  `render()`) pra uma função reutilizável `equipeDaObra(lista)`.
+- O loop do botão (renomeado de "Marcar todos" pra **"Marcar equipe"**, tanto o texto quanto
+  o `id` continuam `todosDia` por trás) agora itera `equipeDaObra(todos)` em vez de `todos`
+  inteiro — só toca quem está na equipe cadastrada/ativa daquela obra.
+- `document.getElementById("todosDia").disabled` também passou a considerar
+  `!equipeDaObra(todos).length` (desabilita se a obra não tem ninguém cadastrado ainda, em
+  vez de só checar se existe algum Ativo no sistema).
+
+**Descoberta durante o teste**: COLÉGIO MILITAR também estava com os 26 Ativos marcados "Dia
+Inteiro" hoje (mesmo padrão do CRAS, provavelmente outro teste anterior do Rubens) — isso
+bloqueava qualquer "Marcar equipe" de outra obra no mesmo dia (o sistema detecta conflito de
+obra real diferente e recusa sobrescrever sem confirmação, corretamente). Confirmado com o
+Rubens via AskUserQuestion e revertido também (mesma rotina: `Limpar lançamentos`, que já
+limpa o cache órfão junto).
+
+Testado ponta a ponta em produção: com CRAS e COLÉGIO MILITAR limpos, cliquei "Marcar
+equipe" em COLÉGIO MILITAR e confirmei via consulta direta ao Firestore que só os 4
+cadastrados (Carlos André, Leonardo Paixão Santos, Ronilson da Silva, Willian de Souza)
+receberam o lançamento — os outros 22 continuaram sem nenhum dado pra hoje. Revertido no
+final do teste.
+
 ## Fechamento de Ponto (02/09/2026) — HISTÓRICO, removido em 03/09/2026 (ver seção acima)
 
 4ª aba do segmentado, ao lado da Conferência de Ponto — mesmo mês selecionado (`mesConferencia`
