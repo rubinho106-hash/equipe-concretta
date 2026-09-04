@@ -100,30 +100,36 @@ qualquer mensagem futura, é COLÉGIO MILITAR.
 ## "Banco de Dados" (antiga aba "Fechamento de Ponto") — estado atual (03/09/2026)
 
 Rubens pediu pra esvaziar essa 4ª aba ("trocar texto Fechamento de Ponto... e limpar todo
-código pra darmos outra funcionalidade") e renomeá-la — via `AskUserQuestion`, confirmou:
-renomear o botão da aba pra **"Banco de Dados"**, e apagar todo o conteúdo antigo de
-aprovação de pagamento por obra (tudo descrito na seção "Fechamento de Ponto (02/09/2026)"
-logo abaixo, mantida só como histórico). O que sobrou na tela, a pedido explícito dele:
+código pra darmos outra funcionalidade") e renomeá-la — via `AskUserQuestion`, confirmou
+inicialmente: renomear o botão da aba pra **"Banco de Dados"**, apagar o conteúdo de
+aprovação de pagamento por obra, mas **manter** a trava de mês fechado (seletor de mês +
+botão Fechar/Reabrir mês + banner). Minutos depois ele pediu pra apagar isso também
+("APAGAR O QUE FOI Mantido... DEIXAR O CODIGO DO BOTAO LIMPO") — então a trava saiu
+inteira na sequência, no mesmo dia.
 
-- Seletor de mês (`fechamento-mes-select`).
-- Botão **"Fechar mês"/"Reabrir mês"** + banner de aviso — continuam funcionando
-  exatamente como antes, gravando `fechamentos/{AAAA-MM} = {fechado: bool}`.
-
-Tudo o mais (filtro de obras clicável, os 3 stat cards Dias/Aprovado/Falta aprovar, busca,
-tabela funcionário+obra com pill de pagamento, exportar CSV) foi removido do HTML/CSS/JS —
+**Estado final: a aba fica 100% vazia** (`<div id="view-fechamento" hidden></div>`, só um
+comentário HTML explicando o histórico). Tudo o que existia nessa aba — filtro de obras
+clicável, os 3 stat cards Dias/Aprovado/Falta aprovar, busca, tabela funcionário+obra com
+pill de pagamento, exportar CSV, seletor de mês, botão Fechar/Reabrir mês, banner de
+aviso — foi removido do HTML/CSS/JS. Funções que não existem mais no código:
 `agruparFechamentoPorObra()`, `calcularDiasPorObra()`, `statusPagamento()`,
-`alternarPagamento()`, `renderFechamentoObrasFiltro()` não existem mais no código.
-`renderFechamento()` ficou só a lógica do banner+botão. **Os dados já gravados no
-Firestore continuam intactos** (campo `pagamentos` nos docs de `pontos/{mes}`) — só não
-tem mais tela pra ver/editar; se precisar reaproveitar, o dado histórico ainda está lá.
+`alternarPagamento()`, `renderFechamentoObrasFiltro()`, `renderFechamento()`,
+`renderFechamentoMesSelect()`. A variável `mesesFechados` e o `onSnapshot` da coleção
+`fechamentos` também foram removidos.
 
-**Por que manteve a trava de mês fechado**: a Conferência de Ponto ainda depende de
-`mesesFechados` pra travar edição de um mês já fechado (`alternarConferencia()`/
-`salvarDia()` checam isso antes de escrever) — remover a trava exigiria também tocar
-naquela tela, que não foi pedido.
+**A Conferência de Ponto não tem mais nenhum conceito de "mês fechado"** — as checagens
+`if(mesesFechados[mesConferencia])` que bloqueavam `alternarConferencia()`/`salvarDia()`,
+e o `disabled` condicional nos selects de obra/status do cartão (`abrirFicha()`/
+`renderFichaConteudo()`), foram todos removidos. Todo mês agora é sempre editável, sem
+exceção.
 
-IDs internos (`seg-fechamento`, `view-fechamento`, `fechamento-*`) continuam com o nome
-antigo no código — só o texto visível do botão da aba mudou. Não renomear esses IDs sem
+**Os dados antigos no Firestore continuam intactos** — coleção `fechamentos/{AAAA-MM}`
+(campo `fechado`) e o campo `pagamentos` nos docs de `pontos/{mes}` — só que nada no app
+lê ou escreve mais neles. Se um dia precisar reaproveitar esse conceito (trava de mês, ou
+aprovação de pagamento), o dado histórico ainda está lá, intacto.
+
+IDs internos (`seg-fechamento`, `view-fechamento`) continuam com o nome antigo no código —
+só o texto visível do botão da aba mudou. Não renomear esses IDs sem
 necessidade real, pra não gerar um diff gigante à toa.
 
 ## Fechamento de Ponto (02/09/2026) — HISTÓRICO, removido em 03/09/2026 (ver seção acima)
