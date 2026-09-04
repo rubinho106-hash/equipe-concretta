@@ -496,6 +496,36 @@ Testado local contra produção: sem busca, COLÉGIO MILITAR mostrou só os 4 da
 nenhum traço de "Outros"; digitando "alex" apareceu "Outros funcionários ativos" com "Alex
 Pereira Silva" (que não é da equipe de lá). Nada foi gravado (só texto de busca).
 
+## Bug real: "Equipe da obra" não atualizava sozinha após lançar (commit `e125b0e`, 04/09/2026)
+
+Rubens usou "Marcar todos" em CRAS de verdade (26 lançados, confirmado pelos stats "26
+Inteiros / 0 Pendentes") e mandou print reclamando "NAO ESTA FUNCIONANDO CORRETAMETE" — só 2
+pessoas apareciam em "Equipe da obra" (os 2 que já tinham `obraPadrao=CRAS` cadastrado antes),
+os outros 24 recém-lançados não apareciam ali até recarregar a página inteira.
+
+Causa raiz: `atualizarUltimaObra(funcId)` grava `ultimaObraNome`/`ultimaObraId`/
+`ultimaObraData` no Firestore, mas **nunca atualizava o objeto correspondente dentro do
+array local `todos`** — só `dadosMes[f.id]` (usado pro status do pill "Dia inteiro • 1", por
+isso o pill de cada linha aparecia certo) era refrescado. O `render()` chamado logo depois
+(tanto no clique individual quanto no loop do "Marcar todos") lia o `ultimaObraNome` antigo
+do objeto em memória, então a pessoa só entrava em "Equipe da obra" depois de um F5 (quando
+`todos` recarrega do zero via `onSnapshot`/`.get()` com o valor já gravado).
+
+Corrigido: `atualizarUltimaObra()` agora também localiza o objeto (`todos.find(x=>x.id===
+funcId)`) e muta `ultimaObraId/ultimaObraNome/ultimaObraData` nele diretamente, antes/junto
+da escrita no Firestore (que continua fire-and-forget) — assim o `render()` seguinte já
+reflete o grupo certo sem precisar recarregar.
+
+Testado contra dado real de produção, com cuidado pra não sujar nada: peguei "José Garcia
+Souza" (real: `ultimaObraNome=CRAS` de hoje, `obraPadrao=PARQUE IMPERIAL`, dia de hoje
+realmente CRAS de verdade por causa do "Marcar todos" do Rubens), chamei
+`atualizarUltimaObra()` com a obra selecionada em PRAÇA G só pra testar a mutação local +
+`render()` — confirmado que ele apareceu instantaneamente em "Equipe da obra" de PRAÇA G sem
+reload — e revertido imediatamente escrevendo de volta `ultimaObraNome/ultimaObraId=CRAS`,
+`ultimaObraData=2026-09-04` (os valores reais de antes) direto no Firestore. **Não toquei
+em `dias.{dia}.m/t` dele em nenhum momento** — só os 3 campos de cache, que já estavam
+sendo testados de propósito.
+
 ## Fechamento de Ponto (02/09/2026) — HISTÓRICO, removido em 03/09/2026 (ver seção acima)
 
 4ª aba do segmentado, ao lado da Conferência de Ponto — mesmo mês selecionado (`mesConferencia`
