@@ -477,6 +477,25 @@ Ronilson da Silva, Willian de Souza) em "Equipe da obra", resto em "Outros"; tro
 CRECHE a lista trocou junto, mostrando os cadastrados de lá. Nada foi gravado durante o
 teste (só troca de obra no `<select>`, sem clicar em nenhum funcionário).
 
+## "Outros funcionários ativos" só aparece durante busca (commit `f57bd47`, 04/09/2026)
+
+Rubens viu a "Equipe da obra" funcionando e mandou print da lista de "Outros funcionários
+ativos" (os ~22 restantes) pedindo "APAGAR OUTROS FUNCINARIOS. DIXAR BUSCA PROCURAR PELO
+NOME" — achou a lista completa sempre visível abaixo poluída, agora que o grupo principal já
+resolve o caso comum.
+
+`render()`: a seção "Outros funcionários ativos" (título + lista) só é montada quando
+`termoBusca` não é vazio — sem nada digitado na busca, a tela mostra só "Equipe da obra".
+**Ninguém fica inacessível**: digitar qualquer nome ainda encontra e deixa apontar
+normalmente, esteja ele na equipe cadastrada ou não (mesmo princípio de sempre — cadastro
+nunca restringe). Adicionado também um aviso ("Ninguém cadastrado nessa obra ainda. Busque
+pelo nome pra lançar alguém.") pro caso de uma obra sem ninguém na equipe e sem busca ainda
+digitada, pra tela não ficar em branco sem explicação.
+
+Testado local contra produção: sem busca, COLÉGIO MILITAR mostrou só os 4 da equipe, sem
+nenhum traço de "Outros"; digitando "alex" apareceu "Outros funcionários ativos" com "Alex
+Pereira Silva" (que não é da equipe de lá). Nada foi gravado (só texto de busca).
+
 ## Fechamento de Ponto (02/09/2026) — HISTÓRICO, removido em 03/09/2026 (ver seção acima)
 
 4ª aba do segmentado, ao lado da Conferência de Ponto — mesmo mês selecionado (`mesConferencia`
