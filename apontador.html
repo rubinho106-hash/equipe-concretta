@@ -106,7 +106,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
     </div>
 
     <div class="row" style="margin-top:14px">
-      <button id="todosDia" class="success">✓ Marcar todos — Dia inteiro</button>
+      <button id="todosDia" class="success">✓ Marcar equipe — Dia inteiro</button>
       <span id="count" class="status">0 funcionários</span>
     </div>
 
@@ -339,6 +339,29 @@ function montaLinhaFuncionario(f){
   return b;
 }
 
+// "Equipe da obra" -- combina dois sinais, nenhum dos dois restringe quem
+// pode ser tocado (a busca sempre enxerga todo mundo em "outros"):
+// (1) ultimaObraNome/ultimaObraData -- ultimo lancamento real nessa obra,
+// gravado por qualquer um dos dois apps em aplicarLancamento()/salvarDia();
+// (2) obraPadrao -- cadastro manual feito no funcionario (index.html,
+// "Obra padrão"), pra quem ainda nao tem lancamento recente mas e esperado
+// ali por cadastro.
+// Quem tem lancamento real recente vem primeiro (mais recente no topo);
+// quem entrou so pelo cadastro manual vem depois, em ordem alfabetica.
+// Usada tanto pro agrupamento visual (render()) quanto pro escopo real do
+// "Marcar todos" (que so deve tocar quem esta cadastrado/ativo nessa obra
+// -- pra outra obra, o apontador busca o nome e marca individualmente).
+function equipeDaObra(lista){
+  return lista
+    .filter(f=>f.ultimaObraNome===obra.value || f.obraPadrao===obra.value)
+    .sort((a,b)=>{
+      const da=(a.ultimaObraNome===obra.value && a.ultimaObraData) || "";
+      const db=(b.ultimaObraNome===obra.value && b.ultimaObraData) || "";
+      if(da!==db) return db.localeCompare(da);
+      return (a.nome||"").localeCompare(b.nome||"");
+    });
+}
+
 function render(){
   const termoBusca=(document.getElementById("buscaFunc").value||"").trim().toLowerCase();
   document.getElementById("count").textContent=`${todos.length} funcionário${todos.length===1?"":"s"}`;
@@ -355,25 +378,7 @@ function render(){
     if(!filtrados.length){
       lista.innerHTML='<div style="padding:16px;color:var(--muted)">Nenhum funcionário encontrado.</div>';
     } else {
-      // "Equipe da obra" -- combina dois sinais, nenhum dos dois restringe
-      // quem pode ser tocado (busca sempre enxerga todo mundo em "outros"):
-      // (1) ultimaObraNome/ultimaObraData -- ultimo lancamento real nessa
-      // obra, gravado por qualquer um dos dois apps em
-      // aplicarLancamento()/salvarDia();
-      // (2) obraPadrao -- cadastro manual feito no funcionario (index.html,
-      // "Obra padrão"), pra quem ainda nao tem lancamento recente mas e
-      // esperado ali por cadastro.
-      // Quem tem lancamento real recente vem primeiro (mais recente no
-      // topo); quem entrou so pelo cadastro manual vem depois, em ordem
-      // alfabetica.
-      const provavel=filtrados
-        .filter(f=>f.ultimaObraNome===obra.value || f.obraPadrao===obra.value)
-        .sort((a,b)=>{
-          const da=(a.ultimaObraNome===obra.value && a.ultimaObraData) || "";
-          const db=(b.ultimaObraNome===obra.value && b.ultimaObraData) || "";
-          if(da!==db) return db.localeCompare(da);
-          return (a.nome||"").localeCompare(b.nome||"");
-        });
+      const provavel=equipeDaObra(filtrados);
       const provavelIds=new Set(provavel.map(f=>f.id));
       const outros=filtrados.filter(f=>!provavelIds.has(f.id));
 
@@ -434,7 +439,7 @@ function render(){
 
   const fechado=isFechado();
   document.getElementById("fechadoBanner").style.display=fechado?"block":"none";
-  document.getElementById("todosDia").disabled=fechado||!todos.length;
+  document.getElementById("todosDia").disabled=fechado||!equipeDaObra(todos).length;
   document.getElementById("limparDia").disabled=fechado;
   document.getElementById("fecharDia").style.display=fechado?"none":"inline-block";
   document.getElementById("reabrirDia").style.display=fechado?"inline-block":"none";
@@ -548,11 +553,16 @@ document.getElementById("todosDia").addEventListener("click",async ()=>{
   const obraSel = obra.value;
   const conflitos=[];
 
+  // So marca quem esta na "Equipe da obra" (cadastrado via obraPadrao ou
+  // com lancamento recente ali) -- alguem de outra obra que precise ser
+  // lancado aqui e feito buscando o nome e marcando individualmente, nao
+  // por esse botao (pedido do Rubens, depois de "Marcar todos" ter
+  // marcado os 26 ativos inteiros por engano num teste).
   // sequencial (nao Promise.all) pra evitar corrida de escritas no mesmo
   // funcionario e manter dadosMes sempre consistente entre uma pessoa e
   // outra -- e um botao usado raramente, alguns segundos a mais aqui nao
   // pesam.
-  for(const f of todos){
+  for(const f of equipeDaObra(todos)){
     const diaAtual = diaDoFuncionario(f.id);
     const m = diaAtual.m || "", t = diaAtual.t || "";
     const mRealDiferente = m && !ehMarcador(m) && m !== obraSel;
