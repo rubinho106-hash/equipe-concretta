@@ -234,15 +234,21 @@ real limpando falta do outro período, falta sobrescrevendo obra real (confirma�
 cancelando — preserva — e confirmando — sobrescreve) — todos os cenários revertidos depois
 do teste.
 
+**Passo 2 do roadmap — coluna "Períodos" virou "Dias" (commit `e92c902`, 04/09/2026)**: no
+"Resumo por obra" da tela Apontamentos, `.apont-obra-row` passou de 3 colunas
+(Obra/Períodos/Total) pra 2 (Obra/Dias) — removido `Math.round(totalObra / 0.5)`, que só
+multiplicava o Total por 2 sem trazer informação nova. Mesma razão de sempre: sistema é de
+gestão de dias, não de valor nem de unidade intermediária (o mesmo motivo que já tinha
+derrubado o R$ antes). Testado ao vivo: Weslen/CRECHE mostra só "CRECHE 1,0" + "Total 1,0".
+
 **Ainda não implementado dessa mesma análise** (aguardando decisão/próximo passo do
 Rubens): app do Apontador (`apontador.html`) integrado ao Firestore real — hoje só existe
 um protótipo isolado em `localStorage` (não faz parte deste repo, está em
 `C:\Users\rubin\Downloads\concretta_apontador_protecao_data_futura.html`, tema visual já
-alinhado ao sistema e sem o status "Transferido"); coluna "Períodos" → "Dias" no resumo por
-obra da tela Apontamentos; campos de cache `ultimaObraId`/`ultimaObraNome`/`ultimaObraData`
-no funcionário (sugestão de ordenação pro apontador, nunca trava); "Fechar Dia" por
-Data+Obra (não por mês); Firebase Authentication (site continua com Firestore aberto,
-`allow read, write: if true`).
+alinhado ao sistema e sem o status "Transferido"); campos de cache
+`ultimaObraId`/`ultimaObraNome`/`ultimaObraData` no funcionário (sugestão de ordenação pro
+apontador, nunca trava); "Fechar Dia" por Data+Obra (não por mês); Firebase Authentication
+(site continua com Firestore aberto, `allow read, write: if true`).
 
 ## Fechamento de Ponto (02/09/2026) — HISTÓRICO, removido em 03/09/2026 (ver seção acima)
 
