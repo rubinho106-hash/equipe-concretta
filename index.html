@@ -398,26 +398,6 @@
     font-weight: 600;
   }
   .fechamento-banner.fechado{ background: var(--warn-bg); color: var(--warn-ink); }
-  .fechamento-header-row, .fechamento-row{
-    display: grid;
-    grid-template-columns: 1fr 56px 116px 140px;
-    align-items: center;
-    gap: 14px;
-    padding: 12px 18px;
-  }
-  .fechamento-header-row > div:not(:first-child), .fechamento-dias, .fechamento-pix{ text-align: right; }
-  .fechamento-status{ display: flex; justify-content: flex-end; }
-  .fechamento-header-row{
-    font-size: 10px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); font-weight: 700;
-    border-bottom: 1px solid var(--line);
-  }
-  .fechamento-row{ border-bottom: 1px solid var(--line); }
-  .fechamento-row:last-child{ border-bottom: none; }
-  .fechamento-dias{ font-variant-numeric: tabular-nums; }
-  .fechamento-pix{
-    font-size: 12px; color: var(--muted);
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }
   .fechamento-mes-select-wrap{
     display: flex; align-items: center; gap: 8px;
     margin-top: 16px;
@@ -435,36 +415,6 @@
     font-size: 13px;
     font-weight: 600;
   }
-  .obras-filtro-row{ display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
-  .obra-filtro-card{
-    border: 2px solid var(--line);
-    border-radius: 10px;
-    padding: 10px 14px;
-    min-width: 132px;
-    cursor: pointer;
-    background: var(--surface);
-    user-select: none;
-  }
-  .obra-filtro-card:hover{ border-color: #c7d3ea; }
-  .obra-filtro-card.selected{ border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
-  .obra-filtro-card .obra-filtro-topo{ display: flex; align-items: center; gap: 6px; }
-  .obra-filtro-card .dot{ width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-  .obra-filtro-nome{ font-weight: 700; font-size: 13px; }
-  .obra-filtro-sub{ font-size: 10.5px; color: var(--muted); margin-top: 6px; font-variant-numeric: tabular-nums; }
-
-  .fechamento-obra-header{
-    display: flex; align-items: baseline; gap: 9px;
-    padding: 14px 18px 8px;
-    border-top: 1px solid var(--line);
-  }
-  .fechamento-obra-header:first-child{ border-top: none; }
-  .fechamento-obra-header .dot{ width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-  .fechamento-obra-header .obra-nome{ font-size: 13px; font-weight: 700; }
-  .fechamento-obra-header .obra-sub{
-    margin-left: auto; font-size: 12px; font-weight: 600; color: var(--muted);
-    font-variant-numeric: tabular-nums;
-  }
-
   .ficha-modal{
     position: fixed;
     margin: 0;
@@ -603,7 +553,7 @@
   <div class="segmented">
     <button id="seg-equipe" class="active">Lista de Funcionários</button>
     <button id="seg-conferencia">Conferência de Ponto</button>
-    <button id="seg-fechamento">Fechamento de Ponto</button>
+    <button id="seg-fechamento">Banco de Dados</button>
     <button id="seg-obras">Obras</button>
   </div>
 
@@ -671,52 +621,21 @@
     </div>
   </div>
 
+  <!-- Aba "Banco de Dados" (id/nomes internos ainda dizem "fechamento" --
+       era a antiga aba "Fechamento de Ponto", esvaziada a pedido do Rubens
+       em 03/09/2026 pra virar outra coisa. Só sobrou o mecanismo de
+       fechar/reabrir mês (mesesFechados), que a Conferência de Ponto ainda
+       usa pra travar edição -- ver CLAUDE.md. -->
   <div id="view-fechamento" hidden>
     <div class="fechamento-mes-select-wrap">
       <label for="fechamento-mes-select">Mês</label>
       <select id="fechamento-mes-select"></select>
     </div>
 
-    <div class="obras-filtro-row" id="fechamento-obras-filtro"></div>
-
     <div class="fechamento-banner" id="fechamento-banner" hidden></div>
 
-    <div class="stats-row">
-      <div class="stat-card">
-        <div class="stat-label" id="fechamento-label-dias">Total de dias</div>
-        <div class="stat-num" id="fechamento-stat-dias">—</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Aprovado</div>
-        <div class="stat-num stat-good" id="fechamento-stat-aprovado">—</div>
-        <div class="stat-sub" id="fechamento-sub-aprovado"></div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Falta aprovar</div>
-        <div class="stat-num stat-warn" id="fechamento-stat-falta">—</div>
-        <div class="stat-sub" id="fechamento-sub-falta"></div>
-      </div>
-    </div>
-
     <div class="toolbar">
-      <div class="search-wrap">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input id="fechamento-busca" type="text" placeholder="Buscar por nome ou função...">
-      </div>
-      <button class="btn" id="btn-fechamento-csv">⬇ Exportar CSV</button>
       <button class="btn btn-primary" id="btn-fechamento-acao">Fechar mês</button>
-    </div>
-
-    <div class="list-wrap">
-      <div class="loading-state" id="fechamento-loading-state">Carregando período…</div>
-      <div class="empty-state" id="fechamento-empty-state" hidden>Nenhum funcionário encontrado.</div>
-      <div class="fechamento-header-row" id="fechamento-header-row" hidden>
-        <div>Funcionário</div>
-        <div>Dias</div>
-        <div>Pagamento</div>
-        <div>PIX</div>
-      </div>
-      <div id="fechamento-lista"></div>
     </div>
   </div>
 
@@ -1383,9 +1302,9 @@ function carregarMesTabs(){
   selecionarMes(atual);
 }
 
-// Cards de mes -- so na Conferencia de Ponto. O Fechamento usa um
-// seletor compacto (renderFechamentoMesSelect), pra deixar espaco pro
-// filtro de obras, que e o jeito principal de navegar por la.
+// Cards de mes -- so na Conferencia de Ponto. A aba "Banco de Dados"
+// (antiga "Fechamento de Ponto") usa um seletor compacto
+// (renderFechamentoMesSelect) em vez disso.
 function renderMesTabs(atual){
   const cont = document.getElementById("mes-tabs");
   if(!cont) return;
@@ -1435,8 +1354,6 @@ async function selecionarMes(mes){
   loading.hidden = false;
   loading.textContent = "Carregando período…";
   document.getElementById("conf-lista").innerHTML = "";
-  document.getElementById("fechamento-loading-state").hidden = false;
-  document.getElementById("fechamento-lista").innerHTML = "";
 
   dadosMes = {};
   try {
@@ -1453,138 +1370,33 @@ async function selecionarMes(mes){
   renderFechamento();
 }
 
-// Conta em fracoes de 0.5 por meio-periodo (igual o resumo do cartao) --
-// nao deve contar meio dia como dia inteiro.
-// Quebra os dias trabalhados por obra (mesma logica do resumo do cartao),
-// pra dar pra controlar o financeiro de cada obra separado -- nao so o
-// total do funcionario somando tudo junto.
-function calcularDiasPorObra(diasObj, diasNoMes, anoNum, mesNum){
-  const porObra = {};
-  let total = 0;
-  for(let dia = 1; dia <= diasNoMes; dia++){
-    let diaObj = (diasObj || {})[dia];
-    if(!diaObj){
-      const wd = new Date(anoNum, mesNum - 1, dia).getDay();
-      if(wd === 0 || wd === 6) continue; // fim de semana sem lancamento nao conta
-      diaObj = {};
-    }
-    if(diaObj.m && !ehMarcador(diaObj.m)){ porObra[diaObj.m] = (porObra[diaObj.m]||0) + 0.5; total += 0.5; }
-    if(diaObj.t && !ehMarcador(diaObj.t)){ porObra[diaObj.t] = (porObra[diaObj.t]||0) + 0.5; total += 0.5; }
-  }
-  return { porObra, total };
-}
-
-// ---------------- Fechamento de Ponto ----------------
+// ---------------- "Banco de Dados" (antiga aba "Fechamento de Ponto") ----------------
+// Rubens pediu (03/09/2026) pra esvaziar essa aba -- todo o conteudo de
+// aprovacao de pagamento por obra (cards de obra, stats Aprovado/Falta
+// aprovar, tabela funcionario+obra, busca, CSV) foi removido do
+// codigo/tela pra dar espaco a outra funcionalidade no futuro. Os dados já
+// gravados no Firestore (campo "pagamentos" nos docs de pontos) continuam
+// intactos, só não tem mais tela pra ver/editar.
+//
+// O que sobrou, a pedido explicito dele: o mecanismo de fechar/reabrir mes
+// (mesesFechados/coleção "fechamentos"), porque a Conferência de Ponto
+// ainda depende dele pra travar edição de um mês já fechado (ver
+// alternarConferencia/salvarDia -- checam mesesFechados[mesConferencia]
+// antes de escrever).
 
 let mesesFechados = {}; // { "2026-09": true, ... }
-let filtroFechamento = "";
-let filtroObraFechamento = "todas";
 
 db.collection("fechamentos").onSnapshot((snap) => {
   mesesFechados = {};
   snap.docs.forEach(d => { if(d.data().fechado) mesesFechados[d.id] = true; });
-  if(document.getElementById("view-fechamento") && !document.getElementById("view-fechamento").hidden) renderFechamento();
+  renderFechamento();
 });
-
-// Monta { "CRAS": { dias, linhas: [{f, dias}, ...] }, ... } -- um
-// funcionario que trabalhou em mais de uma obra no mes aparece em cada
-// obra separadamente, so com os dias daquela obra especifica. Trabalha
-// so com dias, sem nenhum valor/R$ (removido a pedido do Rubens).
-function agruparFechamentoPorObra(){
-  const { diasNoMes } = infoMes(mesConferencia);
-  const [anoNum, mesNum] = mesConferencia.split("-").map(Number);
-  const grupos = {};
-  let totalDias = 0, qtdTotal = 0;
-  let diasAprovados = 0, qtdAprovados = 0;
-
-  todos.filter(f => f.status !== "Inativo").forEach(f => {
-    const info = dadosMes[f.id] || { dias: {} };
-    const { porObra } = calcularDiasPorObra(info.dias, diasNoMes, anoNum, mesNum);
-    Object.entries(porObra).forEach(([obra, dias]) => {
-      if(dias <= 0) return;
-      if(!grupos[obra]) grupos[obra] = { dias: 0, diasAprovados: 0, qtdTotal: 0, qtdAprovados: 0, linhas: [] };
-      grupos[obra].dias += dias;
-      grupos[obra].qtdTotal += 1;
-      grupos[obra].linhas.push({ f, dias });
-      totalDias += dias;
-      qtdTotal += 1;
-      // separa o que ja foi aprovado do que ainda ta pendente -- a
-      // "subtracao" (o que falta aprovar) e so total menos aprovado,
-      // calculada na hora de exibir, nao precisa guardar os dois.
-      if(statusPagamento(f, obra) === "Aprovado"){
-        grupos[obra].diasAprovados += dias;
-        grupos[obra].qtdAprovados += 1;
-        diasAprovados += dias;
-        qtdAprovados += 1;
-      }
-    });
-  });
-
-  return { grupos, totalDias, qtdTotal, diasAprovados, qtdAprovados };
-}
-
-// Status de pagamento por funcionario+obra (nao por mes inteiro, ja que
-// o Fechamento agora fatia cada pessoa por obra) -- guardado no mesmo
-// doc de pontos do mes, em pagamentos.{obra}. Independente do mes estar
-// fechado ou nao: fechar so trava o lancamento dos dias, aprovar
-// pagamento e outra etapa (normalmente vem DEPOIS de fechar o mes).
-function statusPagamento(f, obra){
-  const info = dadosMes[f.id] || {};
-  return (info.pagamentos && info.pagamentos[obra]) === "Aprovado" ? "Aprovado" : "Pendente";
-}
-
-async function alternarPagamento(f, obra){
-  const atual = statusPagamento(f, obra);
-  const novo = atual === "Aprovado" ? "Pendente" : "Aprovado";
-  try {
-    const ref = await garantirDocPontos(f.id, mesConferencia);
-    await ref.update({ ["pagamentos." + obra]: novo });
-    const snap = await ref.get();
-    dadosMes[f.id] = snap.data();
-    renderFechamento();
-    toast(novo === "Aprovado" ? "Pagamento aprovado." : "Pagamento marcado como pendente.");
-  } catch(e){
-    toast("Não deu pra salvar agora — tenta de novo.");
-  }
-}
-
-// Fileira de cards clicaveis pra filtrar o Fechamento por uma obra so
-// (troca a antiga fileira de mes, que virou um <select> compacto) --
-// mostra todas as obras da lista viva, mesmo as sem lancamento nesse mes.
-function renderFechamentoObrasFiltro(grupos){
-  const cont = document.getElementById("fechamento-obras-filtro");
-  const nomes = Array.from(new Set([...OBRAS, ...Object.keys(grupos)])).sort((a, b) => a.localeCompare(b, "pt-BR"));
-
-  cont.innerHTML = "";
-
-  const cardTodas = document.createElement("div");
-  cardTodas.className = "obra-filtro-card" + (filtroObraFechamento === "todas" ? " selected" : "");
-  cardTodas.innerHTML = `<div class="obra-filtro-nome">Todas as obras</div>`;
-  cardTodas.onclick = () => { filtroObraFechamento = "todas"; renderFechamento(); };
-  cont.appendChild(cardTodas);
-
-  nomes.forEach(nome => {
-    const g = grupos[nome] || { dias: 0 };
-    const cor = corAvatar(nome);
-    const card = document.createElement("div");
-    card.className = "obra-filtro-card" + (filtroObraFechamento === nome ? " selected" : "");
-    card.innerHTML = `<div class="obra-filtro-topo"><span class="dot" style="background:${cor}"></span>`
-      + `<span class="obra-filtro-nome">${nome}</span></div>`
-      + `<div class="obra-filtro-sub">${g.dias.toFixed(1)} dias</div>`;
-    card.onclick = () => { filtroObraFechamento = nome; renderFechamento(); };
-    cont.appendChild(card);
-  });
-}
 
 function renderFechamento(){
   if(!mesConferencia) return;
-  document.getElementById("fechamento-loading-state").hidden = true;
-  const cont = document.getElementById("fechamento-lista");
-  const empty = document.getElementById("fechamento-empty-state");
-  const headerRow = document.getElementById("fechamento-header-row");
   const banner = document.getElementById("fechamento-banner");
   const btnAcao = document.getElementById("btn-fechamento-acao");
-  cont.innerHTML = "";
+  if(!banner || !btnAcao) return;
 
   const fechado = !!mesesFechados[mesConferencia];
   banner.hidden = !fechado;
@@ -1594,103 +1406,7 @@ function renderFechamento(){
   }
   btnAcao.textContent = fechado ? "Reabrir mês" : "Fechar mês";
   btnAcao.className = "btn " + (fechado ? "btn-ghost" : "btn-primary");
-
-  const { grupos, totalDias, qtdTotal, diasAprovados, qtdAprovados } = agruparFechamentoPorObra();
-
-  // Os cards de total refletem a obra selecionada no filtro -- "Todas as
-  // obras" mostra a soma do mes inteiro, uma obra especifica mostra so o
-  // dela (pra bater com o subtotal que ja aparece no card daquela obra).
-  const filtrandoObra = filtroObraFechamento !== "todas";
-  const grupoAtivo = filtrandoObra ? grupos[filtroObraFechamento] : null;
-  const diasExibidos = filtrandoObra ? (grupoAtivo?.dias || 0) : totalDias;
-  const qtdTotalExibida = filtrandoObra ? (grupoAtivo?.qtdTotal || 0) : qtdTotal;
-  const qtdAprovExibida = filtrandoObra ? (grupoAtivo?.qtdAprovados || 0) : qtdAprovados;
-  // "a subtracao" pedida pelo Rubens: o que ainda falta aprovar e sempre
-  // o total de funcionarios menos os ja aprovados.
-  const qtdFalta = qtdTotalExibida - qtdAprovExibida;
-
-  document.getElementById("fechamento-stat-dias").textContent = diasExibidos.toFixed(1);
-  document.getElementById("fechamento-label-dias").textContent = filtrandoObra ? "Dias — " + filtroObraFechamento : "Total de dias";
-  // Aprovado/Falta aprovar mostram quantidade de funcionarios, nao soma
-  // de valor -- pedido explicito do Rubens.
-  document.getElementById("fechamento-stat-aprovado").textContent = qtdAprovExibida + " de " + qtdTotalExibida;
-  document.getElementById("fechamento-sub-aprovado").textContent = "funcionários";
-  document.getElementById("fechamento-stat-falta").textContent = qtdFalta + " de " + qtdTotalExibida;
-  document.getElementById("fechamento-sub-falta").textContent = "funcionários";
-
-  renderFechamentoObrasFiltro(grupos);
-
-  const termo = filtroFechamento.trim().toLowerCase();
-  let nomesObra = Object.keys(grupos).sort((a, b) => a.localeCompare(b, "pt-BR"));
-  if(filtroObraFechamento !== "todas") nomesObra = nomesObra.filter(o => o === filtroObraFechamento);
-  let algumaLinha = false;
-
-  nomesObra.forEach(obra => {
-    const grupo = grupos[obra];
-    const obraCasa = !termo || obra.toLowerCase().includes(termo);
-    const linhasFiltradas = grupo.linhas
-      .filter(({ f }) => obraCasa || (f.nome||"").toLowerCase().includes(termo) || (f.funcao||"").toLowerCase().includes(termo))
-      .sort((a, b) => a.f.nome.localeCompare(b.f.nome, "pt-BR"));
-    if(linhasFiltradas.length === 0) return;
-    algumaLinha = true;
-
-    const cor = corAvatar(obra);
-    const header = document.createElement("div");
-    header.className = "fechamento-obra-header";
-    header.innerHTML = `<span class="dot" style="background:${cor}"></span>`
-      + `<span class="obra-nome" style="color:${cor}">${obra}</span>`
-      + `<span class="obra-sub">${grupo.dias.toFixed(1)} dias</span>`;
-    cont.appendChild(header);
-
-    linhasFiltradas.forEach(({ f, dias }) => {
-      const row = document.createElement("div");
-      row.className = "fechamento-row";
-
-      const bloco = document.createElement("div");
-      const nome = document.createElement("div");
-      nome.className = "emp-name";
-      nome.textContent = f.nome;
-      const funcao = document.createElement("div");
-      funcao.className = "emp-sub";
-      funcao.textContent = f.funcao || "—";
-      bloco.appendChild(nome);
-      bloco.appendChild(funcao);
-
-      const diasDiv = document.createElement("div");
-      diasDiv.className = "fechamento-dias";
-      diasDiv.textContent = dias.toFixed(1);
-
-      const statusDiv = document.createElement("div");
-      statusDiv.className = "fechamento-status";
-      const statusAtual = statusPagamento(f, obra);
-      const statusBtn = document.createElement("button");
-      statusBtn.type = "button";
-      statusBtn.className = "pill " + (statusAtual === "Aprovado" ? "pill-conferido" : "pill-pendente");
-      statusBtn.textContent = statusAtual;
-      statusBtn.onclick = () => alternarPagamento(f, obra);
-      statusDiv.appendChild(statusBtn);
-
-      const pixDiv = document.createElement("div");
-      pixDiv.className = "fechamento-pix";
-      pixDiv.textContent = f.pix || "—";
-      if(f.pix) pixDiv.title = f.pix;
-
-      row.appendChild(bloco);
-      row.appendChild(diasDiv);
-      row.appendChild(statusDiv);
-      row.appendChild(pixDiv);
-      cont.appendChild(row);
-    });
-  });
-
-  headerRow.hidden = !algumaLinha;
-  empty.hidden = algumaLinha;
 }
-
-document.getElementById("fechamento-busca").addEventListener("input", (e) => {
-  filtroFechamento = e.target.value;
-  renderFechamento();
-});
 
 document.getElementById("btn-fechamento-acao").onclick = async () => {
   if(!mesConferencia) return;
@@ -1710,30 +1426,6 @@ document.getElementById("btn-fechamento-acao").onclick = async () => {
   } catch(e){
     toast("Não deu pra salvar agora — tenta de novo.");
   }
-};
-
-document.getElementById("btn-fechamento-csv").onclick = () => {
-  if(!mesConferencia) return;
-  const { grupos } = agruparFechamentoPorObra();
-  const linhas = [["Obra","Nome","Função","Dias","Pagamento","Chave PIX"]];
-  Object.keys(grupos).sort((a, b) => a.localeCompare(b, "pt-BR")).forEach(obra => {
-    grupos[obra].linhas
-      .sort((a, b) => a.f.nome.localeCompare(b.f.nome, "pt-BR"))
-      .forEach(({ f, dias }) => {
-        linhas.push([obra, f.nome||"", f.funcao||"", dias.toFixed(1), statusPagamento(f, obra), f.pix||""]);
-      });
-  });
-  const csv = linhas.map(l => l.map(v => '"' + String(v).replace(/"/g,'""') + '"').join(",")).join("\r\n");
-  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "fechamento-" + mesConferencia + ".csv";
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  toast("Relatório salvo.");
 };
 
 // Status de conferencia agora e guardado por quinzena: statusConferencia
@@ -1847,7 +1539,7 @@ async function garantirDocPontos(funcId, mes){
 // dot-path em cima de statusConferencia, ja que um doc antigo pode ter esse
 // campo como string solta e o update() nao faz merge profundo mesmo assim).
 async function alternarConferencia(f, quinzena){
-  if(mesesFechados[mesConferencia]){ toast("Esse mês está fechado — reabra em Fechamento de Ponto pra editar."); return; }
+  if(mesesFechados[mesConferencia]){ toast("Esse mês está fechado — reabra em Banco de Dados pra editar."); return; }
   const info = dadosMes[f.id] || { dias: {}, statusConferencia: {} };
   const atual = statusQuinzena(info, quinzena);
   const novo = atual === "Conferido" ? "Pendente" : "Conferido";
@@ -2008,7 +1700,7 @@ function renderResumoFicha(porObra){
 
 async function salvarDia(dia, campo, valor){
   if(!fichaFunc) return;
-  if(mesesFechados[mesConferencia]){ toast("Esse mês está fechado — reabra em Fechamento de Ponto pra editar."); return; }
+  if(mesesFechados[mesConferencia]){ toast("Esse mês está fechado — reabra em Banco de Dados pra editar."); return; }
   try {
     const ref = await garantirDocPontos(fichaFunc.id, mesConferencia);
     const chave = "dias." + dia + "." + campo;
