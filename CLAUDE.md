@@ -526,6 +526,37 @@ reload — e revertido imediatamente escrevendo de volta `ultimaObraNome/ultimaO
 em `dias.{dia}.m/t` dele em nenhum momento** — só os 3 campos de cache, que já estavam
 sendo testados de propósito.
 
+## Cache "última obra" ficava órfão depois de "Limpar lançamentos" (commit `09bcae8`, 04/09/2026)
+
+Rubens testou "Marcar todos" em CRAS de verdade e depois "Limpar lançamentos" na mesma obra
+(pra reverter o teste) — mandou print "CRAS SO TEM DOIS FUNCIONARIOS" reclamando que a
+"Equipe da obra" mostrava quase todo mundo (25 de 26), quando CRAS só tem 2 cadastrados de
+verdade (Dário Silva Dos Santos e Dhonatan da Costa Oliveira, via `obraPadrao`).
+
+Causa raiz: **"Limpar lançamentos" apaga `dias.{dia}.m/t`, mas nunca apagava o cache
+`ultimaObraNome/ultimaObraId/ultimaObraData`** — então quem foi tocado pelo "Marcar todos" e
+depois teve o lançamento limpo ficava com o cache "grudado" na obra antiga pra sempre (só
+seria corrigido lançando essa pessoa em outra obra de verdade, o que sobrescreve o cache).
+Confirmei consultando `pontos/2026-09` dia 4 de cada um dos 26: todos os 25/26 com
+`ultimaObraNome=CRAS` tinham `dias.4.m` e `dias.4.t` vazios — cache 100% órfão, nenhum dado
+de verdade por trás.
+
+Corrigido em dois níveis:
+1. **Código** (`limparDia` click handler): ao apagar `dias.{dia}.m/t` de alguém, se o cache
+   dele apontava exatamente pra essa mesma obra+data que acabou de ser apagada, o cache
+   (`ultimaObraId/ultimaObraNome/ultimaObraData`) é apagado junto (`FieldValue.delete()`),
+   tanto no Firestore quanto no objeto local em `todos` (mesma lição do fix anterior).
+2. **Dado real já sujo**: rodei uma limpeza direta em produção (com confirmação explícita do
+   Rubens via AskUserQuestion antes, já que o classificador de segurança bloqueou a escrita
+   em lote na primeira tentativa) apagando o cache órfão dos 26 funcionários que estavam
+   nessa condição exata (mesma checagem do fix: `ultimaObraNome===obraSel && ultimaObraData
+   ===dataStr && dia real vazio`) — confirmado depois que CRAS voltou a mostrar só os 2
+   cadastrados.
+
+**Lição gravada**: esse cache nunca tinha um caminho de invalidação — só era escrito (na
+gravação) e nunca apagado (na remoção). Qualquer futura ação que remova um lançamento
+precisa lembrar de checar/limpar esse cache também, senão o problema volta por outra porta.
+
 ## Fechamento de Ponto (02/09/2026) — HISTÓRICO, removido em 03/09/2026 (ver seção acima)
 
 4ª aba do segmentado, ao lado da Conferência de Ponto — mesmo mês selecionado (`mesConferencia`
