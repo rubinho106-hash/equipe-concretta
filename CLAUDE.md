@@ -589,6 +589,28 @@ cadastrados (Carlos André, Leonardo Paixão Santos, Ronilson da Silva, Willian 
 receberam o lançamento — os outros 22 continuaram sem nenhum dado pra hoje. Revertido no
 final do teste.
 
+## Resumo/estatísticas e "Fechar dia" passam a ser por equipe da obra, não por empresa toda (commit `91f57bd`, 04/09/2026)
+
+Rubens mandou print com setas ligando "26 funcionários"/"26 Pendentes" às 4 pessoas da
+"Equipe da obra" — apontando a inconsistência: os 4 cards de resumo (Inteiros/Meio período/
+Faltas/Pendentes) e o contador do topo continuavam somando os **26 Ativos da empresa
+inteira**, não só a equipe daquela obra. Consequência prática (não só visual): como só a
+equipe pequena é marcada agora (desde o fix anterior), os outros ~22 "de fora" nunca saem de
+pendente, então **"Fechar dia" nunca habilitava de verdade** pra nenhuma obra pequena — o
+gate `pending>0` nunca zerava.
+
+Corrigido: `render()` calcula `equipe = equipeDaObra(todos)` uma vez, e essa é a base do
+contador do topo, dos 4 cards de resumo, do "Total equivalente" e do gate de
+`todosDia`/`fecharDia` — tudo isso agora reflete só quem está cadastrado/ativo naquela obra,
+não a empresa toda. O handler de clique do "Fechar dia" (que tinha sua própria checagem de
+pendentes, separada de `render()`) recebeu o mesmo ajuste, senão o botão habilitaria mas o
+clique reclamaria de pendentes inexistentes.
+
+Testado em produção: COLÉGIO MILITAR (4 cadastrados) passou a mostrar "4 funcionários" e "4
+Pendentes" em vez de "26"; cliquei "Marcar equipe" e confirmei "4 Inteiros / 0 Pendentes" com
+"Fechar dia" habilitando; "Limpar lançamentos" reverteu tudo de volta pra "4 Pendentes" com
+o botão desabilitado de novo, exatamente como esperado. Nenhum dado real ficou alterado.
+
 ## Fechamento de Ponto (02/09/2026) — HISTÓRICO, removido em 03/09/2026 (ver seção acima)
 
 4ª aba do segmentado, ao lado da Conferência de Ponto — mesmo mês selecionado (`mesConferencia`
