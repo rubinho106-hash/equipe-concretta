@@ -372,18 +372,22 @@
 
   .conf-row{
     display: grid;
-    grid-template-columns: auto 1fr auto auto auto;
+    grid-template-columns: auto 1fr auto auto;
     align-items: center;
     gap: 14px;
     padding: 14px 18px;
     border-bottom: 1px solid var(--line);
   }
   .conf-row:last-child{ border-bottom: none; }
-  .conf-dias{ text-align: center; min-width: 80px; }
-  .conf-dias .lbl{ font-size: 9.5px; letter-spacing: .04em; color: var(--muted); text-transform: uppercase; }
-  .conf-dias .val{ font-size: 15px; font-weight: 700; margin-top: 2px; }
   .pill-conferido{ background: var(--good-bg); color: var(--good-ink); }
   .pill-pendente{ background: var(--warn-bg); color: var(--warn-ink); }
+  .conf-quinzena-col{ display: flex; flex-direction: column; align-items: stretch; gap: 5px; min-width: 108px; }
+  .conf-quinzena-col .pill{
+    padding: 3px 10px; font-size: 10px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  }
+  .conf-quinzena-col .q-lbl{ font-size: 9px; font-weight: 800; opacity: .7; }
+  .conf-quinzena-col .btn{ font-size: 11.5px; padding: 6px 10px; justify-content: center; }
 
   .fechamento-banner{
     display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
@@ -1465,13 +1469,8 @@ async function selecionarMes(mes){
   renderFechamento();
 }
 
-function contarDias(dias){
-  return Object.values(dias || {}).filter(d => (d.m && !ehMarcador(d.m)) || (d.t && !ehMarcador(d.t))).length;
-}
-
 // Conta em fracoes de 0.5 por meio-periodo (igual o resumo do cartao) --
-// mais preciso que contarDias() pra calcular pagamento, ja que um meio
-// dia nao deve contar como dia inteiro.
+// nao deve contar meio dia como dia inteiro.
 // Quebra os dias trabalhados por obra (mesma logica do resumo do cartao),
 // pra dar pra controlar o financeiro de cada obra separado -- nao so o
 // total do funcionario somando tudo junto.
@@ -1807,36 +1806,33 @@ function renderConfLista(){
     bloco.appendChild(nome);
     bloco.appendChild(funcao);
 
-    const diasBloco = document.createElement("div");
-    diasBloco.className = "conf-dias";
-    const dLbl = document.createElement("div");
-    dLbl.className = "lbl";
-    dLbl.textContent = "Dias";
-    const dVal = document.createElement("div");
-    dVal.className = "val";
-    dVal.textContent = contarDias(info.dias);
-    diasBloco.appendChild(dLbl);
-    diasBloco.appendChild(dVal);
-
-    // Resumo do mes inteiro (as duas quinzenas) -- clicar abre o cartao,
-    // ja que agora e la que da pra ver/togglear cada quinzena separado
-    const conferidoTotal = statusMesConferido(info);
-    const statusPill = document.createElement("button");
-    statusPill.className = "pill " + (conferidoTotal ? "pill-conferido" : "pill-pendente");
-    statusPill.textContent = conferidoTotal ? "Conferido" : "Pendente";
-    statusPill.title = "Conferido = as duas quinzenas conferidas. Clique pra abrir o cartão e conferir cada uma.";
-    statusPill.onclick = () => abrirFicha(f);
-
-    const verBtn = document.createElement("button");
-    verBtn.className = "btn";
-    verBtn.textContent = "Abrir Cartão";
-    verBtn.onclick = () => abrirFicha(f);
-
     row.appendChild(avatar);
     row.appendChild(bloco);
-    row.appendChild(diasBloco);
-    row.appendChild(statusPill);
-    row.appendChild(verBtn);
+
+    // Uma coluna por quinzena -- status Conferido/Pendente daquela quinzena
+    // (alterna sem precisar abrir o cartão) + um "Abrir Cartão" que já abre
+    // direto naquela quinzena selecionada
+    [1, 2].forEach(q => {
+      const col = document.createElement("div");
+      col.className = "conf-quinzena-col";
+
+      const st = statusQuinzena(info, q);
+      const pill = document.createElement("button");
+      pill.className = "pill " + (st === "Conferido" ? "pill-conferido" : "pill-pendente");
+      pill.innerHTML = `<span class="q-lbl">${q}ªQ</span> ${st === "Conferido" ? "Conferido" : "Pendente"}`;
+      pill.title = q === 1 ? "1ª quinzena (01–15)" : "2ª quinzena (16–fim do mês)";
+      pill.onclick = () => alternarConferencia(f, q);
+
+      const abrirBtn = document.createElement("button");
+      abrirBtn.className = "btn";
+      abrirBtn.textContent = "Abrir Cartão";
+      abrirBtn.onclick = () => abrirFicha(f, q);
+
+      col.appendChild(pill);
+      col.appendChild(abrirBtn);
+      row.appendChild(col);
+    });
+
     cont.appendChild(row);
   });
 }
@@ -1899,10 +1895,16 @@ function opcoesObra(valorAtual){
 
 let fichaQuinzena = 1; // 1 = dias 01-15, 2 = dia 16 ate o fim do mes
 
-async function abrirFicha(f){
+// quinzenaAlvo (opcional): abre o cartão já na quinzena pedida (1 ou 2) --
+// usado pelos botões "Abrir Cartão" de cada coluna de quinzena na lista.
+// Sem esse parâmetro, mantém o comportamento padrão (sempre 1ª quinzena
+// numa abertura nova, ou a quinzena que já estava selecionada se o cartão
+// já estava aberto).
+async function abrirFicha(f, quinzenaAlvo){
   const jaAberta = !document.getElementById("ficha-overlay").hidden;
   fichaFunc = f;
-  if(!jaAberta) fichaQuinzena = 1; // toda abertura nova comeca na 1a quinzena
+  if(quinzenaAlvo === 1 || quinzenaAlvo === 2) fichaQuinzena = quinzenaAlvo;
+  else if(!jaAberta) fichaQuinzena = 1; // toda abertura nova comeca na 1a quinzena
 
   const { label, periodo } = infoMes(mesConferencia);
 
