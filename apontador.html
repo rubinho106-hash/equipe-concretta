@@ -355,21 +355,32 @@ function render(){
     if(!filtrados.length){
       lista.innerHTML='<div style="padding:16px;color:var(--muted)">Nenhum funcionário encontrado.</div>';
     } else {
-      // "Equipe provável" -- quem teve o ultimo lancamento real
-      // (ultimaObraNome, gravado por qualquer um dos dois apps em
-      // aplicarLancamento()/salvarDia()) na mesma obra selecionada. So
-      // sugestao de ordenacao pra achar mais rapido quem provavelmente
-      // esta nessa obra hoje -- nunca restringe quem pode ser tocado.
+      // "Equipe da obra" -- combina dois sinais, nenhum dos dois restringe
+      // quem pode ser tocado (busca sempre enxerga todo mundo em "outros"):
+      // (1) ultimaObraNome/ultimaObraData -- ultimo lancamento real nessa
+      // obra, gravado por qualquer um dos dois apps em
+      // aplicarLancamento()/salvarDia();
+      // (2) obraPadrao -- cadastro manual feito no funcionario (index.html,
+      // "Obra padrão"), pra quem ainda nao tem lancamento recente mas e
+      // esperado ali por cadastro.
+      // Quem tem lancamento real recente vem primeiro (mais recente no
+      // topo); quem entrou so pelo cadastro manual vem depois, em ordem
+      // alfabetica.
       const provavel=filtrados
-        .filter(f=>f.ultimaObraNome===obra.value)
-        .sort((a,b)=>(b.ultimaObraData||"").localeCompare(a.ultimaObraData||""));
+        .filter(f=>f.ultimaObraNome===obra.value || f.obraPadrao===obra.value)
+        .sort((a,b)=>{
+          const da=(a.ultimaObraNome===obra.value && a.ultimaObraData) || "";
+          const db=(b.ultimaObraNome===obra.value && b.ultimaObraData) || "";
+          if(da!==db) return db.localeCompare(da);
+          return (a.nome||"").localeCompare(b.nome||"");
+        });
       const provavelIds=new Set(provavel.map(f=>f.id));
       const outros=filtrados.filter(f=>!provavelIds.has(f.id));
 
       if(provavel.length){
         const tituloProvavel=document.createElement("div");
         tituloProvavel.className="grupo-titulo";
-        tituloProvavel.textContent="Equipe provável";
+        tituloProvavel.textContent="Equipe da obra";
         lista.appendChild(tituloProvavel);
 
         const listaProvavel=document.createElement("div");
