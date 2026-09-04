@@ -156,6 +156,23 @@
   .stat-card.filtro:hover{ border-color: var(--accent); }
   .stat-card.filtro.active{ border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
 
+  .obra-filtro-row{ display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .obra-filtro-chip{
+    display: flex; align-items: center; gap: 6px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .obra-filtro-chip .qtd{ font-weight: 700; }
+  .obra-filtro-chip:hover{ border-color: currentColor; }
+  .obra-filtro-chip.active{ box-shadow: 0 0 0 1px currentColor; }
+
   .toolbar{
     display: flex;
     align-items: center;
@@ -655,6 +672,8 @@
       </div>
     </div>
 
+    <div class="obra-filtro-row" id="obra-filtro-row"></div>
+
     <div class="toolbar">
       <div class="search-wrap">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -976,6 +995,7 @@ const SEED = [
 let todos = [];
 let filtro = "";
 let filtroStatus = "todos"; // "todos" | "Ativo" | "Inativo"
+let filtroObraSel = "todas"; // "todas" | "" (sem obra) | nome da obra
 let editandoId = null;
 
 function aplicarFiltro(){
@@ -985,6 +1005,7 @@ function aplicarFiltro(){
       const status = f.status === "Inativo" ? "Inativo" : "Ativo";
       if(status !== filtroStatus) return false;
     }
+    if(filtroObraSel !== "todas" && (f.obraPadrao || "") !== filtroObraSel) return false;
     if(!termo) return true;
     return (f.nome || "").toLowerCase().includes(termo) || (f.funcao || "").toLowerCase().includes(termo);
   });
@@ -998,6 +1019,48 @@ document.querySelectorAll(".stat-card.filtro").forEach((card) => {
   });
 });
 
+// Chips de filtro por obra (a partir de f.obraPadrao) -- pura conveniencia
+// de leitura, igual o campo em si: nao restringe nada, so filtra a lista
+// exibida. Reconstruida a cada render() porque tanto OBRAS quanto as
+// contagens por obra podem mudar.
+function renderObraFiltro(){
+  const row = document.getElementById("obra-filtro-row");
+  const contagem = {};
+  let semObra = 0;
+  todos.forEach(f => {
+    if(f.obraPadrao){ contagem[f.obraPadrao] = (contagem[f.obraPadrao] || 0) + 1; }
+    else { semObra++; }
+  });
+  const nomesObra = OBRAS.filter(o => contagem[o]); // so mostra obra com gente de verdade
+  row.innerHTML = "";
+
+  const chipTodas = document.createElement("div");
+  chipTodas.className = "obra-filtro-chip" + (filtroObraSel === "todas" ? " active" : "");
+  chipTodas.style.cssText = "background:var(--surface-2);color:var(--ink);border-color:var(--line)";
+  chipTodas.innerHTML = `Todas as obras <span class="qtd">${todos.length}</span>`;
+  chipTodas.onclick = () => { filtroObraSel = "todas"; render(); };
+  row.appendChild(chipTodas);
+
+  nomesObra.forEach(nome => {
+    const cor = corAvatar(nome);
+    const chip = document.createElement("div");
+    chip.className = "obra-filtro-chip" + (filtroObraSel === nome ? " active" : "");
+    chip.style.cssText = `background:${cor}1a;border-color:${cor}55;color:${cor}`;
+    chip.innerHTML = `${nome} <span class="qtd">${contagem[nome]}</span>`;
+    chip.onclick = () => { filtroObraSel = filtroObraSel === nome ? "todas" : nome; render(); };
+    row.appendChild(chip);
+  });
+
+  if(semObra){
+    const chipSem = document.createElement("div");
+    chipSem.className = "obra-filtro-chip" + (filtroObraSel === "" ? " active" : "");
+    chipSem.style.cssText = "background:var(--surface-2);color:var(--muted);border-color:var(--line)";
+    chipSem.innerHTML = `Sem obra <span class="qtd">${semObra}</span>`;
+    chipSem.onclick = () => { filtroObraSel = filtroObraSel === "" ? "todas" : ""; render(); };
+    row.appendChild(chipSem);
+  }
+}
+
 function render(){
   const lista = document.getElementById("lista");
   const loading = document.getElementById("loading-state");
@@ -1010,6 +1073,7 @@ function render(){
   document.getElementById("stat-total").textContent = todos.length;
   document.getElementById("stat-ativos").textContent = ativos;
   document.getElementById("stat-inativos").textContent = inativos;
+  renderObraFiltro();
 
   const visiveis = aplicarFiltro();
   lista.innerHTML = "";
@@ -1298,6 +1362,7 @@ function carregarObras(){
       todasObras = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       OBRAS = todasObras.map(o => o.nome);
       renderObras();
+      renderObraFiltro();
     },
     () => {
       document.getElementById("obras-loading-state").hidden = false;
