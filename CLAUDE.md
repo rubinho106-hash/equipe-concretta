@@ -203,6 +203,47 @@ bateram certo nos números; lançamento de teste `FALTA` no dia 10 do Weslen apa
 correto na grade/tabela E no cartão do admin (revertido depois); filtro de obra que não
 bate zera tudo corretamente; mês sem documento no Firestore (Janeiro/2027) não quebra.
 
+## FALTA vira sempre dia inteiro — Modelo A (commit `eb3be37`, 04/09/2026)
+
+Depois de a tela Apontamentos ir pro ar, o Rubens mandou uma análise externa (de outra
+ferramenta) revisando o site inteiro. Um dos pontos: como `FALTA` era só mais um item de
+`MARCADORES`, dava pra selecionar `m:"FALTA", t:"CRAS"` no cartão — meio período de falta
+e meio período trabalhado no mesmo dia. Tecnicamente funcionava (a tela Apontamentos já
+lida bem com isso, contando 0,5 diária), mas a falta parcial desaparecia da leitura: virava
+só "Tarde — 0,5", sem indicar que a manhã foi falta.
+
+Decisão, depois de eu sugerir duas alternativas (Modelo A = falta sempre dia inteiro,
+Modelo B = falta por período) e o Rubens escolher **Modelo A**: `FALTA` nunca fica só num
+período. Implementado em `salvarDia()`:
+
+1. **Marcar Falta em qualquer período (manhã ou tarde) grava os dois juntos** —
+   `dias.{dia}.m = dias.{dia}.t = "FALTA"`, não importa qual dropdown foi mexido.
+2. **Escolher uma obra real num período enquanto o outro ainda é `FALTA` limpa os dois
+   primeiro** (o dia deixa de ser falta integral) e só depois grava a obra no período
+   mexido, deixando o outro vazio — nunca sobra uma "FALTA órfã" sozinha.
+3. **Proteção nova**: marcar Falta quando o outro período já tem uma obra real lançada
+   pede confirmação antes (`confirmarAcao` estilo "danger"), já que isso apagaria esse
+   lançamento — "O outro período desse dia já tem "X" lançado. Marcar Falta apaga esse
+   lançamento e deixa o dia inteiro como falta. Confirma?". Cancelar reverte a tela
+   (`renderFichaConteudo()`) sem gravar nada.
+
+Só o cartão do admin (`index.html`) precisou mudar — a tela Apontamentos e o `cartoes.html`
+já liam `FALTA` corretamente independente de vir num período só ou nos dois (não precisou
+tocar neles). Testado localmente e ao vivo: falta em período vazio (sem confirmação), obra
+real limpando falta do outro período, falta sobrescrevendo obra real (confirmação testada
+cancelando — preserva — e confirmando — sobrescreve) — todos os cenários revertidos depois
+do teste.
+
+**Ainda não implementado dessa mesma análise** (aguardando decisão/próximo passo do
+Rubens): app do Apontador (`apontador.html`) integrado ao Firestore real — hoje só existe
+um protótipo isolado em `localStorage` (não faz parte deste repo, está em
+`C:\Users\rubin\Downloads\concretta_apontador_protecao_data_futura.html`, tema visual já
+alinhado ao sistema e sem o status "Transferido"); coluna "Períodos" → "Dias" no resumo por
+obra da tela Apontamentos; campos de cache `ultimaObraId`/`ultimaObraNome`/`ultimaObraData`
+no funcionário (sugestão de ordenação pro apontador, nunca trava); "Fechar Dia" por
+Data+Obra (não por mês); Firebase Authentication (site continua com Firestore aberto,
+`allow read, write: if true`).
+
 ## Fechamento de Ponto (02/09/2026) — HISTÓRICO, removido em 03/09/2026 (ver seção acima)
 
 4ª aba do segmentado, ao lado da Conferência de Ponto — mesmo mês selecionado (`mesConferencia`
