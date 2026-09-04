@@ -1877,17 +1877,18 @@ function opcoesObra(valorAtual){
   return opts.join("");
 }
 
-// so decide qual quinzena (1 ou 2) o pill de status do cabecalho do cartao
-// reflete/alterna -- nao filtra mais quais dias aparecem na tabela (isso
-// agora mostra o mes inteiro sempre; o filtro por quinzena mora so na
-// lista da Conferencia de Ponto)
+// quinzena (1 ou 2) que o cartao esta mostrando no momento -- filtra quais
+// dias aparecem na tabela e qual quinzena o pill de status do cabecalho
+// reflete/alterna. Nao tem mais um toggle dentro do cartao pra mudar isso
+// (foi removido) -- quem decide e o botao "Abrir Cartao" clicado na lista
+// da Conferencia de Ponto (coluna 1aQ ou 2aQ), via abrirFicha(f, quinzena).
 let fichaQuinzena = 1;
 
-// quinzenaAlvo (opcional): abre o cartão já com o pill de status voltado
-// pra essa quinzena (1 ou 2) -- usado pelos botões "Abrir Cartão" de cada
-// coluna de quinzena na lista. Sem esse parâmetro, mantém o comportamento
-// padrão (sempre 1ª quinzena numa abertura nova, ou a quinzena que já
-// estava selecionada se o cartão já estava aberto).
+// quinzenaAlvo (opcional): abre o cartão já filtrado pra essa quinzena (1
+// ou 2) -- usado pelos botões "Abrir Cartão" de cada coluna de quinzena na
+// lista (o botão da 1ªQ passa 1, o da 2ªQ passa 2). Sem esse parâmetro,
+// mantém o comportamento padrão (sempre 1ª quinzena numa abertura nova, ou
+// a quinzena que já estava selecionada se o cartão já estava aberto).
 async function abrirFicha(f, quinzenaAlvo){
   const jaAberta = !document.getElementById("ficha-overlay").hidden;
   fichaFunc = f;
@@ -1911,13 +1912,17 @@ async function abrirFicha(f, quinzenaAlvo){
 
   document.getElementById("ficha-overlay").hidden = false;
   if(!jaAberta) posicionarFichaCentro();
+  // cartao ja estava aberto (de outra pessoa, ou dessa mesma numa quinzena
+  // diferente) -- a contagem de linhas pode ter mudado, tenta caber sem rolar
+  else ajustarAlturaFichaParaConteudo();
 }
 
 // Redesenha so a tabela + resumo, sem buscar dado de novo -- usado na
-// abertura e depois de salvar um dia. O filtro de quinzena mora só na
-// lista da Conferência de Ponto agora (o cartão sempre mostra o mês
-// inteiro) -- fichaQuinzena só decide qual quinzena o pill de status do
-// cabeçalho reflete/alterna, conforme qual botão "Abrir Cartão" foi usado.
+// abertura e depois de salvar um dia. Não tem mais toggle dentro do cartão
+// pra trocar de quinzena (isso mora só na lista da Conferência de Ponto,
+// nos dois botões "Abrir Cartão") -- mas a tabela continua filtrada pela
+// quinzena escolhida ao abrir (fichaQuinzena, setado por abrirFicha()
+// conforme qual botão da lista foi clicado).
 function renderFichaConteudo(){
   if(!fichaFunc) return;
   const info = dadosMes[fichaFunc.id] || { dias: {}, statusConferencia: {} };
@@ -1933,8 +1938,8 @@ function renderFichaConteudo(){
   statusBtn.disabled = fechado;
   statusBtn.onclick = () => alternarConferencia(fichaFunc, fichaQuinzena).then(() => { renderFichaConteudo(); });
 
-  const diaInicio = 1;
-  const diaFim = diasNoMes;
+  const diaInicio = fichaQuinzena === 1 ? 1 : 16;
+  const diaFim = fichaQuinzena === 1 ? 15 : diasNoMes;
 
   const tbody = document.getElementById("ficha-body");
   tbody.innerHTML = "";
