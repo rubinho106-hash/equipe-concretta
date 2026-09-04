@@ -21,7 +21,7 @@ antigo baseado em Excel (`Controle_Ponto_Concretta.xlsx` + Apps Script `Código.
 
 - Frontend: HTML/CSS/JS puro em `index.html`, Firebase compat SDK carregado via `<script>` do gstatic.com.
 - Firestore (projeto `concretta-equipe`, região `southamerica-east1`), coleções:
-  - `funcionarios/{id}` — cadastro (nome, função, pix, status)
+  - `funcionarios/{id}` — cadastro (nome, função, pix, status, obraPadrao)
   - `funcionarios/{id}/pontos/{AAAA-MM}` — um doc por mês, campo `dias.{dia}.{m|t}` = nome da obra
     (ou `SÁBADO`/`DOMINGO`/`FERIADO` como marcador), mais `statusConferencia`
   - `obras/{id}` — lista viva de obras (nome), editável na aba "Obras"
@@ -389,6 +389,62 @@ limpos, cache `ultimaObra*` apagado, doc de teste em `fechamentosDia` deletado).
 **Roadmap restante**: Passo 8 (auditoria de quem lançou/reabriu/corrigiu); Firebase
 Authentication (site continua com Firestore aberto, `allow read, write: if true`) — esse
 último ainda é o maior risco técnico pendente, não tem data pra entrar no roadmap.
+
+## Campo "Obra padrão" no cadastro do funcionário (commit `d1b2f18`, 04/09/2026)
+
+Origem: depois do Passo 5/7, o Rubens viu ao vivo que o Apontador mostra os 26 ativos
+inteiros em qualquer obra selecionada (não existe "pertence à obra"), achou confuso, e a
+gente discutiu 3 alternativas. Ele escolheu "Cadastro de equipe da obra" e perguntou como
+apontar quem vai pra uma obra diferente da equipe dele — a resposta combinada foi: esse
+cadastro é só um **filtro/sugestão de exibição**, nunca uma restrição de escrita. Esse
+commit implementa a primeira metade (o campo em si); a segunda metade (usar o campo pra
+agrupar a lista do `apontador.html`, junto com o sinal automático `ultimaObraNome` do
+Passo 4 e um índice de afinidade por recência/frequência dos últimos 15 dias úteis) **ainda
+não foi implementada** — segue em discussão de desenho, ver próxima seção.
+
+- Campo novo `obraPadrao` no modal "Editar/Novo funcionário" (`index.html`), opcional
+  (`— nenhuma —` por padrão), populado dinamicamente a partir do array vivo `OBRAS` (mesmo
+  padrão de `opcoesObra()` já usado no cartão — se o valor gravado não estiver mais na
+  lista viva de obras, aparece como opção extra em vez de sumir silenciosamente).
+- Gravado junto com os outros campos do formulário (`nome`, `funcao`, `pix`, `status`) no
+  mesmo `.set()/.update()` do submit — nada de lógica nova de salvamento.
+- Exibido como linha extra ("Obra: X") sob a função, na Lista de Funcionários — só aparece
+  se o campo estiver preenchido, sem alterar as outras telas (Apontamentos, Conferência de
+  Ponto) que também listam funcionário.
+- **Puramente informativo por enquanto**: nenhuma tela usa esse campo pra filtrar ou
+  restringir nada ainda — nem o Apontador, nem a Conferência de Ponto. É só cadastro.
+- Testado local e ao vivo: setei "CRECHE" em Alex Pereira Silva, confirmei que grava, que
+  reabrir o modal mostra o valor certo, e que a lista mostra "Obra: CRECHE" — revertido pra
+  vazio nos dois ambientes depois.
+
+## Índice de afinidade por obra (15 dias úteis) — EM DISCUSSÃO, não implementado
+
+Próximo passo combinado pro `apontador.html`: em vez de só usar `ultimaObraNome` (só o
+último lançamento) pra decidir quem aparece em destaque, calcular um score por
+recência+frequência olhando os 15 dias úteis (sáb/dom sempre pulados; feriado só conta como
+não-útil se a maioria dos funcionários ativos tiver `FERIADO` marcado naquele dia — não
+existe calendário de feriado separado, é um marcador por pessoa) **anteriores à data
+selecionada** (nunca "hoje" — importante pra lançamento retroativo continuar correto, e o
+próprio dia selecionado nunca entra no cálculo, pra evitar circularidade):
+
+```
+presença integral = 1,0   |   presença meio período = 0,5
+peso: D-1..D-3 = 3   |   D-4..D-7 = 2   |   D-8..D-15 = 1
+score = soma(presença × peso) por obra, dentro da janela
+```
+
+Validado com dado real da planilha antiga de agosto (`Controle_Ponto_Concretta_2026-08.xlsx`,
+aba "FP Eliton Lima", que alternou entre CRECHE e PRAÇA G) — com data selecionada 28/08/2026
+o score deu CRECHE=13, PRAÇA G=10: a fórmula corretamente prioriza CRECHE (trabalhado nos 2
+dias imediatamente anteriores) mesmo com frequência empatada nas duas obras — confirma que
+recência funciona como esperado e que uma pessoa pode legitimamente pontuar alto em mais de
+uma obra ao mesmo tempo (ex: quem circula de verdade entre duas obras).
+
+Ainda em aberto antes de implementar: (1) corte de score pros 3 grupos "Equipe
+sugerida"/"Prováveis"/"Outros ativos" (proposta: ≥3 / 0<x<3 / 0); (2) janela cruzando virada
+de mês exige carregar também `pontos/{mês-anterior}` (`dadosMes` hoje só guarda um mês por
+vez); (3) se os ☑/☐ do mockup são só indicador visual (mantendo clique→modal atual) ou
+seleção em lote de verdade.
 
 ## Fechamento de Ponto (02/09/2026) — HISTÓRICO, removido em 03/09/2026 (ver seção acima)
 
