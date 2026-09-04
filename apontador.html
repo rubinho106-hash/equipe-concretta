@@ -606,6 +606,7 @@ document.getElementById("limparDia").addEventListener("click",async ()=>{
   if(!confirm("Apagar os lançamentos desta obra nesta data?"))return;
   const dia = diaDaData();
   const obraSel = obra.value;
+  const dataStr = mesCarregado + "-" + String(dia).padStart(2,"0");
   for(const f of todos){
     const diaAtual = diaDoFuncionario(f.id);
     const upd = {};
@@ -616,6 +617,19 @@ document.getElementById("limparDia").addEventListener("click",async ()=>{
       await ref.update(upd);
       const snap = await ref.get();
       dadosMes[f.id] = snap.data();
+    }
+    // se o cache de "ultima obra" apontava exatamente pra esse dia+obra que
+    // acabou de ser apagado, ele ficaria orfao (gruda em "Equipe da obra"
+    // pra sempre, mesmo sem lancamento nenhum) -- limpa junto.
+    if(f.ultimaObraNome === obraSel && f.ultimaObraData === dataStr){
+      f.ultimaObraId = "";
+      f.ultimaObraNome = "";
+      f.ultimaObraData = "";
+      db.doc("funcionarios/" + f.id).update({
+        ultimaObraId: firebase.firestore.FieldValue.delete(),
+        ultimaObraNome: firebase.firestore.FieldValue.delete(),
+        ultimaObraData: firebase.firestore.FieldValue.delete()
+      }).catch(()=>{});
     }
   }
   render();
