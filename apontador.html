@@ -450,12 +450,23 @@ function fecharModal(){atual=null;backdrop.style.display="none"}
 
 // Grava a cache de "ultima obra" (mesma logica do salvarDia() no
 // index.html) -- so quando o resultado final e uma obra real, nunca pra
-// falta. Fire-and-forget: se falhar, nao deve travar o lancamento.
+// falta. Fire-and-forget pro Firestore (se falhar, nao deve travar o
+// lancamento), mas atualiza o objeto local em `todos` na hora -- sem
+// isso, o render() chamado logo depois (aqui mesmo ou no "Marcar todos")
+// usava o valor antigo de ultimaObraNome e a pessoa so entrava em
+// "Equipe da obra" depois de recarregar a pagina inteira.
 function atualizarUltimaObra(funcId){
+  const dataStr = mesCarregado + "-" + String(diaDaData()).padStart(2,"0");
+  const f = todos.find(x => x.id === funcId);
+  if(f){
+    f.ultimaObraId = obra.value;
+    f.ultimaObraNome = obra.value;
+    f.ultimaObraData = dataStr;
+  }
   db.doc("funcionarios/" + funcId).update({
     ultimaObraId: obra.value,
     ultimaObraNome: obra.value,
-    ultimaObraData: mesCarregado + "-" + String(diaDaData()).padStart(2,"0")
+    ultimaObraData: dataStr
   }).catch(()=>{});
 }
 
