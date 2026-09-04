@@ -200,29 +200,34 @@ Encarregado R$200. Aplicado a todos os 32 via `valorDiaria` no cadastro. Usar es
 funcionário novo — se aparecer uma função fora dessas quatro, perguntar ao Rubens antes de inventar um
 valor.
 
-## Filtro de quinzena no cartão do admin — REMOVIDO no mesmo dia (03/09/2026)
+## Filtro de quinzena no cartão do admin — estado final (03/09/2026)
 
-O cartão (ficha) da Conferência de Ponto chegou a ganhar um toggle "1ª quinzena (01–15)"
-/ "2ª quinzena (16–fim do mês)" que filtrava quais dias apareciam na tabela, junto com um
-ajuste de altura (`ajustarAlturaFichaParaConteudo()`) pra caber a quinzena inteira sem
-rolar. **Rubens pediu pra tirar esse filtro do cartão** ("remover filtro quinzena do
-cartão, deixar somente na conferência de ponto") — o filtro por quinzena agora mora só na
-lista principal (ver seção "Lista de Conferência de Ponto" abaixo). O cartão voltou a
-mostrar o **mês inteiro sempre** na tabela de dias, sem filtro nenhum (`diaInicio`/
-`diaFim` fixos em `1`/`diasNoMes` dentro de `renderFichaConteudo()`) — os botões de
-quinzena e o CSS deles foram removidos do HTML.
+Passou por três versões no mesmo dia até chegar no formato atual:
 
-`ajustarAlturaFichaParaConteudo()` continua existindo (ainda cresce o cartão até 92vh pra
-caber mais dias sem rolar, quando dá), só que agora mede o mês inteiro em vez de uma
-quinzena — com 28-31 linhas normalmente não cabe tudo sem scroll (volta a ser rolável,
-igual era antes de qualquer feature de quinzena existir).
+1. Toggle "1ª quinzena / 2ª quinzena" **dentro** do cartão (botões visíveis, trocavam
+   quais dias apareciam na tabela).
+2. Rubens pediu pra tirar esse toggle do cartão e deixar o filtro só na lista — nessa
+   versão intermediária o cartão passou a mostrar o **mês inteiro sempre**, sem filtro
+   nenhum, e o botão "Abrir Cartão" de cada coluna da lista só mudava qual quinzena o
+   pill de status refletia (não filtrava os dias).
+3. **Ajuste final, mesmo dia**: Rubens esclareceu — "separar as quinzenas: abrir cartão
+   quinzena 1 mostra do dia 1 ao 15, abrir cartão quinzena 2 mostra do dia 16 ao fim do
+   mês". Ou seja, ele queria o toggle **removido de dentro do cartão** (isso ficou), mas
+   o **filtro por dias mantido**, só que decidido por qual botão "Abrir Cartão" da lista
+   foi clicado, em vez de um toggle visível dentro do cartão.
 
-`fichaQuinzena` (module-level, `1` ou `2`) não filtra mais a tabela — só decide **qual
-quinzena o pill de status do cabeçalho reflete/alterna**. É setado pelo botão "Abrir
-Cartão" que foi clicado na lista (`abrirFicha(f, quinzenaAlvo)` — ver "Lista de
-Conferência de Ponto" abaixo), não por um toggle dentro do cartão (que não existe mais).
-O pill ganhou um rótulo pra deixar isso claro (ex: "1ª quinzena: Conferido", em vez de só
-"Conferido"), já que não tem mais um toggle visível mostrando qual quinzena está ativa.
+**Estado final**: sem toggle dentro do cartão (removido do HTML/CSS, não volta). A
+tabela de dias É filtrada — `diaInicio`/`diaFim` em `renderFichaConteudo()` voltaram a
+depender de `fichaQuinzena` (`1`→dias 1-15, `2`→dia 16 até o fim do mês). `fichaQuinzena`
+é setado só por `abrirFicha(f, quinzenaAlvo)`, chamado pelos botões "Abrir Cartão" da
+lista (coluna 1ªQ passa `1`, coluna 2ªQ passa `2` — ver seção "Lista de Conferência de
+Ponto" abaixo). O pill de status do cabeçalho segue essa mesma quinzena e tem rótulo
+("1ª quinzena: Conferido") já que não tem mais toggle visível mostrando o contexto.
+
+`ajustarAlturaFichaParaConteudo()` roda tanto numa abertura nova (dentro de
+`posicionarFichaCentro()`) quanto quando o cartão já estava aberto e a quinzena muda (ex:
+clicar "Abrir Cartão" de outra coluna/pessoa com o cartão já na tela) — útil de novo
+porque voltou a ter só 15-16 linhas por vez (cabe em 92vh na maioria das telas).
 
 ## Status de conferência guardado por quinzena (03/09/2026)
 
