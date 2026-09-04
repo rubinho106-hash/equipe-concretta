@@ -361,11 +361,34 @@ conferidos intactos antes de encerrar).
 continuar testando na MESMA aba depois de uma reversão manual, chamar
 `carregarDadosMes(mesCarregado)` de novo antes, ou só recarregar a página.
 
-**Ainda não implementado dessa mesma análise** (roadmap, aguardando os próximos passos):
-Passo 6 ("Marcar todos" já migrado pro Firestore real no Passo 5 acima — este passo já está
-feito, na prática); Passo 7 ("Fechar Dia" por Data+Obra, numa coleção nova, sem relação com
-o antigo `fechamentos/{mês}` já removido); Passo 8 (auditoria de quem lançou); Firebase
-Authentication (site continua com Firestore aberto, `allow read, write: if true`).
+## Passo 7 do roadmap — "Fechar Dia" por Data+Obra (commit `1d12d2a`, 04/09/2026)
+
+"Fechar dia" deixou de ser `localStorage` (`concretta_fechados_v3`) e passou a gravar numa
+coleção nova e compartilhada: **`fechamentosDia/{AAAA-MM-DD_OBRA}`** — por exemplo
+`fechamentosDia/2026-09-03_CRAS`. Sem nenhuma relação com o antigo `fechamentos/{AAAA-MM}`
+(removido do sistema em 03/09) — esse é por **mês**, o novo é por **dia + obra**, exatamente
+como a análise recomendou: cada obra fecha o dia dela quando termina de apontar, sem
+depender das outras obras nem do mês inteiro.
+
+Implementação: `chaveFechamento()` monta a chave (`data.value + "_" + obra.value`);
+`carregarFechado()` lê o doc e guarda o resultado numa variável em memória
+(`fechadoAtual`), recarregada sempre que **obra** ou **data** mudam (e na carga inicial) —
+`isFechado()` virou só a leitura síncrona dessa variável, sem mudar nenhum outro ponto do
+código que já dependia dela (banner, desabilitar botões/linhas). "Fechar dia"/"Reabrir dia"
+gravam `{obra, data, fechado, atualizadoEm}` com `.set({...}, {merge:true})` — preserva
+histórico (`fechado:false` em vez de apagar o doc), mesmo padrão do antigo
+`fechamentos/{mês}`.
+
+Testado local e ao vivo: Marcar Todos + Fechar Dia nos 26 funcionários reais (obra PRAÇA G,
+dia seguro) — banner "Dia fechado" e todos os botões/linhas desabilitados corretamente;
+confirmado que **outra obra no mesmo dia continua aberta** (isolamento por obra+data
+funcionando — testado trocando pra CRAS e verificando `fechadoAtual: false`); Reabrir Dia
+testado, volta ao normal. Revertido tudo depois nos dois ambientes (26 lançamentos
+limpos, cache `ultimaObra*` apagado, doc de teste em `fechamentosDia` deletado).
+
+**Roadmap restante**: Passo 8 (auditoria de quem lançou/reabriu/corrigiu); Firebase
+Authentication (site continua com Firestore aberto, `allow read, write: if true`) — esse
+último ainda é o maior risco técnico pendente, não tem data pra entrar no roadmap.
 
 ## Fechamento de Ponto (02/09/2026) — HISTÓRICO, removido em 03/09/2026 (ver seção acima)
 
