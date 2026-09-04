@@ -370,38 +370,113 @@
   .mes-pill-encerrado{ background: var(--surface-2); color: var(--muted); }
   .mes-pill-futuro{ background: var(--surface-2); color: var(--muted); }
 
-  .banco-meses-grid{ display: flex; flex-wrap: wrap; gap: 14px; margin-top: 16px; }
-  .mini-cal-card{
-    border: 2px solid var(--line);
+  .apont-header h2{ font-size: 20px; margin-bottom: 2px; }
+  .apont-header .modal-sub{ margin-bottom: 0; }
+
+  .apont-filtros{
+    display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap;
+    margin-top: 18px;
+  }
+  .apont-filtros .field{ margin-bottom: 0; min-width: 200px; flex: 1 1 200px; }
+  .apont-filtros .btn{ flex-shrink: 0; }
+
+  .apont-resumo-func{
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    margin-top: 20px;
+    padding: 14px 16px;
+    border: 1px solid var(--line);
     border-radius: 12px;
-    padding: 12px 14px;
-    width: 208px;
-    cursor: pointer;
     background: var(--surface);
-    user-select: none;
   }
-  .mini-cal-card:hover{ border-color: #c7d3ea; }
-  .mini-cal-card.selected{ border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
-  .mini-cal-head{
-    display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap;
-    margin-bottom: 8px;
+  .apont-resumo-func .avatar{ width: 44px; height: 44px; font-size: 15px; flex-shrink: 0; }
+  .apont-resumo-info{ margin-right: auto; }
+  .apont-resumo-nome{ font-size: 15px; font-weight: 700; }
+  .apont-resumo-sub{ font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .apont-resumo-sub .status-ativo{ color: var(--good-ink); font-weight: 700; }
+  .apont-resumo-sub .status-inativo{ color: var(--warn-ink); font-weight: 700; }
+
+  .apont-mini-stats{ display: flex; gap: 10px; flex-wrap: wrap; }
+  .apont-mini-stat{
+    min-width: 82px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: var(--surface-2);
+    text-align: center;
   }
-  .mini-cal-nome{ font-weight: 700; font-size: 12px; }
-  .mini-cal-head .mes-pill{ padding: 2px 8px; font-size: 8.5px; }
-  .mini-cal-semana, .mini-cal-dias{
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
+  .apont-mini-stat .num{ font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .apont-mini-stat .lbl{ font-size: 9.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; margin-top: 1px; }
+  .apont-mini-stat .sub{ font-size: 9px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .apont-mini-stat.total{ background: var(--good-bg); }
+  .apont-mini-stat.total .num, .apont-mini-stat.total .lbl{ color: var(--good-ink); }
+
+  .apont-grade-titulo{ font-size: 13px; font-weight: 700; margin: 20px 0 8px; }
+  .apont-grade-wrap{ overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
+  .apont-grade-row{ display: flex; }
+  .apont-grade-row + .apont-grade-row{ border-top: 1px solid var(--line); }
+  .apont-grade-rotulo{
+    width: 74px; flex-shrink: 0;
+    padding: 6px 8px;
+    font-size: 9.5px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .02em;
+    background: var(--surface-2);
+    position: sticky; left: 0;
+    display: flex; align-items: center;
   }
-  .mini-cal-semana{ margin-bottom: 3px; }
-  .mini-cal-semana span{
-    font-size: 9px; font-weight: 700; text-align: center; color: var(--muted);
+  .apont-grade-row > div:not(.apont-grade-rotulo){
+    width: 34px; flex-shrink: 0;
+    padding: 6px 2px;
+    text-align: center;
+    font-size: 10.5px;
+    font-variant-numeric: tabular-nums;
   }
-  .mini-cal-dias span{
-    font-size: 10px; text-align: center; padding: 3px 0;
-    color: var(--ink); font-variant-numeric: tabular-nums;
+  .cel-periodo{ border-radius: 4px; margin: 3px 2px; font-weight: 700; }
+  .cel-periodo.tipo-d{ background: var(--good-bg); color: var(--good-ink); }
+  .cel-periodo.tipo-m{ background: var(--warn-bg); color: var(--warn-ink); }
+  .cel-periodo.tipo-t{ background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
+  .cel-periodo.tipo-f{ background: color-mix(in srgb, var(--danger-ink) 16%, transparent); color: var(--danger-ink); }
+  .cel-periodo.tipo-vazio{ color: var(--muted); }
+
+  .apont-periodo-tag{
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
   }
-  .mini-cal-dias span.vazio{ visibility: hidden; }
-  .mini-cal-dias span.fds{ color: var(--muted); }
+  .apont-periodo-tag.tipo-d{ background: var(--good-bg); color: var(--good-ink); }
+  .apont-periodo-tag.tipo-m{ background: var(--warn-bg); color: var(--warn-ink); }
+  .apont-periodo-tag.tipo-t{ background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
+  .apont-periodo-tag.tipo-f{ background: color-mix(in srgb, var(--danger-ink) 16%, transparent); color: var(--danger-ink); }
+
+  .apont-legenda{ display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 8px; font-size: 11px; color: var(--muted); }
+  .apont-legenda .dot{ display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 4px; vertical-align: middle; }
+
+  .apont-baixo{ display: grid; grid-template-columns: 1.6fr 1fr; gap: 16px; margin-top: 20px; align-items: start; }
+  @media (max-width: 760px){ .apont-baixo{ grid-template-columns: 1fr; } }
+  .apont-card{ border: 1px solid var(--line); border-radius: 12px; background: var(--surface); padding: 16px; }
+  .apont-card h3{ font-size: 13px; margin-bottom: 10px; }
+
+  .apont-detalhe-row{
+    display: grid; grid-template-columns: 84px 1fr 96px 56px;
+    gap: 10px; align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 12.5px;
+  }
+  .apont-detalhe-row:last-child{ border-bottom: none; }
+  .apont-detalhe-row .valor{ text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+
+  .apont-obra-row{
+    display: grid; grid-template-columns: 1fr 56px 66px;
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 12.5px;
+  }
+  .apont-obra-row.total{ font-weight: 700; border-top: 2px solid var(--line); border-bottom: none; padding-top: 9px; margin-top: 2px; }
+  .apont-obra-row div:nth-child(2), .apont-obra-row div:nth-child(3){ text-align: right; font-variant-numeric: tabular-nums; }
+
+  .apont-obs{ font-size: 12px; color: var(--muted); line-height: 1.65; margin: 0; padding-left: 16px; }
+  .apont-obs li{ margin-bottom: 4px; }
 
   .conf-row{
     display: grid;
@@ -629,14 +704,32 @@
   </div>
 
   <!-- Aba "Banco de Dados" (id/nomes internos ainda dizem "fechamento" --
-       era a antiga aba "Fechamento de Ponto". Esvaziada por completo a
-       pedido do Rubens em 03/09/2026 (inclusive a trava de mês fechado que
-       tinha sobrado numa limpeza anterior). Primeiro passo da funcionalidade
-       nova, adicionado depois: cards de mês em grade de mini-calendário,
-       só pra selecionar o mês por enquanto (sem conteúdo dentro ainda) --
-       ver CLAUDE.md. -->
+       era a antiga aba "Fechamento de Ponto"). Tela "Apontamentos": consulta
+       os dias lançados de um funcionário num mês, com filtro opcional de
+       obra. Ver CLAUDE.md. -->
   <div id="view-fechamento" hidden>
-    <div class="banco-meses-grid" id="banco-meses-grid"></div>
+    <div class="apont-header">
+      <h2>Apontamentos</h2>
+      <div class="modal-sub">Consulte e gerencie os dias lançados</div>
+    </div>
+
+    <div class="apont-filtros">
+      <div class="field">
+        <label for="apont-funcionario">Funcionário</label>
+        <select id="apont-funcionario"></select>
+      </div>
+      <div class="field">
+        <label for="apont-obra">Obra</label>
+        <select id="apont-obra"></select>
+      </div>
+      <div class="field">
+        <label for="apont-periodo">Período</label>
+        <select id="apont-periodo"></select>
+      </div>
+      <button class="btn btn-primary" id="btn-apont-consultar">Consultar</button>
+    </div>
+
+    <div id="apont-resultado"></div>
   </div>
 
   <div id="view-obras" hidden>
@@ -1108,7 +1201,7 @@ async function iniciar(){
 // em 02/09/2026, entao o fallback ja reflete isso
 const OBRAS_SEED = ["CRAS", "COLÉGIO MILITAR", "CRECHE", "PARQUE IMPERIAL", "PRAÇA G"];
 let OBRAS = OBRAS_SEED.slice(); // lista viva, atualizada pela colecao "obras"
-const MARCADORES = ["SÁBADO", "DOMINGO", "FERIADO"];
+const MARCADORES = ["SÁBADO", "DOMINGO", "FERIADO", "FALTA"];
 const NOMES_MESES = ["JANEIRO","FEVEREIRO","MARÇO","ABRIL","MAIO","JUNHO","JULHO","AGOSTO","SETEMBRO","OUTUBRO","NOVEMBRO","DEZEMBRO"];
 const MES_INICIO = "2026-07";
 
@@ -1150,8 +1243,11 @@ function mostrarSegmento(qual){
   document.getElementById("view-conferencia").hidden = qual !== "conferencia";
   document.getElementById("view-fechamento").hidden = qual !== "fechamento";
   document.getElementById("view-obras").hidden = qual !== "obras";
-  if((qual === "conferencia" || qual === "fechamento") && !listaMeses.length) carregarMesTabs();
-  else if(qual === "fechamento") renderBancoMesesGrid();
+  if(qual === "conferencia" && !mesConferencia) carregarMesTabs();
+  else if(qual === "fechamento"){
+    if(!listaMeses.length) listaMeses = calcularListaMeses();
+    popularFiltrosApontamentos();
+  }
 }
 
 // ---------------- Obras ----------------
@@ -1288,7 +1384,7 @@ document.getElementById("obras-busca").addEventListener("input", (e) => {
   renderObras();
 });
 
-function carregarMesTabs(){
+function calcularListaMeses(){
   const atual = mesAtualReal();
   const limite = somarMeses(atual, 4);
   const meses = [];
@@ -1297,9 +1393,13 @@ function carregarMesTabs(){
     meses.push(cursor);
     cursor = somarMeses(cursor, 1);
   }
-  listaMeses = meses;
-  renderMesTabs(atual);
-  selecionarMes(atual);
+  return meses;
+}
+
+function carregarMesTabs(){
+  listaMeses = calcularListaMeses();
+  renderMesTabs(mesAtualReal());
+  selecionarMes(mesAtualReal());
 }
 
 // Cards de mes da Conferencia de Ponto (fileira grande, com chave AAAA-MM
@@ -1336,70 +1436,9 @@ function renderMesTabs(atual){
 
 const DIAS_SEMANA_ABREV = ["D","S","T","Q","Q","S","S"];
 
-// Cards da aba "Banco de Dados" -- primeira peça da funcionalidade nova
-// que vai substituir o antigo "Fechamento de Ponto" (ainda sem conteúdo
-// dentro do mês selecionado, só marca qual mês está ativo por enquanto,
-// igual selecionarMes() já faz pra Conferência de Ponto). Visual pedido
-// pelo Rubens: cada card mostra uma prévia de mini-calendário (grade de
-// dias) em vez do card retangular simples usado em renderMesTabs().
-function renderBancoMesesGrid(){
-  const cont = document.getElementById("banco-meses-grid");
-  if(!cont) return;
-  const atual = mesAtualReal();
-  cont.innerHTML = "";
-
-  listaMeses.forEach(mes => {
-    const { nome, ano, diasNoMes } = infoMes(mes);
-    const [anoNum, mesNum] = mes.split("-").map(Number);
-    const primeiroDiaSemana = new Date(anoNum, mesNum - 1, 1).getDay(); // 0=domingo
-
-    const card = document.createElement("div");
-    card.className = "mini-cal-card" + (mes === mesConferencia ? " selected" : "");
-    card.onclick = () => selecionarMes(mes);
-
-    let classe = "mes-pill-futuro", texto = "PRÓXIMO";
-    if(mes === atual){ classe = "mes-pill-atual"; texto = "MÊS ATUAL"; }
-    else if(mes < atual){ classe = "mes-pill-encerrado"; texto = "ENCERRADO"; }
-
-    const head = document.createElement("div");
-    head.className = "mini-cal-head";
-    head.innerHTML = `<span class="mini-cal-nome">${nome} / ${ano}</span>`
-      + `<span class="mes-pill ${classe}">${texto}</span>`;
-    card.appendChild(head);
-
-    const semana = document.createElement("div");
-    semana.className = "mini-cal-semana";
-    DIAS_SEMANA_ABREV.forEach(d => {
-      const s = document.createElement("span");
-      s.textContent = d;
-      semana.appendChild(s);
-    });
-    card.appendChild(semana);
-
-    const grade = document.createElement("div");
-    grade.className = "mini-cal-dias";
-    for(let i = 0; i < primeiroDiaSemana; i++){
-      const vazio = document.createElement("span");
-      vazio.className = "vazio";
-      grade.appendChild(vazio);
-    }
-    for(let dia = 1; dia <= diasNoMes; dia++){
-      const wd = new Date(anoNum, mesNum - 1, dia).getDay();
-      const el = document.createElement("span");
-      el.textContent = dia;
-      if(wd === 0 || wd === 6) el.className = "fds";
-      grade.appendChild(el);
-    }
-    card.appendChild(grade);
-
-    cont.appendChild(card);
-  });
-}
-
 async function selecionarMes(mes){
   mesConferencia = mes;
   renderMesTabs(mesAtualReal());
-  renderBancoMesesGrid();
 
   const loading = document.getElementById("conf-loading-state");
   loading.hidden = false;
@@ -1421,13 +1460,227 @@ async function selecionarMes(mes){
 }
 
 // ---------------- "Banco de Dados" (antiga aba "Fechamento de Ponto") ----------------
-// Rubens pediu (03/09/2026) pra esvaziar essa aba por completo -- todo o
-// conteudo de aprovacao de pagamento por obra E a trava de mes
-// fechado/reabrir que tinha sobrado numa limpeza anterior foram removidos
-// do codigo/tela, pra dar espaco a outra funcionalidade no futuro (aba
-// fica vazia por enquanto -- ver #view-fechamento). Os dados já gravados
-// no Firestore (coleção "fechamentos" e campo "pagamentos" nos docs de
-// pontos) continuam intactos, só não tem mais tela nem trava usando eles.
+// Ficou vazia numa limpeza em 03/09/2026 (removido o antigo conteudo de
+// aprovacao de pagamento por obra e a trava de mes fechado/reabrir -- ver
+// CLAUDE.md), depois virou a tela "Apontamentos": consulta os dias
+// lancados de UM funcionario num mes, com filtro opcional de obra.
+// Independente do mesConferencia/dadosMes da Conferencia de Ponto -- os
+// filtros aqui (funcionario/obra/periodo) sao proprios dessa tela,
+// consultados sob demanda no botao "Consultar", sem ficar sincronizados
+// com a outra aba.
+
+function popularFiltrosApontamentos(){
+  const selFunc = document.getElementById("apont-funcionario");
+  const selObra = document.getElementById("apont-obra");
+  const selPeriodo = document.getElementById("apont-periodo");
+  if(!selFunc || !selObra || !selPeriodo) return;
+
+  const funcAtual = selFunc.value;
+  selFunc.innerHTML = '<option value="">Selecione…</option>'
+    + todos.filter(f => f.status !== "Inativo")
+      .sort((a, b) => (a.nome||"").localeCompare(b.nome||"", "pt-BR"))
+      .map(f => `<option value="${f.id}">${f.nome}</option>`).join("");
+  if(funcAtual) selFunc.value = funcAtual;
+
+  const obraAtual = selObra.value;
+  selObra.innerHTML = '<option value="">Todas</option>'
+    + OBRAS.map(o => `<option value="${o}">${o}</option>`).join("");
+  if(obraAtual) selObra.value = obraAtual;
+
+  const periodoAtual = selPeriodo.value;
+  selPeriodo.innerHTML = listaMeses.map(mes => {
+    const { label } = infoMes(mes);
+    return `<option value="${mes}">${label}</option>`;
+  }).join("");
+  selPeriodo.value = periodoAtual && listaMeses.includes(periodoAtual) ? periodoAtual : mesAtualReal();
+}
+
+document.getElementById("btn-apont-consultar").onclick = consultarApontamentos;
+
+async function consultarApontamentos(){
+  const funcId = document.getElementById("apont-funcionario").value;
+  const obraFiltro = document.getElementById("apont-obra").value;
+  const mes = document.getElementById("apont-periodo").value;
+  const cont = document.getElementById("apont-resultado");
+
+  if(!funcId){
+    cont.innerHTML = '<div class="empty-state">Selecione um funcionário pra consultar.</div>';
+    return;
+  }
+  const f = todos.find(x => x.id === funcId);
+  if(!f) return;
+
+  cont.innerHTML = '<div class="loading-state">Consultando…</div>';
+  let info;
+  try {
+    const snap = await db.doc("funcionarios/" + funcId + "/pontos/" + mes).get();
+    info = snap.exists ? snap.data() : { dias: {} };
+  } catch(e){
+    cont.innerHTML = '<div class="empty-state">Não deu pra consultar agora — tenta de novo.</div>';
+    return;
+  }
+  renderApontResultado(f, mes, info, obraFiltro);
+}
+
+// Classifica cada dia do mes em D (dia inteiro) / M (manha) / T (tarde) /
+// F (falta) / vazio (sem lancamento), aplicando o filtro de obra -- um
+// periodo (manha ou tarde) so "conta" se bater com a obra escolhida;
+// marcadores (FALTA/SABADO/DOMINGO/FERIADO) continuam valendo mesmo com
+// filtro de obra ativo, ja que nao sao obra. Quando manha e tarde tem
+// obras REAIS diferentes no mesmo dia, mostra as duas separadas por "/"
+// em vez de inventar um estado "transferido".
+function renderApontResultado(f, mes, info, obraFiltro){
+  const cont = document.getElementById("apont-resultado");
+  const { diasNoMes, label } = infoMes(mes);
+  const [anoNum, mesNum] = mes.split("-").map(Number);
+  const NOMES_DIAS_SEMANA = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+
+  const dias = [];
+  const porObra = {};
+  let diasInteiros = 0, meiosPeriodos = 0, faltas = 0;
+
+  for(let dia = 1; dia <= diasNoMes; dia++){
+    const wd = new Date(anoNum, mesNum - 1, dia).getDay();
+    const diaObj = (info.dias || {})[dia] || {};
+    const m = diaObj.m || "";
+    const t = diaObj.t || "";
+
+    const mVale = !obraFiltro || !m || ehMarcador(m) || m === obraFiltro;
+    const tVale = !obraFiltro || !t || ehMarcador(t) || t === obraFiltro;
+    const mReal = (mVale && m && !ehMarcador(m)) ? m : "";
+    const tReal = (tVale && t && !ehMarcador(t)) ? t : "";
+    const temFalta = (mVale && m === "FALTA") || (tVale && t === "FALTA");
+
+    let valor = 0;
+    const obrasDoDia = [];
+    if(mReal){ valor += 0.5; obrasDoDia.push(mReal); porObra[mReal] = (porObra[mReal] || 0) + 0.5; }
+    if(tReal){ valor += 0.5; obrasDoDia.push(tReal); porObra[tReal] = (porObra[tReal] || 0) + 0.5; }
+
+    let tipo, obraLabel;
+    if(valor === 1){
+      tipo = "d";
+      obraLabel = obrasDoDia[0] === obrasDoDia[1] ? obrasDoDia[0] : obrasDoDia.join(" / ");
+      diasInteiros++;
+    } else if(valor === 0.5){
+      tipo = mReal ? "m" : "t";
+      obraLabel = obrasDoDia[0];
+      meiosPeriodos++;
+    } else if(temFalta){
+      tipo = "f";
+      obraLabel = "—";
+      faltas++;
+    } else {
+      tipo = "vazio";
+      obraLabel = "—";
+    }
+
+    dias.push({ dia, semana: NOMES_DIAS_SEMANA[wd], tipo, obraLabel, valor });
+  }
+
+  const totalDiarias = diasInteiros + meiosPeriodos * 0.5;
+
+  const statusClasse = f.status === "Inativo" ? "status-inativo" : "status-ativo";
+  const resumoHtml = `
+    <div class="apont-resumo-func">
+      <div class="avatar" style="background:${corAvatar(f.nome||"?")}">${iniciais(f.nome||"?")}</div>
+      <div class="apont-resumo-info">
+        <div class="apont-resumo-nome">${f.nome}</div>
+        <div class="apont-resumo-sub">Função: ${f.funcao || "—"} &nbsp;|&nbsp; Situação: <span class="${statusClasse}">${f.status || "Ativo"}</span></div>
+      </div>
+      <div class="apont-mini-stats">
+        <div class="apont-mini-stat">
+          <div class="num">${diasInteiros}</div>
+          <div class="lbl">Dias inteiros</div>
+          <div class="sub">(1,0)</div>
+        </div>
+        <div class="apont-mini-stat">
+          <div class="num">${meiosPeriodos}</div>
+          <div class="lbl">Meio período</div>
+          <div class="sub">(0,5)</div>
+        </div>
+        <div class="apont-mini-stat">
+          <div class="num">${faltas}</div>
+          <div class="lbl">Faltas</div>
+          <div class="sub">(0,0)</div>
+        </div>
+        <div class="apont-mini-stat total">
+          <div class="num">${totalDiarias.toFixed(1)}</div>
+          <div class="lbl">Total no mês</div>
+        </div>
+      </div>
+    </div>`;
+
+  const celDia = dias.map(d => `<div>${String(d.dia).padStart(2,"0")}</div>`).join("");
+  const celSemana = dias.map(d => `<div>${d.semana}</div>`).join("");
+  const celObra = dias.map(d => `<div>${d.tipo === "vazio" ? "–" : d.obraLabel}</div>`).join("");
+  const rotuloPeriodo = { d: "D", m: "M", t: "T", f: "F", vazio: "–" };
+  const celPeriodo = dias.map(d => `<div class="cel-periodo tipo-${d.tipo}">${rotuloPeriodo[d.tipo]}</div>`).join("");
+
+  const gradeHtml = `
+    <div class="apont-grade-titulo">Apontamentos — ${label}</div>
+    <div class="apont-grade-wrap">
+      <div class="apont-grade-row"><div class="apont-grade-rotulo">Dia</div>${celDia}</div>
+      <div class="apont-grade-row"><div class="apont-grade-rotulo"></div>${celSemana}</div>
+      <div class="apont-grade-row"><div class="apont-grade-rotulo">Obra</div>${celObra}</div>
+      <div class="apont-grade-row"><div class="apont-grade-rotulo">Período</div>${celPeriodo}</div>
+    </div>
+    <div class="apont-legenda">
+      <span><span class="dot" style="background:var(--good-bg)"></span>D = Dia inteiro (1,0)</span>
+      <span><span class="dot" style="background:var(--warn-bg)"></span>M = Manhã (0,5)</span>
+      <span><span class="dot" style="background:color-mix(in srgb, var(--accent) 30%, transparent)"></span>T = Tarde (0,5)</span>
+      <span><span class="dot" style="background:color-mix(in srgb, var(--danger-ink) 30%, transparent)"></span>F = Falta (0,0)</span>
+      <span><span class="dot" style="background:var(--surface-2)"></span>– = Sem lançamento</span>
+    </div>`;
+
+  const rotuloPeriodoLongo = { d: "Dia inteiro", m: "Manhã", t: "Tarde", f: "Falta" };
+  const linhasDetalhe = dias.filter(d => d.tipo !== "vazio").map(d => {
+    const dataStr = String(d.dia).padStart(2,"0") + "/" + String(mesNum).padStart(2,"0") + "/" + anoNum;
+    return `<div class="apont-detalhe-row">
+      <div>${dataStr}</div>
+      <div>${d.obraLabel}</div>
+      <div><span class="apont-periodo-tag tipo-${d.tipo}">${rotuloPeriodoLongo[d.tipo]}</span></div>
+      <div class="valor">${d.valor.toFixed(1)}</div>
+    </div>`;
+  }).join("") || '<div class="empty-state" style="padding:20px 0;">Nenhum lançamento nesse período.</div>';
+
+  const obrasOrdenadas = Object.keys(porObra).sort((a,b) => a.localeCompare(b, "pt-BR"));
+  const linhasObra = obrasOrdenadas.map(o => {
+    const totalObra = porObra[o];
+    return `<div class="apont-obra-row"><div>${o}</div><div>${Math.round(totalObra / 0.5)}</div><div>${totalObra.toFixed(1)}</div></div>`;
+  }).join("") || '<div class="empty-state" style="padding:20px 0;">Sem lançamentos.</div>';
+  const totalObraRow = obrasOrdenadas.length
+    ? `<div class="apont-obra-row total"><div>Total</div><div>${Math.round(totalDiarias / 0.5)}</div><div>${totalDiarias.toFixed(1)}</div></div>`
+    : "";
+
+  const baixoHtml = `
+    <div class="apont-baixo">
+      <div class="apont-card">
+        <h3>Lançamentos detalhados</h3>
+        ${linhasDetalhe}
+      </div>
+      <div>
+        <div class="apont-card" style="margin-bottom:16px;">
+          <h3>Resumo por obra</h3>
+          <div class="apont-obra-row" style="font-weight:700; color:var(--muted); font-size:11px; text-transform:uppercase;">
+            <div>Obra</div><div>Períodos</div><div>Total</div>
+          </div>
+          ${linhasObra}
+          ${totalObraRow}
+        </div>
+        <div class="apont-card">
+          <h3>Observações</h3>
+          <ul class="apont-obs">
+            <li>D = dia inteiro (1,0) · M = manhã (0,5) · T = tarde (0,5) · F = falta (0,0)</li>
+            <li>Um dia pode ter obras diferentes de manhã e de tarde — as duas aparecem separadas por "/".</li>
+            <li>Falta é marcada no mesmo seletor de obra do dia, dentro do Cartão.</li>
+            <li>Pra editar um lançamento, abra o Cartão do funcionário na Conferência de Ponto.</li>
+          </ul>
+        </div>
+      </div>
+    </div>`;
+
+  cont.innerHTML = resumoHtml + gradeHtml + baixoHtml;
+}
 
 // Status de conferencia agora e guardado por quinzena: statusConferencia
 // vira {q1, q2} em vez de uma string unica pro mes inteiro. Documentos
