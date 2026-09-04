@@ -168,15 +168,18 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// PASSO 3 do roadmap (04/09/2026): esse arquivo deixou de ser o protótipo
-// com dados fixos (Downloads/concretta_apontador_protecao_data_futura.html)
-// e passou a carregar funcionários e obras de verdade do Firestore. Ainda
-// NÃO grava os lançamentos lá -- isso é o passo 5. Por enquanto os
-// lançamentos continuam em localStorage, exatamente como no protótipo, só
-// que agora identificados pelo id real do funcionário (não mais pelo
-// nome, que podia colidir). "Equipe provável" (ordenar quem trabalhou na
-// obra por último) é o passo 4, ainda não feito -- por ora mostra todos
-// os Ativos, em qualquer ordem que vierem do Firestore.
+// PASSO 5 do roadmap (04/09/2026): os lançamentos deixam de ir pro
+// localStorage e passam a gravar direto em
+// funcionarios/{funcId}/pontos/{AAAA-MM} -- o MESMO documento que o
+// cartão do admin (index.html) e a tela Apontamentos leem/escrevem. Um
+// lançamento feito aqui já aparece nos dois assim que salva. O modelo de
+// dado muda de "um registro por funcionário+obra+data" (localStorage) pra
+// "um dia com m/t" compartilhado entre obras -- por isso as regras de
+// conflito e a antiga função complementar() saem: com dado real, marcar
+// manhã numa obra e tarde noutra já É complementar por natureza (cada
+// período grava sua própria obra, sem precisar de lógica extra pra
+// permitir isso). Só "Fechar dia"/"Reabrir dia" continuam em
+// localStorage por enquanto -- isso é o Passo 7, ainda não feito.
 
 // Mesma lógica de corAvatar()/iniciais() do site principal -- paleta
 // idêntica, então o mesmo funcionário cai na mesma cor em todo canto.
@@ -193,7 +196,11 @@ function iniciais(nome){
   return (a + b).toUpperCase();
 }
 
-const KEY="concretta_apontamentos_v3";
+// Mesmo conceito de marcador do index.html/cartoes.html -- SÁBADO/DOMINGO/
+// FERIADO/FALTA não são obra, então nunca contam como trabalho real.
+const MARCADORES = ["SÁBADO", "DOMINGO", "FERIADO", "FALTA"];
+function ehMarcador(v){ return MARCADORES.includes(v); }
+
 const KEY_FECHADOS="concretta_fechados_v3";
 
 const obra=document.getElementById("obra");
@@ -205,6 +212,39 @@ let atual=null; // funcionário (objeto {id, nome, ...}) com o modal aberto
 
 let OBRAS = [];
 let todos = []; // funcionários Ativos, [{id, nome, funcao, status, ...}]
+let dadosMes = {}; // funcId -> { dias: {...} } do mes atualmente carregado
+let mesCarregado = null; // "AAAA-MM" -- qual mes esta em dadosMes agora
+
+function mesDaData(){ return data.value.slice(0,7); }
+function diaDaData(){ return Number(data.value.split("-")[2]); }
+
+async function carregarDadosMes(mes){
+  mesCarregado = mes;
+  await Promise.all(todos.map(async f => {
+    const snap = await db.doc("funcionarios/" + f.id + "/pontos/" + mes).get();
+    dadosMes[f.id] = snap.exists ? snap.data() : { dias: {} };
+  }));
+}
+
+// Igual garantirDocPontos() do index.html -- cria o doc do mes pre-
+// preenchido com SABADO/DOMINGO se ainda nao existir, mantendo o mesmo
+// formato que o resto do sistema espera (inclusive statusConferencia,
+// que a Conferencia de Ponto usa).
+async function garantirDocPontos(funcId, mes){
+  const ref = db.doc("funcionarios/" + funcId + "/pontos/" + mes);
+  const snap = await ref.get();
+  if(snap.exists) return ref;
+  const [anoNum, mesNum] = mes.split("-").map(Number);
+  const totalDias = new Date(anoNum, mesNum, 0).getDate();
+  const dias = {};
+  for(let dia = 1; dia <= totalDias; dia++){
+    const wd = new Date(anoNum, mesNum - 1, dia).getDay();
+    if(wd === 0) dias[dia] = { m: "DOMINGO", t: "DOMINGO" };
+    else if(wd === 6) dias[dia] = { m: "SÁBADO", t: "SÁBADO" };
+  }
+  await ref.set({ dias, statusConferencia: { q1: "Pendente", q2: "Pendente" } });
+  return ref;
+}
 
 async function iniciarDados(){
   try {
@@ -227,6 +267,7 @@ async function iniciarDados(){
     op.value=o;op.textContent=o;obra.appendChild(op);
   });
 
+  await carregarDadosMes(mesDaData());
   render();
 }
 
@@ -240,31 +281,34 @@ function dataLocalHoje(){
 data.value = dataLocalHoje();
 data.max = dataLocalHoje();
 
-function getRegs(){return JSON.parse(localStorage.getItem(KEY)||"[]")}
-function setRegs(v){localStorage.setItem(KEY,JSON.stringify(v))}
 function getFechados(){return JSON.parse(localStorage.getItem(KEY_FECHADOS)||"[]")}
 function setFechados(v){localStorage.setItem(KEY_FECHADOS,JSON.stringify(v))}
 function chave(){return obra.value+"|"+data.value}
 function isFechado(){return getFechados().includes(chave())}
 
-// Identifica por funcId (id real do doc no Firestore), não mais por nome
-// -- evita ambiguidade se dois funcionários tiverem nome igual/parecido.
-function regObraFunc(funcId){
-  return getRegs().find(x=>x.funcId===funcId&&x.data===data.value&&x.obra===obra.value);
+function diaDoFuncionario(funcId){
+  return ((dadosMes[funcId]||{}).dias||{})[diaDaData()] || {};
 }
-function labelStatus(r){
-  if(!r)return {txt:"Não lançado",cls:"pending"};
-  if(r.status==="full")return {txt:"Dia inteiro • 1",cls:"full"};
-  if(r.status==="morning")return {txt:"Manhã • 0,5",cls:"half"};
-  if(r.status==="afternoon")return {txt:"Tarde • 0,5",cls:"half"};
-  if(r.status==="absent")return {txt:"Falta • 0",cls:"absent"};
+// Status exibido é sempre relativo à obra selecionada no momento (mesmo
+// comportamento já testado nos passos anteriores) -- se a pessoa tiver um
+// lançamento real em OUTRA obra nesse dia, aqui aparece "Não lançado" (a
+// obra ainda não tem nada registrado dela), mas a checagem de conflito em
+// aplicarLancamento() enxerga esse valor e avisa antes de sobrescrever.
+// Falta é sempre dia inteiro (Modelo A) e aparece igual não importa qual
+// obra está selecionada, já que não é uma obra.
+function statusParaExibir(funcId){
+  const { m="", t="" } = diaDoFuncionario(funcId);
+  if(m === "FALTA" || t === "FALTA") return {txt:"Falta • 0",cls:"absent"};
+  const mAqui = m === obra.value;
+  const tAqui = t === obra.value;
+  if(mAqui && tAqui) return {txt:"Dia inteiro • 1",cls:"full"};
+  if(mAqui) return {txt:"Manhã • 0,5",cls:"half"};
+  if(tAqui) return {txt:"Tarde • 0,5",cls:"half"};
   return {txt:"Não lançado",cls:"pending"};
 }
-function valor(r){
-  if(!r)return 0;
-  if(r.status==="full")return 1;
-  if(r.status==="morning"||r.status==="afternoon")return .5;
-  return 0;
+function valorNestaObra(funcId){
+  const { m="", t="" } = diaDoFuncionario(funcId);
+  return (m===obra.value?0.5:0) + (t===obra.value?0.5:0);
 }
 function dataValidaParaLancamento(){
   const hoje = dataLocalHoje();
@@ -276,28 +320,8 @@ function dataValidaParaLancamento(){
   return true;
 }
 
-// Qual periodo do dia um status ocupa -- 'm' (manha) e 't' (tarde) sao os
-// unicos que deixam a outra metade do dia livre pra outra obra. "full" e
-// "absent" tomam o dia inteiro conceitualmente, entao nunca sao
-// complementares com nada.
-function sitPeriodo(status){
-  if(status==="morning")return "m";
-  if(status==="afternoon")return "t";
-  return "dia";
-}
-// Dois status sao complementares quando um ocupa a manha e o outro a
-// tarde -- nesse caso o funcionario pode ter um lancamento de meio
-// periodo em cada obra no mesmo dia, sem que isso seja tratado como
-// conflito (mesmo modelo do cartão do admin: sem "Transferido", a obra de
-// cada periodo fica explicita).
-function complementar(statusA, statusB){
-  const pa=sitPeriodo(statusA), pb=sitPeriodo(statusB);
-  return (pa==="m"&&pb==="t")||(pa==="t"&&pb==="m");
-}
-
 function montaLinhaFuncionario(f){
-  const r=regObraFunc(f.id);
-  const st=labelStatus(r);
+  const st=statusParaExibir(f.id);
   const b=document.createElement("button");
   b.className="emp";b.type="button";b.disabled=isFechado();
   b.innerHTML=`<span class="emp-avatar" style="background:${corAvatar(f.nome)}">${iniciais(f.nome)}</span>`
@@ -323,10 +347,10 @@ function render(){
       lista.innerHTML='<div style="padding:16px;color:var(--muted)">Nenhum funcionário encontrado.</div>';
     } else {
       // "Equipe provável" -- quem teve o ultimo lancamento real
-      // (ultimaObraNome, gravado pelo cartao do admin em salvarDia()) na
-      // mesma obra selecionada. So sugestao de ordenacao pra achar mais
-      // rapido quem provavelmente esta nessa obra hoje -- nunca restringe
-      // quem pode ser tocado, todo mundo aparece em algum dos dois grupos.
+      // (ultimaObraNome, gravado por qualquer um dos dois apps em
+      // aplicarLancamento()/salvarDia()) na mesma obra selecionada. So
+      // sugestao de ordenacao pra achar mais rapido quem provavelmente
+      // esta nessa obra hoje -- nunca restringe quem pode ser tocado.
       const provavel=filtrados
         .filter(f=>f.ultimaObraNome===obra.value)
         .sort((a,b)=>(b.ultimaObraData||"").localeCompare(a.ultimaObraData||""));
@@ -359,12 +383,15 @@ function render(){
 
   // resumo/estatisticas continuam sobre TODOS os funcionarios -- a busca
   // e so pra achar alguem na lista, nao e um filtro de relatorio.
-  const regs=todos.map(f=>regObraFunc(f.id));
-  const full=regs.filter(r=>r&&r.status==="full").length;
-  const half=regs.filter(r=>r&&(r.status==="morning"||r.status==="afternoon")).length;
-  const absent=regs.filter(r=>r&&r.status==="absent").length;
-  const pending=regs.filter(r=>!r).length;
-  const total=regs.reduce((s,r)=>s+valor(r),0);
+  let full=0, half=0, absent=0, pending=0, total=0;
+  todos.forEach(f=>{
+    const st=statusParaExibir(f.id);
+    if(st.cls==="full") full++;
+    else if(st.cls==="half") half++;
+    else if(st.cls==="absent") absent++;
+    else pending++;
+    total += valorNestaObra(f.id);
+  });
 
   document.getElementById("sFull").textContent=full;
   document.getElementById("sHalf").textContent=half;
@@ -388,27 +415,80 @@ function abrir(f){
 }
 function fecharModal(){atual=null;backdrop.style.display="none"}
 
-function aplicar(status){
-  if(!atual)return;
-  let arr=getRegs();
+// Grava a cache de "ultima obra" (mesma logica do salvarDia() no
+// index.html) -- so quando o resultado final e uma obra real, nunca pra
+// falta. Fire-and-forget: se falhar, nao deve travar o lancamento.
+function atualizarUltimaObra(funcId){
+  db.doc("funcionarios/" + funcId).update({
+    ultimaObraId: obra.value,
+    ultimaObraNome: obra.value,
+    ultimaObraData: mesCarregado + "-" + String(diaDaData()).padStart(2,"0")
+  }).catch(()=>{});
+}
 
-  // regra global: um funcionário por dia em apenas uma obra -- EXCETO
-  // quando os dois lancamentos sao complementares (um de manha, outro de
-  // tarde), caso em que a pessoa trabalhou meio periodo em cada uma e os
-  // dois registros coexistem, cada um com sua obra explicita.
-  const outro=arr.find(x=>x.funcId===atual.id&&x.data===data.value&&x.obra!==obra.value);
-  if(outro && complementar(outro.status, status)){
-    arr=arr.filter(x=>!(x.funcId===atual.id&&x.data===data.value&&x.obra===obra.value));
-  } else if(outro){
-    const ok=confirm(`${atual.nome} já possui lançamento na obra ${outro.obra} nesta data.\n\nDeseja mover o funcionário para ${obra.value}?`);
-    if(!ok){fecharModal();return;}
-    arr=arr.filter(x=>!(x.funcId===atual.id&&x.data===data.value));
-  } else {
-    arr=arr.filter(x=>!(x.funcId===atual.id&&x.data===data.value&&x.obra===obra.value));
+// Grava de verdade em funcionarios/{funcId}/pontos/{mes}, direto nos
+// campos dias.{dia}.m/dias.{dia}.t -- o mesmo doc que index.html e
+// cartoes.html leem. Le o estado atual (dadosMes, ja carregado) pra
+// decidir se ha conflito com uma obra diferente ja lancada, ou se precisa
+// limpar uma Falta orfa (Modelo A: falta nunca fica so num periodo).
+async function aplicarLancamento(func, status){
+  const dia = diaDaData();
+  const diaAtual = diaDoFuncionario(func.id);
+  const m = diaAtual.m || "", t = diaAtual.t || "";
+  const mReal = m && !ehMarcador(m);
+  const tReal = t && !ehMarcador(t);
+  const obraSel = obra.value;
+
+  if(status === "absent"){
+    // Falta = Modelo A, dia inteiro -- se ja tem trabalho real lancado
+    // (nessa obra ou noutra), confirma antes de apagar e sobrescrever.
+    if(mReal || tReal){
+      const obraExistente = mReal ? m : t;
+      const ok = confirm(`${func.nome} já tem "${obraExistente}" lançado nesse dia.\n\nMarcar Falta apaga esse lançamento e deixa o dia inteiro como falta. Confirma?`);
+      if(!ok) return false;
+    }
+    const ref = await garantirDocPontos(func.id, mesCarregado);
+    await ref.update({ ["dias."+dia+".m"]:"FALTA", ["dias."+dia+".t"]:"FALTA" });
+    const snap = await ref.get();
+    dadosMes[func.id] = snap.data();
+    return true;
   }
 
-  arr.push({funcId:atual.id, nome:atual.nome, obra:obra.value, data:data.value, status});
-  setRegs(arr);fecharModal();render();
+  const alvoM = status==="full" || status==="morning";
+  const alvoT = status==="full" || status==="afternoon";
+  const conflitoM = alvoM && mReal && m!==obraSel;
+  const conflitoT = alvoT && tReal && t!==obraSel;
+  if(conflitoM || conflitoT){
+    const obraConflito = conflitoM ? m : t;
+    const ok = confirm(`${func.nome} já possui lançamento na obra "${obraConflito}" nesta data.\n\nDeseja substituir por "${obraSel}"?`);
+    if(!ok) return false;
+  }
+
+  const upd = {};
+  if(alvoM) upd["dias."+dia+".m"] = obraSel;
+  if(alvoT) upd["dias."+dia+".t"] = obraSel;
+  // limpa uma Falta orfa do periodo que NAO esta sendo gravado agora
+  if(!alvoT && t==="FALTA") upd["dias."+dia+".t"] = "";
+  if(!alvoM && m==="FALTA") upd["dias."+dia+".m"] = "";
+
+  const ref = await garantirDocPontos(func.id, mesCarregado);
+  await ref.update(upd);
+  const snap = await ref.get();
+  dadosMes[func.id] = snap.data();
+  atualizarUltimaObra(func.id);
+  return true;
+}
+
+async function aplicar(status){
+  if(!atual)return;
+  const func = atual;
+  fecharModal();
+  const ok = await aplicarLancamento(func, status);
+  if(!ok){
+    render();
+    return;
+  }
+  render();
 }
 
 document.querySelectorAll("[data-status]").forEach(b=>{
@@ -417,20 +497,33 @@ document.querySelectorAll("[data-status]").forEach(b=>{
 document.getElementById("cancelar").addEventListener("click",fecharModal);
 backdrop.addEventListener("click",e=>{if(e.target===backdrop)fecharModal()});
 
-document.getElementById("todosDia").addEventListener("click",()=>{
+document.getElementById("todosDia").addEventListener("click",async ()=>{
   if(!dataValidaParaLancamento())return;
   if(isFechado())return;
-  let arr=getRegs();
-  let conflitos=[];
+  const dia = diaDaData();
+  const obraSel = obra.value;
+  const conflitos=[];
 
-  todos.forEach(f=>{
-    const outro=arr.find(x=>x.funcId===f.id&&x.data===data.value&&x.obra!==obra.value);
-    if(outro){conflitos.push(`${f.nome} (${outro.obra})`);return;}
-    arr=arr.filter(x=>!(x.funcId===f.id&&x.data===data.value&&x.obra===obra.value));
-    arr.push({funcId:f.id, nome:f.nome, obra:obra.value, data:data.value, status:"full"});
-  });
+  // sequencial (nao Promise.all) pra evitar corrida de escritas no mesmo
+  // funcionario e manter dadosMes sempre consistente entre uma pessoa e
+  // outra -- e um botao usado raramente, alguns segundos a mais aqui nao
+  // pesam.
+  for(const f of todos){
+    const diaAtual = diaDoFuncionario(f.id);
+    const m = diaAtual.m || "", t = diaAtual.t || "";
+    const mRealDiferente = m && !ehMarcador(m) && m !== obraSel;
+    const tRealDiferente = t && !ehMarcador(t) && t !== obraSel;
+    if(mRealDiferente || tRealDiferente){
+      conflitos.push(`${f.nome} (${mRealDiferente ? m : t})`);
+      continue;
+    }
+    const ref = await garantirDocPontos(f.id, mesCarregado);
+    await ref.update({ ["dias."+dia+".m"]: obraSel, ["dias."+dia+".t"]: obraSel });
+    const snap = await ref.get();
+    dadosMes[f.id] = snap.data();
+    atualizarUltimaObra(f.id);
+  }
 
-  setRegs(arr);
   if(conflitos.length){
     alert("Alguns funcionários não foram alterados porque já estão lançados em outra obra:\n\n"+conflitos.join("\n"));
   }
@@ -439,7 +532,7 @@ document.getElementById("todosDia").addEventListener("click",()=>{
 
 document.getElementById("fecharDia").addEventListener("click",()=>{
   if(!dataValidaParaLancamento())return;
-  const pendentes=todos.filter(f=>!regObraFunc(f.id));
+  const pendentes=todos.filter(f=>statusParaExibir(f.id).cls==="pending");
   if(pendentes.length){
     alert("Ainda existem funcionários pendentes.");
     return;
@@ -453,14 +546,33 @@ document.getElementById("reabrirDia").addEventListener("click",()=>{
   setFechados(getFechados().filter(x=>x!==chave()));render();
 });
 
-document.getElementById("limparDia").addEventListener("click",()=>{
-  if(!confirm("Apagar todos os lançamentos desta obra nesta data?"))return;
-  setRegs(getRegs().filter(x=>!(x.obra===obra.value&&x.data===data.value)));render();
+document.getElementById("limparDia").addEventListener("click",async ()=>{
+  if(!confirm("Apagar os lançamentos desta obra nesta data?"))return;
+  const dia = diaDaData();
+  const obraSel = obra.value;
+  for(const f of todos){
+    const diaAtual = diaDoFuncionario(f.id);
+    const upd = {};
+    if(diaAtual.m === obraSel) upd["dias."+dia+".m"] = "";
+    if(diaAtual.t === obraSel) upd["dias."+dia+".t"] = "";
+    if(Object.keys(upd).length){
+      const ref = await garantirDocPontos(f.id, mesCarregado);
+      await ref.update(upd);
+      const snap = await ref.get();
+      dadosMes[f.id] = snap.data();
+    }
+  }
+  render();
 });
 
 obra.addEventListener("change",render);
-data.addEventListener("change",()=>{
+data.addEventListener("change",async ()=>{
   dataValidaParaLancamento();
+  const novoMes = mesDaData();
+  if(novoMes !== mesCarregado){
+    lista.innerHTML = '<div style="padding:16px;color:var(--muted)">Carregando período…</div>';
+    await carregarDadosMes(novoMes);
+  }
   render();
 });
 document.getElementById("buscaFunc").addEventListener("input",render);
