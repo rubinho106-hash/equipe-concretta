@@ -424,6 +424,32 @@ funcionários ativos, do Passo 4) e a busca já bastam.
   reabrir o modal mostra o valor certo, e que a lista mostra "Obra: CRECHE" — revertido pra
   vazio nos dois ambientes depois.
 
+## Filtro por obra na Lista de Funcionários (commit `1ce3292`, 04/09/2026)
+
+Depois de descartar o índice de afinidade (ver acima) e revalidar com o Rubens ("consegui ler
+funcionários por obra?"), ele preencheu de verdade o `obraPadrao` de vários funcionários reais
+em produção e a resposta final (via AskUserQuestion, "sem preferência" → segui a opção
+recomendada) foi: cards de filtro clicáveis, mesmo padrão visual dos já existentes
+Total/Ativos/Inativos.
+
+- Nova fileira `#obra-filtro-row`, logo abaixo dos 3 stat-cards de status — um chip "Todas as
+  obras" + um chip por obra que tenha pelo menos 1 funcionário com esse `obraPadrao` (cor por
+  `corAvatar(nome)`, mesmo esquema dos chips de resumo do cartão) + um chip "Sem obra" se
+  houver alguém sem o campo preenchido. Cada chip mostra a contagem.
+- `renderObraFiltro()` reconstrói a fileira inteira a cada `render()` (que já roda em toda
+  mudança de `todos` via `onSnapshot`) e também quando `OBRAS` muda (`carregarObras()`) —
+  cobre tanto gente nova/editada quanto obra renomeada/criada.
+- Clicar um chip seleciona `filtroObraSel`; clicar de novo no mesmo chip volta pra "Todas as
+  obras" (toggle). `aplicarFiltro()` ganhou essa condição a mais, combinando com o filtro de
+  status e a busca já existentes (os três são independentes, aplicam juntos).
+- **Só filtra a exibição** — mesma natureza informativa do campo `obraPadrao` em si, não
+  restringe nada em nenhuma outra tela.
+- Testado local com dado real de produção (só leitura, nada revertido porque nada foi
+  escrito): 28 cadastrados, chips mostraram COLÉGIO MILITAR 4 / CRAS 2 / CRECHE 12 / PARQUE
+  IMPERIAL 4 / PRAÇA G 4 / Sem obra 2 — clicar CRECHE filtrou pra exatamente os 12, clicar de
+  novo voltou pra todos, "Sem obra" mostrou os 2 sem o campo preenchido (Carlos Rikary e
+  Dagilson Gomes da Conceição, ambos Inativos).
+
 ## Fechamento de Ponto (02/09/2026) — HISTÓRICO, removido em 03/09/2026 (ver seção acima)
 
 4ª aba do segmentado, ao lado da Conferência de Ponto — mesmo mês selecionado (`mesConferencia`
