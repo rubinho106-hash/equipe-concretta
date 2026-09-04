@@ -201,8 +201,6 @@ function iniciais(nome){
 const MARCADORES = ["SÁBADO", "DOMINGO", "FERIADO", "FALTA"];
 function ehMarcador(v){ return MARCADORES.includes(v); }
 
-const KEY_FECHADOS="concretta_fechados_v3";
-
 const obra=document.getElementById("obra");
 const data=document.getElementById("data");
 const lista=document.getElementById("funcionarios");
@@ -214,6 +212,7 @@ let OBRAS = [];
 let todos = []; // funcionários Ativos, [{id, nome, funcao, status, ...}]
 let dadosMes = {}; // funcId -> { dias: {...} } do mes atualmente carregado
 let mesCarregado = null; // "AAAA-MM" -- qual mes esta em dadosMes agora
+let fechadoAtual = false; // se a combinacao obra+data selecionada agora esta fechada
 
 function mesDaData(){ return data.value.slice(0,7); }
 function diaDaData(){ return Number(data.value.split("-")[2]); }
@@ -268,6 +267,7 @@ async function iniciarDados(){
   });
 
   await carregarDadosMes(mesDaData());
+  await carregarFechado();
   render();
 }
 
@@ -281,10 +281,19 @@ function dataLocalHoje(){
 data.value = dataLocalHoje();
 data.max = dataLocalHoje();
 
-function getFechados(){return JSON.parse(localStorage.getItem(KEY_FECHADOS)||"[]")}
-function setFechados(v){localStorage.setItem(KEY_FECHADOS,JSON.stringify(v))}
-function chave(){return obra.value+"|"+data.value}
-function isFechado(){return getFechados().includes(chave())}
+// PASSO 7 do roadmap (04/09/2026): "Fechar dia" deixa de ser por mes (o
+// antigo fechamentos/{AAAA-MM}, ja removido do sistema) e tambem deixa de
+// ser so localStorage (como era ate aqui) -- agora e por Data+Obra,
+// gravado numa colecao nova e compartilhada,
+// fechamentosDia/{AAAA-MM-DD_OBRA}. Isso combina melhor com o jeito real
+// de trabalhar: cada obra fecha o dia dela quando termina de apontar,
+// independente das outras obras e sem depender do mes inteiro.
+function chaveFechamento(){ return data.value + "_" + obra.value; }
+async function carregarFechado(){
+  const snap = await db.doc("fechamentosDia/" + chaveFechamento()).get();
+  fechadoAtual = snap.exists && !!snap.data().fechado;
+}
+function isFechado(){ return fechadoAtual; }
 
 function diaDoFuncionario(funcId){
   return ((dadosMes[funcId]||{}).dias||{})[diaDaData()] || {};
@@ -530,7 +539,7 @@ document.getElementById("todosDia").addEventListener("click",async ()=>{
   render();
 });
 
-document.getElementById("fecharDia").addEventListener("click",()=>{
+document.getElementById("fecharDia").addEventListener("click",async ()=>{
   if(!dataValidaParaLancamento())return;
   const pendentes=todos.filter(f=>statusParaExibir(f.id).cls==="pending");
   if(pendentes.length){
@@ -538,12 +547,24 @@ document.getElementById("fecharDia").addEventListener("click",()=>{
     return;
   }
   if(!confirm(`Fechar o dia ${data.value.split("-").reverse().join("/")} da obra ${obra.value}?\n\nDepois disso os lançamentos ficarão bloqueados.`))return;
-  const f=getFechados(); if(!f.includes(chave()))f.push(chave()); setFechados(f);render();
+  await db.doc("fechamentosDia/" + chaveFechamento()).set({
+    obra: obra.value,
+    data: data.value,
+    fechado: true,
+    atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
+  fechadoAtual = true;
+  render();
 });
 
-document.getElementById("reabrirDia").addEventListener("click",()=>{
+document.getElementById("reabrirDia").addEventListener("click",async ()=>{
   if(!confirm("Reabrir este dia para permitir correções?"))return;
-  setFechados(getFechados().filter(x=>x!==chave()));render();
+  await db.doc("fechamentosDia/" + chaveFechamento()).set({
+    fechado: false,
+    atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
+  fechadoAtual = false;
+  render();
 });
 
 document.getElementById("limparDia").addEventListener("click",async ()=>{
@@ -565,7 +586,10 @@ document.getElementById("limparDia").addEventListener("click",async ()=>{
   render();
 });
 
-obra.addEventListener("change",render);
+obra.addEventListener("change",async ()=>{
+  await carregarFechado();
+  render();
+});
 data.addEventListener("change",async ()=>{
   dataValidaParaLancamento();
   const novoMes = mesDaData();
@@ -573,6 +597,7 @@ data.addEventListener("change",async ()=>{
     lista.innerHTML = '<div style="padding:16px;color:var(--muted)">Carregando período…</div>';
     await carregarDadosMes(novoMes);
   }
+  await carregarFechado();
   render();
 });
 document.getElementById("buscaFunc").addEventListener("input",render);
