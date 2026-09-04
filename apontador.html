@@ -387,17 +387,30 @@ function render(){
         listaProvavel.className="emp-list";
         provavel.forEach(f=>listaProvavel.appendChild(montaLinhaFuncionario(f)));
         lista.appendChild(listaProvavel);
+      }
 
+      // "Outros funcionários ativos" so aparece quando tem busca digitada --
+      // sem busca, a lista fica so na Equipe da obra (o Rubens achou a
+      // lista completa sempre visivel poluida). Ninguem fica inacessivel:
+      // digitar o nome de qualquer ativo encontra e deixa apontar normal.
+      if(termoBusca && outros.length){
         const tituloOutros=document.createElement("div");
         tituloOutros.className="grupo-titulo";
         tituloOutros.textContent="Outros funcionários ativos";
         lista.appendChild(tituloOutros);
+
+        const listaOutros=document.createElement("div");
+        listaOutros.className="emp-list";
+        outros.forEach(f=>listaOutros.appendChild(montaLinhaFuncionario(f)));
+        lista.appendChild(listaOutros);
       }
 
-      const listaOutros=document.createElement("div");
-      listaOutros.className="emp-list";
-      outros.forEach(f=>listaOutros.appendChild(montaLinhaFuncionario(f)));
-      lista.appendChild(listaOutros);
+      if(!provavel.length && !termoBusca){
+        const dica=document.createElement("div");
+        dica.style.cssText="padding:16px;color:var(--muted)";
+        dica.textContent="Ninguém cadastrado nessa obra ainda. Busque pelo nome pra lançar alguém.";
+        lista.appendChild(dica);
+      }
     }
   }
 
