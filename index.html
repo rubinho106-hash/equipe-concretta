@@ -389,32 +389,6 @@
   .conf-quinzena-col .q-lbl{ font-size: 9px; font-weight: 800; opacity: .7; }
   .conf-quinzena-col .btn{ font-size: 11.5px; padding: 6px 10px; justify-content: center; }
 
-  .fechamento-banner{
-    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
-    margin-top: 14px;
-    padding: 12px 16px;
-    border-radius: 10px;
-    font-size: 13px;
-    font-weight: 600;
-  }
-  .fechamento-banner.fechado{ background: var(--warn-bg); color: var(--warn-ink); }
-  .fechamento-mes-select-wrap{
-    display: flex; align-items: center; gap: 8px;
-    margin-top: 16px;
-  }
-  .fechamento-mes-select-wrap label{
-    font-size: 10.5px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); font-weight: 700;
-  }
-  .fechamento-mes-select-wrap select{
-    padding: 8px 10px;
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    background: var(--surface);
-    color: var(--ink);
-    font: inherit;
-    font-size: 13px;
-    font-weight: 600;
-  }
   .ficha-modal{
     position: fixed;
     margin: 0;
@@ -622,22 +596,11 @@
   </div>
 
   <!-- Aba "Banco de Dados" (id/nomes internos ainda dizem "fechamento" --
-       era a antiga aba "Fechamento de Ponto", esvaziada a pedido do Rubens
-       em 03/09/2026 pra virar outra coisa. Só sobrou o mecanismo de
-       fechar/reabrir mês (mesesFechados), que a Conferência de Ponto ainda
-       usa pra travar edição -- ver CLAUDE.md. -->
-  <div id="view-fechamento" hidden>
-    <div class="fechamento-mes-select-wrap">
-      <label for="fechamento-mes-select">Mês</label>
-      <select id="fechamento-mes-select"></select>
-    </div>
-
-    <div class="fechamento-banner" id="fechamento-banner" hidden></div>
-
-    <div class="toolbar">
-      <button class="btn btn-primary" id="btn-fechamento-acao">Fechar mês</button>
-    </div>
-  </div>
+       era a antiga aba "Fechamento de Ponto". Esvaziada por completo a
+       pedido do Rubens em 03/09/2026 (inclusive a trava de mês fechado que
+       tinha sobrado numa limpeza anterior) -- fica pronta pra receber
+       outra funcionalidade do zero. Ver CLAUDE.md. -->
+  <div id="view-fechamento" hidden></div>
 
   <div id="view-obras" hidden>
     <div class="stats-row" style="grid-template-columns: 1fr;">
@@ -1150,8 +1113,7 @@ function mostrarSegmento(qual){
   document.getElementById("view-conferencia").hidden = qual !== "conferencia";
   document.getElementById("view-fechamento").hidden = qual !== "fechamento";
   document.getElementById("view-obras").hidden = qual !== "obras";
-  if((qual === "conferencia" || qual === "fechamento") && !listaMeses.length) carregarMesTabs();
-  else if(qual === "fechamento") renderFechamento();
+  if(qual === "conferencia" && !listaMeses.length) carregarMesTabs();
 }
 
 // ---------------- Obras ----------------
@@ -1302,9 +1264,8 @@ function carregarMesTabs(){
   selecionarMes(atual);
 }
 
-// Cards de mes -- so na Conferencia de Ponto. A aba "Banco de Dados"
-// (antiga "Fechamento de Ponto") usa um seletor compacto
-// (renderFechamentoMesSelect) em vez disso.
+// Cards de mes -- so na Conferencia de Ponto (a aba "Banco de Dados" nao
+// usa mais mes nenhum, ficou vazia).
 function renderMesTabs(atual){
   const cont = document.getElementById("mes-tabs");
   if(!cont) return;
@@ -1333,22 +1294,9 @@ function renderMesTabs(atual){
   });
 }
 
-function renderFechamentoMesSelect(){
-  const sel = document.getElementById("fechamento-mes-select");
-  if(!sel) return;
-  sel.innerHTML = listaMeses.map(mes => {
-    const { label } = infoMes(mes);
-    return `<option value="${mes}"${mes===mesConferencia?" selected":""}>${label}</option>`;
-  }).join("");
-}
-document.getElementById("fechamento-mes-select").addEventListener("change", (e) => {
-  selecionarMes(e.target.value);
-});
-
 async function selecionarMes(mes){
   mesConferencia = mes;
   renderMesTabs(mesAtualReal());
-  renderFechamentoMesSelect();
 
   const loading = document.getElementById("conf-loading-state");
   loading.hidden = false;
@@ -1367,66 +1315,16 @@ async function selecionarMes(mes){
   }
   loading.hidden = true;
   renderConfLista();
-  renderFechamento();
 }
 
 // ---------------- "Banco de Dados" (antiga aba "Fechamento de Ponto") ----------------
-// Rubens pediu (03/09/2026) pra esvaziar essa aba -- todo o conteudo de
-// aprovacao de pagamento por obra (cards de obra, stats Aprovado/Falta
-// aprovar, tabela funcionario+obra, busca, CSV) foi removido do
-// codigo/tela pra dar espaco a outra funcionalidade no futuro. Os dados já
-// gravados no Firestore (campo "pagamentos" nos docs de pontos) continuam
-// intactos, só não tem mais tela pra ver/editar.
-//
-// O que sobrou, a pedido explicito dele: o mecanismo de fechar/reabrir mes
-// (mesesFechados/coleção "fechamentos"), porque a Conferência de Ponto
-// ainda depende dele pra travar edição de um mês já fechado (ver
-// alternarConferencia/salvarDia -- checam mesesFechados[mesConferencia]
-// antes de escrever).
-
-let mesesFechados = {}; // { "2026-09": true, ... }
-
-db.collection("fechamentos").onSnapshot((snap) => {
-  mesesFechados = {};
-  snap.docs.forEach(d => { if(d.data().fechado) mesesFechados[d.id] = true; });
-  renderFechamento();
-});
-
-function renderFechamento(){
-  if(!mesConferencia) return;
-  const banner = document.getElementById("fechamento-banner");
-  const btnAcao = document.getElementById("btn-fechamento-acao");
-  if(!banner || !btnAcao) return;
-
-  const fechado = !!mesesFechados[mesConferencia];
-  banner.hidden = !fechado;
-  if(fechado){
-    banner.className = "fechamento-banner fechado";
-    banner.textContent = "🔒 Este mês está fechado — a Conferência de Ponto ficou somente leitura.";
-  }
-  btnAcao.textContent = fechado ? "Reabrir mês" : "Fechar mês";
-  btnAcao.className = "btn " + (fechado ? "btn-ghost" : "btn-primary");
-}
-
-document.getElementById("btn-fechamento-acao").onclick = async () => {
-  if(!mesConferencia) return;
-  const fechado = !!mesesFechados[mesConferencia];
-  const { label } = infoMes(mesConferencia);
-  const pergunta = fechado
-    ? "Reabrir " + label + "? A Conferência de Ponto volta a ficar editável."
-    : "Fechar " + label + "? A Conferência de Ponto desse mês vira somente leitura até reabrir.";
-  const ok = await confirmarAcao(pergunta, fechado ? "Reabrir mês" : "Fechar mês", fechado ? "primary" : "danger");
-  if(!ok) return;
-  try {
-    await db.doc("fechamentos/" + mesConferencia).set({
-      fechado: !fechado,
-      atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
-    toast(fechado ? "Mês reaberto." : "Mês fechado.");
-  } catch(e){
-    toast("Não deu pra salvar agora — tenta de novo.");
-  }
-};
+// Rubens pediu (03/09/2026) pra esvaziar essa aba por completo -- todo o
+// conteudo de aprovacao de pagamento por obra E a trava de mes
+// fechado/reabrir que tinha sobrado numa limpeza anterior foram removidos
+// do codigo/tela, pra dar espaco a outra funcionalidade no futuro (aba
+// fica vazia por enquanto -- ver #view-fechamento). Os dados já gravados
+// no Firestore (coleção "fechamentos" e campo "pagamentos" nos docs de
+// pontos) continuam intactos, só não tem mais tela nem trava usando eles.
 
 // Status de conferencia agora e guardado por quinzena: statusConferencia
 // vira {q1, q2} em vez de uma string unica pro mes inteiro. Documentos
@@ -1539,7 +1437,6 @@ async function garantirDocPontos(funcId, mes){
 // dot-path em cima de statusConferencia, ja que um doc antigo pode ter esse
 // campo como string solta e o update() nao faz merge profundo mesmo assim).
 async function alternarConferencia(f, quinzena){
-  if(mesesFechados[mesConferencia]){ toast("Esse mês está fechado — reabra em Banco de Dados pra editar."); return; }
   const info = dadosMes[f.id] || { dias: {}, statusConferencia: {} };
   const atual = statusQuinzena(info, quinzena);
   const novo = atual === "Conferido" ? "Pendente" : "Conferido";
@@ -1594,11 +1491,8 @@ async function abrirFicha(f, quinzenaAlvo){
   document.getElementById("ficha-pix").textContent = "PIX: " + (f.pix || "—");
   document.getElementById("ficha-periodo").textContent = label + " · " + periodo;
 
-  const fechado = !!mesesFechados[mesConferencia];
-  const dicaEl = document.querySelector("#ficha-overlay .ficha-dica");
-  dicaEl.textContent = fechado
-    ? "🔒 mês fechado — somente leitura"
-    : "⤡ arraste qualquer borda ou canto pra redimensionar · ✥ arraste o topo pra mover";
+  document.querySelector("#ficha-overlay .ficha-dica").textContent =
+    "⤡ arraste qualquer borda ou canto pra redimensionar · ✥ arraste o topo pra mover";
 
   renderFichaConteudo();
 
@@ -1620,14 +1514,12 @@ function renderFichaConteudo(){
   const info = dadosMes[fichaFunc.id] || { dias: {}, statusConferencia: {} };
   const { diasNoMes } = infoMes(mesConferencia);
   const [anoNum, mesNum] = mesConferencia.split("-").map(Number);
-  const fechado = !!mesesFechados[mesConferencia];
 
   const statusBtn = document.getElementById("ficha-status");
   const statusAtual = statusQuinzena(info, fichaQuinzena);
   const rotuloQuinzena = fichaQuinzena === 1 ? "1ª quinzena" : "2ª quinzena";
   statusBtn.className = "pill " + (statusAtual === "Conferido" ? "pill-conferido" : "pill-pendente");
   statusBtn.textContent = rotuloQuinzena + ": " + (statusAtual === "Conferido" ? "Conferido" : "Pendente");
-  statusBtn.disabled = fechado;
   statusBtn.onclick = () => alternarConferencia(fichaFunc, fichaQuinzena).then(() => { renderFichaConteudo(); });
 
   const diaInicio = fichaQuinzena === 1 ? 1 : 16;
@@ -1656,7 +1548,6 @@ function renderFichaConteudo(){
     const selM = document.createElement("select");
     selM.className = "obra-select" + (ehMarcador(diaObj.m) ? " marcado" : "");
     selM.innerHTML = opcoesObra(diaObj.m || "");
-    selM.disabled = fechado;
     selM.onchange = () => salvarDia(dia, "m", selM.value);
     tdM.appendChild(selM);
 
@@ -1664,7 +1555,6 @@ function renderFichaConteudo(){
     const selT = document.createElement("select");
     selT.className = "obra-select" + (ehMarcador(diaObj.t) ? " marcado" : "");
     selT.innerHTML = opcoesObra(diaObj.t || "");
-    selT.disabled = fechado;
     selT.onchange = () => salvarDia(dia, "t", selT.value);
     tdT.appendChild(selT);
 
@@ -1700,7 +1590,6 @@ function renderResumoFicha(porObra){
 
 async function salvarDia(dia, campo, valor){
   if(!fichaFunc) return;
-  if(mesesFechados[mesConferencia]){ toast("Esse mês está fechado — reabra em Banco de Dados pra editar."); return; }
   try {
     const ref = await garantirDocPontos(fichaFunc.id, mesConferencia);
     const chave = "dias." + dia + "." + campo;
