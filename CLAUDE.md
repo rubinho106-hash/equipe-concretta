@@ -132,6 +132,33 @@ IDs internos (`seg-fechamento`, `view-fechamento`) continuam com o nome antigo n
 só o texto visível do botão da aba mudou. Não renomear esses IDs sem
 necessidade real, pra não gerar um diff gigante à toa.
 
+**Primeiro passo da funcionalidade nova, mesmo dia — cards de mês em mini-calendário**:
+Rubens mandou print dos cards de mês retangulares da Conferência de Ponto pedindo pra
+"criar cards na aba banco de dados, cada card sera responsavel por armazenar os dias
+lançados". Como isso é o início de algo maior e ainda vago, usei `AskUserQuestion` duas
+vezes antes de codar: (1) visual igual ao `.mes-tab` já existente ou diferente? →
+diferente; (2) o que aparece dentro de um mês selecionado? → nada ainda, só marcar qual
+mês está ativo, o conteúdo vem depois. Uma segunda pergunta fechou o visual: **grade de
+mini-calendário** (não só nome do mês, uma prévia com os dias do mês numa grade tipo
+calendário de verdade).
+
+Implementado em `renderBancoMesesGrid()` — pra cada mês de `listaMeses`, monta um card
+`.mini-cal-card` com cabeçalho (nome do mês/ano + pill Atual/Próximo/Encerrado, mesmas
+classes `.mes-pill-*` já usadas em `renderMesTabs()`) e uma grade de 7 colunas (D S T Q Q
+S S) com os dias do mês posicionados no dia da semana correto (células vazias antes do
+dia 1, calculadas com `new Date(ano, mes-1, 1).getDay()`), fim de semana com cor mais
+apagada (`.fds`). Clicar num card chama `selecionarMes(mes)` — a mesma função que a
+Conferência de Ponto usa, então **o mês selecionado é compartilhado entre as duas abas**
+(igual já acontecia com o antigo Fechamento): trocar de mês em uma reflete
+imediatamente na outra. `mostrarSegmento()` voltou a chamar `carregarMesTabs()`/
+`renderBancoMesesGrid()` ao entrar na aba "fechamento" (tinha sido simplificado pra só
+"conferencia" na limpeza anterior, já que a aba não usava mês nenhum até agora).
+
+Testado ao vivo: grade renderiza com os dias no dia da semana certo (conferido setembro/
+2026 começando numa terça), clicar num mês diferente sincroniza com a Conferência de
+Ponto e vice-versa, sem erro no console. **Ainda sem conteúdo dentro do mês selecionado**
+— próximo passo, quando o Rubens definir o que "armazenar os dias lançados" deve mostrar.
+
 ## Fechamento de Ponto (02/09/2026) — HISTÓRICO, removido em 03/09/2026 (ver seção acima)
 
 4ª aba do segmentado, ao lado da Conferência de Ponto — mesmo mês selecionado (`mesConferencia`
