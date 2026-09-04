@@ -200,32 +200,29 @@ Encarregado R$200. Aplicado a todos os 32 via `valorDiaria` no cadastro. Usar es
 funcionário novo — se aparecer uma função fora dessas quatro, perguntar ao Rubens antes de inventar um
 valor.
 
-## Filtro de quinzena no cartão do admin (03/09/2026)
+## Filtro de quinzena no cartão do admin — REMOVIDO no mesmo dia (03/09/2026)
 
-O cartão (ficha) da Conferência de Ponto ganhou um toggle "1ª quinzena (01–15)" /
-"2ª quinzena (16–fim do mês, rótulo se ajusta a 28/29/30/31)" logo acima do resumo por
-obra. `fichaQuinzena` (module-level, `1` ou `2`) controla o intervalo de dias que
-`renderFichaConteudo()` desenha (extraída de dentro de `abrirFicha()` — essa função
-agora só popula cabeçalho/PIX/status e chama `renderFichaConteudo()`). Sempre abre na
-1ª quinzena (reset em `abrirFicha()` quando `!jaAberta`, ou seja, card recém-aberto,
-não numa re-renderização depois de salvar um dia).
+O cartão (ficha) da Conferência de Ponto chegou a ganhar um toggle "1ª quinzena (01–15)"
+/ "2ª quinzena (16–fim do mês)" que filtrava quais dias apareciam na tabela, junto com um
+ajuste de altura (`ajustarAlturaFichaParaConteudo()`) pra caber a quinzena inteira sem
+rolar. **Rubens pediu pra tirar esse filtro do cartão** ("remover filtro quinzena do
+cartão, deixar somente na conferência de ponto") — o filtro por quinzena agora mora só na
+lista principal (ver seção "Lista de Conferência de Ponto" abaixo). O cartão voltou a
+mostrar o **mês inteiro sempre** na tabela de dias, sem filtro nenhum (`diaInicio`/
+`diaFim` fixos em `1`/`diasNoMes` dentro de `renderFichaConteudo()`) — os botões de
+quinzena e o CSS deles foram removidos do HTML.
 
-**Ajuste no mesmo dia — cartão tem que abrir mostrando a quinzena inteira sem rolar**:
-o card por padrão (640×640, ou o tamanho salvo de uma sessão anterior) não tinha altura
-suficiente pra caber as 15/16 linhas da quinzena sem scroll interno. Corrigido com
-`ajustarAlturaFichaParaConteudo()` — mede o conteúdo real da lista de dias
-(`scrollEl.scrollHeight`, que dá o tamanho natural mesmo com `overflow-y:auto`
-cortando visualmente) e cresce `fichaH` até caber tudo, respeitando o teto de `92vh`
-(`.ficha-modal{ max-height: 92vh }`) e nunca encolhendo um tamanho que já seja maior
-(seja o padrão, seja salvo de antes). Roda em dois pontos: dentro de
-`posicionarFichaCentro()` (abertura nova) e nos dois `onclick` dos botões de quinzena
-(trocar de quinzena também pode mudar a contagem de linhas — quinzena 2 de um mês de
-31 dias tem 16 linhas). Também precisou compactar CSS (paddings/margens do cabeçalho,
-do "Resumo de dias por obra" e das linhas da tabela) — sem isso, mesmo crescendo até
-92vh não sobrava espaço pra 15-16 linhas em telas comuns. Testado: quinzena 1 (15
-linhas), quinzena 2 de setembro (15 linhas) e quinzena 2 de outubro (16 linhas, pior
-caso) — todas renderizam sem scrollbar; testado também partindo de um tamanho salvo
-pequeno (400px de altura) no `localStorage`, confirmando que o card cresce mesmo assim.
+`ajustarAlturaFichaParaConteudo()` continua existindo (ainda cresce o cartão até 92vh pra
+caber mais dias sem rolar, quando dá), só que agora mede o mês inteiro em vez de uma
+quinzena — com 28-31 linhas normalmente não cabe tudo sem scroll (volta a ser rolável,
+igual era antes de qualquer feature de quinzena existir).
+
+`fichaQuinzena` (module-level, `1` ou `2`) não filtra mais a tabela — só decide **qual
+quinzena o pill de status do cabeçalho reflete/alterna**. É setado pelo botão "Abrir
+Cartão" que foi clicado na lista (`abrirFicha(f, quinzenaAlvo)` — ver "Lista de
+Conferência de Ponto" abaixo), não por um toggle dentro do cartão (que não existe mais).
+O pill ganhou um rótulo pra deixar isso claro (ex: "1ª quinzena: Conferido", em vez de só
+"Conferido"), já que não tem mais um toggle visível mostrando qual quinzena está ativa.
 
 ## Status de conferência guardado por quinzena (03/09/2026)
 
@@ -245,11 +242,12 @@ por quizena". `statusConferencia` deixou de ser uma string única pro mês intei
 - O pill do cabeçalho do cartão (`#ficha-status`) segue a quinzena selecionada no momento
   (`fichaQuinzena`) — populado dentro de `renderFichaConteudo()` (não mais só em
   `abrirFicha()`), então reage a trocar de quinzena.
-- **O pill da linha na lista de Conferência de Ponto e o stat "Conferidos" do topo viraram
-  resumo do mês inteiro**: só contam "Conferido" quando as DUAS quinzenas estão conferidas
-  (`statusMesConferido()`, lógica E). Clicar nesse pill da linha agora **abre o cartão** em
-  vez de togglear direto — não dava mais pra saber qual quinzena o clique da lista queria
-  dizer.
+- O stat "Conferidos" do topo é resumo do mês inteiro: só conta "Conferido" quando as DUAS
+  quinzenas estão conferidas (`statusMesConferido()`, lógica E).
+- **(Superseded no mesmo dia)** O pill da linha na lista chegou a virar um resumo único
+  (clicar abria o cartão em vez de togglear) — isso foi substituído horas depois por duas
+  colunas de pill+botão, uma por quinzena, direto na lista. Ver "Lista de Conferência de
+  Ponto: coluna DIAS saiu, virou 2 colunas por quinzena" mais abaixo pro estado atual.
 
 ## Lista de Conferência de Ponto: coluna DIAS saiu, virou 2 colunas por quinzena (03/09/2026)
 
