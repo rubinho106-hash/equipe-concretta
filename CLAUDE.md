@@ -309,11 +309,62 @@ obra sem ninguém no cache mostrou lista simples sem cabeçalhos, busca filtrand
 Dados de teste revertidos nos dois ambientes (cache apagado com `FieldValue.delete()`, dia
 de teste limpo) depois de cada verificação.
 
+## Passo 5 do roadmap — Apontador grava de verdade no Firestore (commit `bd765e8`, 04/09/2026)
+
+O `localStorage` (`concretta_apontamentos_v3`) saiu de vez do Apontador — lançamentos
+agora leem/escrevem direto em `funcionarios/{funcId}/pontos/{AAAA-MM}`, o **mesmo** doc que
+`index.html` e a tela Apontamentos usam. Um lançamento feito no Apontador aparece
+imediatamente no cartão do admin, sem nenhuma sincronização extra.
+
+**Mudança de modelo importante**: o `localStorage` guardava "um registro por
+funcionário+obra+data" (várias obras podiam coexistir pro mesmo dia via registros
+separados). O Firestore real guarda "um dia com `m`/`t`, obra é dado, não é chave" — então
+a antiga lógica de detectar "registros complementares" (`complementar()`/`sitPeriodo()`)
+**saiu**, porque deixou de ser necessária: com dado real, manhã numa obra + tarde noutra já
+é o resultado natural de duas escritas em campos diferentes (`dias.dia.m` e `dias.dia.t`),
+sem precisar de lógica especial pra permitir isso.
+
+**`aplicarLancamento(func, status)`** unifica os 4 status num só fluxo, lendo o estado atual
+do dia (`dadosMes`, carregado uma vez por mês em `carregarDadosMes()`, recarregado quando a
+data muda de mês):
+- `absent` (Falta) → Modelo A: grava `m` e `t` como `"FALTA"` juntos. Se já havia trabalho
+  real em qualquer período, confirma antes (mesmo texto/lógica do `index.html`).
+- `full`/`morning`/`afternoon` → grava só o(s) período(s) visado(s) com a obra selecionada.
+  Se o período alvo já tem uma obra REAL **diferente**, confirma antes de substituir. Limpa
+  uma Falta órfã do período oposto quando necessário (mesma regra do Passo 1).
+- Ao gravar uma obra real com sucesso, atualiza o cache `ultimaObraId/Nome/Data` (mesmo
+  mecanismo do Passo 4).
+
+`garantirDocPontos()` foi copiada do `index.html` (mesmo formato, incluindo
+`statusConferencia`, pra não quebrar a Conferência de Ponto se o Apontador for o primeiro a
+criar o doc de um mês). O status exibido por funcionário continua **relativo à obra
+selecionada no momento** (mesmo visual de antes — "Não lançado" se o trabalho real dele foi
+em outra obra, mas a checagem de conflito em `aplicarLancamento()` enxerga isso e avisa
+antes de sobrescrever). "Marcar todos" e "Limpar lançamentos" também migraram pra escrita
+real (sequencial, não em paralelo, pra manter `dadosMes` consistente).
+
+**O que continua em localStorage**: só "Fechar dia"/"Reabrir dia" (`concretta_fechados_v3`)
+— isso é o Passo 7 (Fechar Dia por Data+Obra), ainda não migrado.
+
+Testado localmente e ao vivo (nos dois arquivos, index.html incluído): lançamento real via
+Apontador apareceu certo no cartão do admin (Fabio Pereira de Souza → CRAS, resumo por obra
+bateu); conflito real (obra diferente já lançada) pediu confirmação, cancelar preservou,
+confirmar sobrescreveu só o período certo; complementar (manhã numa obra + tarde noutra,
+dia vazio) gravou sem pedir confirmação nenhuma; falta sobrescrevendo trabalho real seguiu
+a mesma regra de confirmação; "Marcar todos" testado nos 26 funcionários reais (obra PRAÇA
+G, dia seguro) e "Limpar lançamentos" também. Todos os dados de teste revertidos ao final
+nos dois ambientes (dias limpos, cache `ultimaObra*` apagado, dados reais pré-existentes
+conferidos intactos antes de encerrar).
+
+**Nota de teste aprendida nesta sessão**: escrever direto no Firestore por fora da página
+(pra reverter um teste) deixa o `dadosMes` em memória da aba aberta desatualizado — se for
+continuar testando na MESMA aba depois de uma reversão manual, chamar
+`carregarDadosMes(mesCarregado)` de novo antes, ou só recarregar a página.
+
 **Ainda não implementado dessa mesma análise** (roadmap, aguardando os próximos passos):
-Passo 5 (gravar de verdade em `pontos/{AAAA-MM}` a partir do Apontador, trocando o
-`localStorage`); Passo 6 ("Marcar todos" já existe no Apontador, falta integrar com
-Firestore); Passo 7 ("Fechar Dia" por Data+Obra, numa coleção nova, sem relação com o
-antigo `fechamentos/{mês}` já removido); Passo 8 (auditoria de quem lançou); Firebase
+Passo 6 ("Marcar todos" já migrado pro Firestore real no Passo 5 acima — este passo já está
+feito, na prática); Passo 7 ("Fechar Dia" por Data+Obra, numa coleção nova, sem relação com
+o antigo `fechamentos/{mês}` já removido); Passo 8 (auditoria de quem lançou); Firebase
 Authentication (site continua com Firestore aberto, `allow read, write: if true`).
 
 ## Fechamento de Ponto (02/09/2026) — HISTÓRICO, removido em 03/09/2026 (ver seção acima)
