@@ -251,6 +251,18 @@ por quizena". `statusConferencia` deixou de ser uma string única pro mês intei
   vez de togglear direto — não dava mais pra saber qual quinzena o clique da lista queria
   dizer.
 
+## Lista de Conferência de Ponto: coluna DIAS saiu, virou 2 colunas por quinzena (03/09/2026)
+
+Rubens mandou print marcando a coluna "DIAS" (contagem de dias) da lista principal e pediu
+pra excluir, e trocar o pill único "Conferido/Pendente" + botão "Abrir Cartão" por **duas
+colunas, uma por quinzena**. Cada linha agora tem: pill "1ªQ Conferido/Pendente" + "Abrir
+Cartão" (abre já na 1ª quinzena) e o mesmo pra "2ªQ". `contarDias()` ficou sem uso e foi
+removida. `abrirFicha(f, quinzenaAlvo)` ganhou um segundo parâmetro opcional — passar `1`
+ou `2` abre o cartão já naquela quinzena (os botões da lista usam isso); sem o parâmetro,
+mantém o comportamento de antes (1ª quinzena numa abertura nova, ou a quinzena que já
+estava selecionada se o cartão já estava aberto). Clicar direto num pill da lista continua
+alternando só aquela quinzena (`alternarConferencia(f, q)`), sem precisar abrir o cartão.
+
 ## Lançamento diário de ponto por WhatsApp
 
 Desde 02/09/2026 o lançamento diário vai direto aqui (não mais no Excel antigo). Fluxo:
