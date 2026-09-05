@@ -128,13 +128,24 @@
   }
   .func-row{
     display: grid;
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: auto 1fr auto auto;
     align-items: center;
     gap: 14px;
     padding: 13px 18px;
     border-bottom: 1px solid var(--line);
   }
   .func-row:last-child{ border-bottom: none; }
+  .func-quinzena-col{ display: flex; flex-direction: column; align-items: stretch; gap: 5px; min-width: 108px; }
+  .func-quinzena-col .btn{ font-size: 11.5px; padding: 6px 10px; justify-content: center; text-align: center; }
+  .q-status-pill{
+    display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .02em;
+  }
+  .q-status-pill .q-lbl{ font-size: 9px; font-weight: 800; opacity: .7; }
   .avatar{
     width: 36px; height: 36px;
     border-radius: 50%;
@@ -396,12 +407,27 @@ function infoMes(mesStr){
 let todos = [];
 let filtro = "";
 
+// Status Conferido/Pendente por quinzena de cada um, so pro mes atual real
+// (o mes que a lista mostra) -- carregado uma vez no load, igual o
+// dadosMes do index.html faz pra Conferencia de Ponto.
+let dadosMesAtual = {};
+async function carregarDadosMesAtual(){
+  const mes = mesAtualReal();
+  const resultados = await Promise.all(todos.map(f =>
+    db.doc("funcionarios/" + f.id + "/pontos/" + mes).get()
+      .then(snap => ({ id: f.id, data: snap.exists ? snap.data() : {} }))
+      .catch(() => ({ id: f.id, data: {} }))
+  ));
+  resultados.forEach(r => { dadosMesAtual[r.id] = r.data; });
+}
+
 async function iniciar(){
   try {
     const snap = await db.collection("funcionarios").orderBy("nome").get();
     todos = snap.docs
       .map(d => ({ id: d.id, ...d.data() }))
       .filter(f => f.status !== "Inativo");
+    await carregarDadosMesAtual();
   } catch(e){
     document.getElementById("estado-carregando").textContent = "Não deu pra carregar a equipe agora.";
     return;
@@ -439,15 +465,35 @@ function render(){
     info.appendChild(nome);
     info.appendChild(funcao);
 
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "btn";
-    btn.textContent = "Abrir Cartão";
-    btn.onclick = () => abrirFicha(f);
-
     row.appendChild(avatar);
     row.appendChild(info);
-    row.appendChild(btn);
+
+    // Uma coluna por quinzena -- mesma logica da Conferencia de Ponto do
+    // admin (index.html): pill de status (aqui so leitura, funcionario nao
+    // aprova o proprio ponto) + "Abrir Cartão" que ja abre direto naquela
+    // quinzena (dia 1-15 ou 16-fim do mes).
+    const infoMesAtual = dadosMesAtual[f.id] || {};
+    [1, 2].forEach(q => {
+      const col = document.createElement("div");
+      col.className = "func-quinzena-col";
+
+      const st = statusQuinzena(infoMesAtual, q);
+      const pill = document.createElement("span");
+      pill.className = "q-status-pill " + (st === "Conferido" ? "pill-conferido" : "pill-pendente");
+      pill.innerHTML = `<span class="q-lbl">${q}ªQ</span> ${st}`;
+      pill.title = q === 1 ? "1ª quinzena (01–15)" : "2ª quinzena (16–fim do mês)";
+
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "btn";
+      btn.textContent = "Abrir Cartão";
+      btn.onclick = () => abrirFicha(f, q);
+
+      col.appendChild(pill);
+      col.appendChild(btn);
+      row.appendChild(col);
+    });
+
     lista.appendChild(row);
   });
 }
@@ -458,9 +504,14 @@ document.getElementById("busca").addEventListener("input", (e) => {
 });
 
 let fichaFunc = null;
+// quinzena que o cartao esta mostrando -- decidida por qual "Abrir Cartão"
+// da lista foi clicado (1ªQ ou 2ªQ), igual o index.html faz na Conferencia
+// de Ponto. Sem toggle dentro do cartao (mesma decisao de la).
+let fichaQuinzena = 1;
 
-async function abrirFicha(f){
+async function abrirFicha(f, quinzenaAlvo){
   fichaFunc = f;
+  fichaQuinzena = (quinzenaAlvo === 1 || quinzenaAlvo === 2) ? quinzenaAlvo : 1;
   document.getElementById("ficha-nome").textContent = f.nome;
   document.getElementById("ficha-funcao").textContent = f.funcao || "—";
 
@@ -503,12 +554,10 @@ async function carregarMes(mes){
   statusWrap.innerHTML = `<span class="status-pill ${q1 === "Conferido" ? "pill-conferido" : "pill-pendente"}">1ª quinzena: ${q1}</span>`
     + `<span class="status-pill ${q2 === "Conferido" ? "pill-conferido" : "pill-pendente"}">2ª quinzena: ${q2}</span>`;
 
-  const tbody = document.getElementById("dias-body");
-  tbody.innerHTML = "";
-  const porObra = {};
-  let totalQ1 = 0, totalQ2 = 0;
-
-  for(let dia = 1; dia <= diasNoMes; dia++){
+  // funcao local pra nao repetir a logica de dia-marcador/fim-de-semana
+  // entre o loop de resumo (mes inteiro) e o loop da tabela (so a quinzena
+  // aberta)
+  function diaDoMes(dia){
     let diaObj = (info.dias || {})[dia];
     if(!diaObj){
       const wd = new Date(anoNum, mesNum - 1, dia).getDay();
@@ -516,6 +565,29 @@ async function carregarMes(mes){
       else if(wd === 6) diaObj = { m: "SÁBADO", t: "SÁBADO" };
       else diaObj = {};
     }
+    return diaObj;
+  }
+
+  // Resumo (chips por obra + totais 1a/2a quinzena) continua olhando o mes
+  // inteiro, independente de qual quinzena a tabela abaixo esta mostrando.
+  const porObra = {};
+  let totalQ1 = 0, totalQ2 = 0;
+  for(let dia = 1; dia <= diasNoMes; dia++){
+    const diaObj = diaDoMes(dia);
+    let diaQtd = 0;
+    if(diaObj.m && !ehMarcador(diaObj.m)){ porObra[diaObj.m] = (porObra[diaObj.m]||0) + 0.5; diaQtd += 0.5; }
+    if(diaObj.t && !ehMarcador(diaObj.t)){ porObra[diaObj.t] = (porObra[diaObj.t]||0) + 0.5; diaQtd += 0.5; }
+    if(dia <= 15) totalQ1 += diaQtd; else totalQ2 += diaQtd;
+  }
+
+  // Tabela de dias mostra so a quinzena aberta (1-15 ou 16-fim do mes) --
+  // pedido do Rubens, mesma logica ja usada no cartao do admin.
+  const tbody = document.getElementById("dias-body");
+  tbody.innerHTML = "";
+  const diaInicio = fichaQuinzena === 1 ? 1 : 16;
+  const diaFim = fichaQuinzena === 1 ? 15 : diasNoMes;
+  for(let dia = diaInicio; dia <= diaFim; dia++){
+    const diaObj = diaDoMes(dia);
 
     const tr = document.createElement("tr");
     const tdDia = document.createElement("td");
@@ -529,12 +601,6 @@ async function carregarMes(mes){
     const tdT = document.createElement("td");
     tdT.textContent = diaObj.t || "—";
     tdT.className = diaObj.t ? (ehMarcador(diaObj.t) ? "marcado" : "") : "vazio";
-
-    // dias 01-15 = 1a quinzena, 16 ate o fim do mes = 2a quinzena
-    let diaQtd = 0;
-    if(diaObj.m && !ehMarcador(diaObj.m)){ porObra[diaObj.m] = (porObra[diaObj.m]||0) + 0.5; diaQtd += 0.5; }
-    if(diaObj.t && !ehMarcador(diaObj.t)){ porObra[diaObj.t] = (porObra[diaObj.t]||0) + 0.5; diaQtd += 0.5; }
-    if(dia <= 15) totalQ1 += diaQtd; else totalQ2 += diaQtd;
 
     tr.appendChild(tdDia);
     tr.appendChild(tdM);
