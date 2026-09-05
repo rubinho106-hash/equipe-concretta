@@ -638,6 +638,36 @@ Testado local, só leitura: abri o cartão de Eliton Granjeira Lima e confirmei 
 Pendente" / "2ª quinzena: Pendente" nos dois pills, batendo com o dado real (nenhuma
 quinzena foi conferida ainda pra ele). Nada foi escrito.
 
+## `cartoes.html`: lista ganha colunas por quinzena, cartão filtra por quinzena (commit `cd35060`, 04/09/2026)
+
+Rubens mandou print da lista do `cartoes.html` (uma coluna vazia entre nome e "Abrir Cartão")
+lado a lado com a lista da Conferência de Ponto do `index.html` (que já tem 2 colunas —
+"1ªQ Pendente"/"Abrir Cartão" e "2ªQ Pendente"/"Abrir Cartão") pedindo "mesma lógica" — 1ª
+quinzena dia 1 ao 15, 2ª quinzena dia 16 ao fim do mês.
+
+Implementado:
+- **Cache novo** `dadosMesAtual` — carrega `pontos/{mês atual real}` de todo mundo de uma vez
+  no `iniciar()` (`Promise.all`, mesmo padrão do `dadosMes` da Conferência de Ponto), só pra
+  alimentar os pills da lista. Antes o `cartoes.html` não carregava nenhum dado de ponto até
+  abrir um cartão específico — essa é a primeira leitura em lote do arquivo.
+- **Lista** (`render()`): cada linha ganhou 2 colunas (`.func-quinzena-col`), uma por
+  quinzena — pill de status (`<span>`, não clicável — funcionário não aprova o próprio
+  ponto, diferente do admin) + botão "Abrir Cartão" que já abre direto naquela quinzena.
+  Classe do pill renomeada pra `q-status-pill` (não reaproveitei `.status-pill` que já
+  existia pro cabeçalho do cartão — evita colisão de CSS entre os dois contextos).
+- **Cartão** (`abrirFicha(f, quinzenaAlvo)`/`carregarMes()`): novo estado `fichaQuinzena`
+  (1 ou 2, decidido por qual botão da lista foi clicado, sem toggle dentro do cartão — mesma
+  decisão de design já tomada no `index.html`). A tabela de dias agora mostra só a quinzena
+  aberta (`diaInicio`/`diaFim` = 1–15 ou 16–fim do mês, mesma fórmula do admin). O resumo
+  por obra e os totais 1ª/2ª quinzena continuam somando o **mês inteiro**, independente de
+  qual quinzena a tabela está filtrando — só a tabela de dias em si ficou restrita (o loop
+  que antes fazia tudo junto foi separado em dois: um pro resumo, outro pra tabela).
+
+Testado local, só leitura, contra dado real de produção: lista mostrou os pills certos pra
+todo mundo; abri o cartão de Eliton Granjeira Lima pela 1ªQ (tabela parou exatamente no dia
+15) e depois pela 2ªQ (tabela começou no dia 16, foi até 30) — resumo por obra e totais
+continuaram os mesmos nos dois casos, como esperado. Nada foi escrito.
+
 ## Fechamento de Ponto (02/09/2026) — HISTÓRICO, removido em 03/09/2026 (ver seção acima)
 
 4ª aba do segmentado, ao lado da Conferência de Ponto — mesmo mês selecionado (`mesConferencia`
