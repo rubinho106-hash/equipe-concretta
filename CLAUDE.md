@@ -668,6 +668,27 @@ todo mundo; abri o cartão de Eliton Granjeira Lima pela 1ªQ (tabela parou exat
 15) e depois pela 2ªQ (tabela começou no dia 16, foi até 30) — resumo por obra e totais
 continuaram os mesmos nos dois casos, como esperado. Nada foi escrito.
 
+**Ajuste no mesmo dia (commit `7b4d15c`, 04/09/2026)**: Rubens mandou print do cartão de
+Carlos André aberto pela 1ªQ mostrando os dois pills de status ("1ª quinzena: Pendente" e
+"2ª quinzena: Pendente") e os dois totais lado a lado (1ª quinzena 1.0 / 2ª quinzena 0.0) —
+riscou de vermelho o bloco da 2ª quinzena, dizendo que abrir uma quinzena deveria mostrar
+**só** os dados daquela quinzena, sem misturar com a outra. Ou seja: a intenção anterior de
+manter resumo/total "olhando o mês inteiro, independente da quinzena aberta" (decisão que eu
+tinha tomado sozinho, sem confirmar) estava errada — o pedido original já era pra tudo ficar
+restrito à quinzena aberta, igual a tabela de dias.
+
+Corrigido: `carregarMes()` agora usa **um loop só**, restrito a `diaInicio..diaFim`, que
+alimenta a tabela de dias E o resumo por obra E o total — os três sempre da mesma quinzena.
+O pill de status também virou um só (antes mostrava os dois juntos), refletindo só
+`fichaQuinzena`. Os dois blocos de total no HTML (`resumo-q1-bloco`/`resumo-q2-bloco`)
+continuam existindo, mas agora só um fica visível por vez (`style.display`), escondendo o da
+quinzena que não está aberta.
+
+Testado local, só leitura: Carlos André pela 1ªQ mostrou só "1ª quinzena: Pendente" + chip
+"COLÉGIO MILITAR 1.0" + total "1.0" (sem nenhum traço da 2ª quinzena); pela 2ªQ mostrou "2ª
+quinzena: Pendente" + "Nenhum dia lançado nessa quinzena" + total "0.0" — nada da 1ª
+quinzena visível. Nada foi escrito.
+
 ## Fechamento de Ponto (02/09/2026) — HISTÓRICO, removido em 03/09/2026 (ver seção acima)
 
 4ª aba do segmentado, ao lado da Conferência de Ponto — mesmo mês selecionado (`mesConferencia`
