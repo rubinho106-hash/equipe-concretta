@@ -205,6 +205,7 @@
     font-weight: 700;
     letter-spacing: .02em;
     margin-top: 10px;
+    margin-right: 6px;
   }
   .pill-conferido{ background: var(--good-bg); color: var(--good-ink); }
   .pill-pendente{ background: var(--warn-bg); color: var(--warn-ink); }
@@ -366,6 +367,14 @@ const MES_INICIO = "2026-07";
 const MARCADORES = ["SÁBADO", "DOMINGO", "FERIADO", "FALTA"];
 function ehMarcador(v){ return MARCADORES.includes(v); }
 
+// Mesma logica do index.html: statusConferencia pode ser string legada ou
+// objeto {q1,q2} desde que o status virou por quinzena la.
+function statusQuinzena(info, quinzena){
+  const sc = (info || {}).statusConferencia;
+  if(sc && typeof sc === "object") return sc["q" + quinzena] === "Conferido" ? "Conferido" : "Pendente";
+  return sc === "Conferido" ? "Conferido" : "Pendente";
+}
+
 function mesAtualReal(){
   const d = new Date();
   return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
@@ -485,9 +494,14 @@ async function carregarMes(mes){
     if(snap.exists) info = snap.data();
   } catch(e){ /* sem lancamento nesse mes ainda -- fica no padrao vazio */ }
 
+  // Igual index.html: statusConferencia pode ser string legada (doc antigo,
+  // antes do status virar por quinzena) ou objeto {q1,q2}. statusQuinzena()
+  // faz o fallback pra nao quebrar cartao de quem nunca foi tocado desde
+  // essa migracao.
   const statusWrap = document.getElementById("status-wrap");
-  statusWrap.innerHTML = `<span class="status-pill ${info.statusConferencia === "Conferido" ? "pill-conferido" : "pill-pendente"}">`
-    + (info.statusConferencia === "Conferido" ? "Conferido" : "Pendente") + "</span>";
+  const q1 = statusQuinzena(info, 1), q2 = statusQuinzena(info, 2);
+  statusWrap.innerHTML = `<span class="status-pill ${q1 === "Conferido" ? "pill-conferido" : "pill-pendente"}">1ª quinzena: ${q1}</span>`
+    + `<span class="status-pill ${q2 === "Conferido" ? "pill-conferido" : "pill-pendente"}">2ª quinzena: ${q2}</span>`;
 
   const tbody = document.getElementById("dias-body");
   tbody.innerHTML = "";
