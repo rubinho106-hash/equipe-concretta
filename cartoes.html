@@ -321,11 +321,11 @@
       <div class="ficha-resumo-titulo">Resumo de dias por obra</div>
       <div class="ficha-resumo-chips" id="resumo-chips"></div>
       <div class="ficha-resumo-total">
-        <div class="quinzena">
+        <div class="quinzena" id="resumo-q1-bloco">
           <div class="lbl" id="resumo-q1-lbl">1ª quinzena (01–15)</div>
           <div class="val" id="resumo-q1">0.0</div>
         </div>
-        <div class="quinzena">
+        <div class="quinzena" id="resumo-q2-bloco">
           <div class="lbl" id="resumo-q2-lbl">2ª quinzena (16–30)</div>
           <div class="val" id="resumo-q2">0.0</div>
         </div>
@@ -549,15 +549,24 @@ async function carregarMes(mes){
   // antes do status virar por quinzena) ou objeto {q1,q2}. statusQuinzena()
   // faz o fallback pra nao quebrar cartao de quem nunca foi tocado desde
   // essa migracao.
+  // Cartao inteiro (pill, resumo por obra, total) fica restrito a
+  // fichaQuinzena -- so mostra dados da quinzena que foi aberta, igual a
+  // tabela de dias ja faz. Pedido do Rubens depois de ver o resumo/total
+  // ainda somando o mes inteiro mesmo com a tabela ja filtrada.
+  const statusAtual = statusQuinzena(info, fichaQuinzena);
   const statusWrap = document.getElementById("status-wrap");
-  const q1 = statusQuinzena(info, 1), q2 = statusQuinzena(info, 2);
-  statusWrap.innerHTML = `<span class="status-pill ${q1 === "Conferido" ? "pill-conferido" : "pill-pendente"}">1ª quinzena: ${q1}</span>`
-    + `<span class="status-pill ${q2 === "Conferido" ? "pill-conferido" : "pill-pendente"}">2ª quinzena: ${q2}</span>`;
+  statusWrap.innerHTML = `<span class="status-pill ${statusAtual === "Conferido" ? "pill-conferido" : "pill-pendente"}">`
+    + (fichaQuinzena === 1 ? "1ª quinzena: " : "2ª quinzena: ") + statusAtual + "</span>";
 
-  // funcao local pra nao repetir a logica de dia-marcador/fim-de-semana
-  // entre o loop de resumo (mes inteiro) e o loop da tabela (so a quinzena
-  // aberta)
-  function diaDoMes(dia){
+  const diaInicio = fichaQuinzena === 1 ? 1 : 16;
+  const diaFim = fichaQuinzena === 1 ? 15 : diasNoMes;
+
+  const tbody = document.getElementById("dias-body");
+  tbody.innerHTML = "";
+  const porObra = {};
+  let totalQuinzena = 0;
+
+  for(let dia = diaInicio; dia <= diaFim; dia++){
     let diaObj = (info.dias || {})[dia];
     if(!diaObj){
       const wd = new Date(anoNum, mesNum - 1, dia).getDay();
@@ -565,29 +574,6 @@ async function carregarMes(mes){
       else if(wd === 6) diaObj = { m: "SÁBADO", t: "SÁBADO" };
       else diaObj = {};
     }
-    return diaObj;
-  }
-
-  // Resumo (chips por obra + totais 1a/2a quinzena) continua olhando o mes
-  // inteiro, independente de qual quinzena a tabela abaixo esta mostrando.
-  const porObra = {};
-  let totalQ1 = 0, totalQ2 = 0;
-  for(let dia = 1; dia <= diasNoMes; dia++){
-    const diaObj = diaDoMes(dia);
-    let diaQtd = 0;
-    if(diaObj.m && !ehMarcador(diaObj.m)){ porObra[diaObj.m] = (porObra[diaObj.m]||0) + 0.5; diaQtd += 0.5; }
-    if(diaObj.t && !ehMarcador(diaObj.t)){ porObra[diaObj.t] = (porObra[diaObj.t]||0) + 0.5; diaQtd += 0.5; }
-    if(dia <= 15) totalQ1 += diaQtd; else totalQ2 += diaQtd;
-  }
-
-  // Tabela de dias mostra so a quinzena aberta (1-15 ou 16-fim do mes) --
-  // pedido do Rubens, mesma logica ja usada no cartao do admin.
-  const tbody = document.getElementById("dias-body");
-  tbody.innerHTML = "";
-  const diaInicio = fichaQuinzena === 1 ? 1 : 16;
-  const diaFim = fichaQuinzena === 1 ? 15 : diasNoMes;
-  for(let dia = diaInicio; dia <= diaFim; dia++){
-    const diaObj = diaDoMes(dia);
 
     const tr = document.createElement("tr");
     const tdDia = document.createElement("td");
@@ -602,6 +588,9 @@ async function carregarMes(mes){
     tdT.textContent = diaObj.t || "—";
     tdT.className = diaObj.t ? (ehMarcador(diaObj.t) ? "marcado" : "") : "vazio";
 
+    if(diaObj.m && !ehMarcador(diaObj.m)){ porObra[diaObj.m] = (porObra[diaObj.m]||0) + 0.5; totalQuinzena += 0.5; }
+    if(diaObj.t && !ehMarcador(diaObj.t)){ porObra[diaObj.t] = (porObra[diaObj.t]||0) + 0.5; totalQuinzena += 0.5; }
+
     tr.appendChild(tdDia);
     tr.appendChild(tdM);
     tr.appendChild(tdT);
@@ -614,9 +603,14 @@ async function carregarMes(mes){
     const cor = corAvatar(nome);
     return `<div class="ficha-resumo-chip" style="background:${cor}1a;border-color:${cor}55;color:${cor}">`
       + `<span>${nome}</span><span class="qtd">${porObra[nome].toFixed(1)}</span></div>`;
-  }).join("") : `<span style="color:var(--muted);font-size:12px">Nenhum dia lançado ainda nesse mês.</span>`;
-  document.getElementById("resumo-q1").textContent = totalQ1.toFixed(1);
-  document.getElementById("resumo-q2").textContent = totalQ2.toFixed(1);
+  }).join("") : `<span style="color:var(--muted);font-size:12px">Nenhum dia lançado nessa quinzena.</span>`;
+
+  // Mostra so o bloco de total da quinzena aberta -- o outro fica oculto
+  // (antes os dois apareciam sempre, mesmo com a tabela ja filtrada, o que
+  // confundia).
+  document.getElementById("resumo-q1-bloco").style.display = fichaQuinzena === 1 ? "" : "none";
+  document.getElementById("resumo-q2-bloco").style.display = fichaQuinzena === 2 ? "" : "none";
+  document.getElementById("resumo-q" + fichaQuinzena).textContent = totalQuinzena.toFixed(1);
   document.getElementById("resumo-q2-lbl").textContent = "2ª quinzena (16–" + String(diasNoMes).padStart(2,"0") + ")";
 }
 
