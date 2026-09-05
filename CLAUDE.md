@@ -689,6 +689,20 @@ Testado local, só leitura: Carlos André pela 1ªQ mostrou só "1ª quinzena: P
 quinzena: Pendente" + "Nenhum dia lançado nessa quinzena" + total "0.0" — nada da 1ª
 quinzena visível. Nada foi escrito.
 
+**Mês virou fixo no cartão do `cartoes.html` (commit `e31d79d`, 04/09/2026)**: Rubens
+mandou print marcando o seletor de mês e pediu "MES FIXO". O `<select id="mes-select">`
+(que deixava escolher qualquer mês desde `MES_INICIO` até o mês seguinte ao atual) virou um
+`<span>` de texto simples mostrando só o mês atual real (`mesAtualReal()`), sem nenhuma forma
+de trocar. `abrirFicha()` perdeu toda a lógica de montar a lista de meses/`onchange` — só
+grava o label do mês atual e chama `carregarMes(atual)` direto. `MES_INICIO` e
+`somarMeses()` ficaram sem nenhum uso depois disso, removidos. **Diferença intencional do
+admin**: o `index.html` (Conferência de Ponto/Banco de Dados) continua deixando navegar entre
+meses — isso é uma ferramenta de trabalho pra quem audita histórico; `cartoes.html` é o
+cartão público que o funcionário abre pra conferir o mês corrente, não precisa (e gerava
+confusão) deixar trocar de mês por lá.
+
+Testado local: modal abre mostrando "SETEMBRO / 2026" como texto fixo, sem dropdown nenhum.
+
 ## Fechamento de Ponto (02/09/2026) — HISTÓRICO, removido em 03/09/2026 (ver seção acima)
 
 4ª aba do segmentado, ao lado da Conferência de Ponto — mesmo mês selecionado (`mesConferencia`
