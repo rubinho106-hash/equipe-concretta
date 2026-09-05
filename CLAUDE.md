@@ -611,6 +611,33 @@ Pendentes" em vez de "26"; cliquei "Marcar equipe" e confirmei "4 Inteiros / 0 P
 "Fechar dia" habilitando; "Limpar lançamentos" reverteu tudo de volta pra "4 Pendentes" com
 o botão desabilitado de novo, exatamente como esperado. Nenhum dado real ficou alterado.
 
+## `cartoes.html` ficou desatualizado desde que o status virou por quinzena (commit `3c6f817`, 04/09/2026)
+
+Rubens mandou print do `cartoes.html` (Eliton Granjeira Lima, setembro/2026) mostrando um
+único pill "Pendente" no topo, e comparou com a lista da Conferência de Ponto no `index.html`
+que já mostra "1ªQ Pendente"/"2ªQ Pendente" separados — "MOSTRA POR QUIZENA".
+
+Causa: em 03/09/2026 o `statusConferencia` deixou de ser uma string única pro mês inteiro e
+virou objeto `{q1, q2}` (ver "Status de conferência guardado por quinzena" abaixo) — mas essa
+mudança só foi replicada no `index.html`. **O `cartoes.html`, por ser um arquivo
+propositalmente isolado (sem módulo compartilhado, cada HTML se vira sozinho), nunca foi
+atualizado** — continuava lendo `info.statusConferencia === "Conferido"` como se fosse
+sempre string. Resultado: pra qualquer funcionário cujo doc já tivesse sido tocado pelo novo
+formato de objeto, essa comparação nunca batia (`{q1:...} === "Conferido"` é sempre falso), e
+o cartão mostrava "Pendente" fixo, mesmo que uma ou as duas quinzenas já estivessem
+conferidas de verdade.
+
+Corrigido: portada a função `statusQuinzena(info, quinzena)` do `index.html` (mesmo
+fallback pra doc legado em string), e o pill único virou dois — "1ª quinzena: Pendente/
+Conferido" e "2ª quinzena: Pendente/Conferido" — mesma lógica e mesmos dados, só exibidos
+corretamente agora. Não mexi na tabela de dias (continua mostrando o mês inteiro de uma vez,
+sem filtro de quinzena) nem no resumo por obra (já mostrava os totais 1ª/2ª quinzena
+separados antes disso) — só o pill de status estava quebrado.
+
+Testado local, só leitura: abri o cartão de Eliton Granjeira Lima e confirmei "1ª quinzena:
+Pendente" / "2ª quinzena: Pendente" nos dois pills, batendo com o dado real (nenhuma
+quinzena foi conferida ainda pra ele). Nada foi escrito.
+
 ## Fechamento de Ponto (02/09/2026) — HISTÓRICO, removido em 03/09/2026 (ver seção acima)
 
 4ª aba do segmentado, ao lado da Conferência de Ponto — mesmo mês selecionado (`mesConferencia`
