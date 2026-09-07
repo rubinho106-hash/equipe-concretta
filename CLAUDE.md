@@ -858,6 +858,13 @@ e deixa a classe `.marcado` (ou o padrão) cuidar sozinha. Chamada logo depois d
 Testado local: CRECHE nos dias 01-04 apareceu com fundo/borda laranja clarinho igual o chip "CRECHE
 3.5" do resumo; SÁBADO/DOMINGO continuaram vermelhos; dias vazios continuaram neutros. Nada gravado.
 
+**Mesmo tratamento no `cartoes.html` (commit `dc1d8de`, 04/09/2026)**: Rubens pediu "mesmo estilo"
+pro cartão público do funcionário. Como lá a tabela é texto puro (`<td>`, não `<select>`), a versão
+equivalente é `aplicarCorObraCelula(td, valor)` — só cor de texto + negrito (mesma família visual do
+`.marcado` já existente, que também é só texto colorido, sem fundo), em vez do fundo/borda usado no
+`<select>` do admin. Testado local: CRECHE apareceu laranja negrito na tabela, batendo com o chip do
+resumo acima; SÁBADO/DOMINGO e vazios sem mudança.
+
 ## Filtro de quinzena no cartão do admin — estado final (03/09/2026)
 
 Passou por três versões no mesmo dia até chegar no formato atual:
