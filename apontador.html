@@ -4,6 +4,10 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <title>Concretta • Apontador</title>
+<meta name="theme-color" content="#0b1330">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
 <style>
 :root{
@@ -29,6 +33,9 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"IBM Plex Sans",
 .hero-eyebrow{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#a9bdfb;margin-bottom:8px}
 .hero h1{margin:0;font-size:24px;font-weight:800;color:#fff}
 .hero-sub{font-size:13px;color:#cbd5f7;margin-top:6px}
+.install-row{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;min-height:20px}
+.install-btn{background:#fff;color:var(--hero-2);border:0;border-radius:9px;padding:9px 14px;font-weight:700;font-size:12.5px;cursor:pointer}
+.install-status{font-size:11.5px;color:#cbd5f7}
 
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-top:14px;box-shadow:var(--shadow)}
 label{display:block;color:var(--muted);font-size:11px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;margin:8px 0 6px}
@@ -91,6 +98,10 @@ button:disabled{opacity:.45;cursor:not-allowed}
     <div class="hero-eyebrow">GESTÃO DE PONTO · CONCRETTA</div>
     <h1>Apontador</h1>
     <div class="hero-sub">Lançamento rápido por obra e exceções</div>
+    <div class="install-row">
+      <button class="install-btn" id="btnInstalar" style="display:none">⬇ Instalar app</button>
+      <span class="install-status" id="statusInstalar"></span>
+    </div>
   </div>
 
   <div class="card">
@@ -669,6 +680,45 @@ data.addEventListener("change",async ()=>{
 document.getElementById("buscaFunc").addEventListener("input",render);
 
 iniciarDados();
+
+// ---------------- PWA: service worker + botao de instalar ----------------
+// Decisao (04/09/2026): so instalavel, sem cache offline por enquanto --
+// evoluir pra isso depois se fizer falta. Ver CLAUDE.md.
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("sw.js").catch(()=>{});
+}
+
+const btnInstalar=document.getElementById("btnInstalar");
+const statusInstalar=document.getElementById("statusInstalar");
+let promptInstalacao=null;
+
+window.addEventListener("beforeinstallprompt",(e)=>{
+  e.preventDefault();
+  promptInstalacao=e;
+  btnInstalar.style.display="inline-block";
+  statusInstalar.textContent="Instalável neste navegador.";
+});
+
+btnInstalar.addEventListener("click",async ()=>{
+  if(!promptInstalacao) return;
+  promptInstalacao.prompt();
+  const escolha=await promptInstalacao.userChoice;
+  statusInstalar.textContent=escolha.outcome==="accepted" ? "Instalado!" : "Instalação cancelada.";
+  promptInstalacao=null;
+  btnInstalar.style.display="none";
+});
+
+window.addEventListener("appinstalled",()=>{
+  statusInstalar.textContent="App instalado — abra pela tela inicial.";
+});
+
+if(window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone){
+  statusInstalar.textContent="Rodando como app instalado ✓";
+} else if("serviceWorker" in navigator){
+  setTimeout(()=>{
+    if(!promptInstalacao) statusInstalar.textContent="Em iOS: Compartilhar → Adicionar à Tela de Início.";
+  },2500);
+}
 </script>
 </body>
 </html>
