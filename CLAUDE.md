@@ -762,6 +762,27 @@ Testado local: card aparece exatamente na posição indicada (depois de Janeiro/
 nele carrega a lista normal (todos pendentes, já que 2020-01 está vazio) sem erro; o select do
 Banco de Dados também lista "🧪 Mês teste" como opção. Nada foi gravado durante o teste.
 
+## Apontador ganha "Modo teste" travado no mês teste (commit `17d4c97`, 04/09/2026)
+
+Rubens perguntou se dava pra travar o Apontador no mês teste, só com opção de escolher o dia —
+em vez de um `<input type="date">` normal (que deixa escolher qualquer ano/mês/dia, arriscando
+sair do mês teste sem querer). Ativado via **`?teste=1`** na URL do próprio `apontador.html`
+(link "🧪 Modo teste" novo no hero, ao lado do botão de instalar).
+
+Quando ativo: o `<input id="data">` fica escondido (`display:none`, mas continua existindo —
+o resto do código só lê `data.value`, então nada mais precisou mudar) e um
+`<select id="diaTeste">` (dias 01–31) toma o lugar visualmente, sempre montando
+`data.value = "2020-01-" + dia` e disparando o mesmo evento `change` que o input real dispara
+— reaproveita 100% da lógica existente (recarregar mês, `dataValidaParaLancamento()`, etc.),
+sem duplicar nada. Um banner roxo fixo (`.teste-banner`, mesma paleta do card do índex) avisa
+"Modo teste — lançamentos em Janeiro/2020, não é folha real" com link "Sair do modo teste"
+(volta pra `apontador.html` sem o parâmetro, calendário normal de novo).
+
+Testado local: entrar via `?teste=1` esconde o calendário e mostra o select de dia; trocar de
+dia mantém mês/ano travados (`mesCarregado` sempre `"2020-01"`); lançamento real (Eliton
+Granjeira Lima, PRAÇA G, dia 05, dia inteiro) gravou certinho em `pontos/2020-01` — confirmado
+no Firestore e revertido em seguida.
+
 ## Fechamento de Ponto (02/09/2026) — HISTÓRICO, removido em 03/09/2026 (ver seção acima)
 
 4ª aba do segmentado, ao lado da Conferência de Ponto — mesmo mês selecionado (`mesConferencia`
