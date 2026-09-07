@@ -832,6 +832,16 @@ Testado local: triple-click no PIX selecionou o texto (`window.getSelection().to
 arrastar pelo handle pequeno moveu o cartão normalmente; arrastar pelo nome não moveu nada e só
 selecionou texto (verificado com um `left_click_drag` real sobre o nome). Nada foi escrito no banco.
 
+**Ajuste no mesmo dia (commit `f1271cf`, 04/09/2026)**: Rubens mandou print com uma seta apontando
+do vão vazio entre o nome e a pastilha "1ª quinzena" pro texto pequeno "arraste aqui pra mover" — pedindo
+pra mover o "pegador" de arrastar pra esse espaço vazio, mais visível, em vez de ficar escondido dentro
+do texto de dica. Implementado: o handle saiu de dentro de `.ficha-dica` (que voltou a ser só o hint de
+redimensionar) e virou um ícone próprio (`✥`, 30×30px, círculo com hover) posicionado como filho do meio
+de `.ficha-head` (entre o bloco nome/função/PIX e a pastilha de status) — como esse bloco é estático (não
+recriado via `innerHTML` a cada abertura, diferente do handle anterior), o `textContent` de `.ficha-dica`
+voltou a ser simples de novo, sem span nenhum. Testado local: ícone aparece no vão certo, arrastar por ele
+move o cartão, nome/PIX continuam selecionáveis (`window.getSelection().toString()` confirmado de novo).
+
 ## Filtro de quinzena no cartão do admin — estado final (03/09/2026)
 
 Passou por três versões no mesmo dia até chegar no formato atual:
