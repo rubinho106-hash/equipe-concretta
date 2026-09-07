@@ -703,6 +703,45 @@ confusão) deixar trocar de mês por lá.
 
 Testado local: modal abre mostrando "SETEMBRO / 2026" como texto fixo, sem dropdown nenhum.
 
+## Apontador vira PWA instalável de verdade (commit `9412de7`, 04/09/2026)
+
+Rubens perguntou "dá pra criar um app apontador de verdade que não seja somente um link?" —
+respondi que sim via PWA. Antes de tocar no arquivo real, construí um **protótipo isolado**
+(pasta separada, sem Firebase, dados fictícios) pra validar a ideia sem mexer no sistema —
+confirmado funcionando (manifest carrega, service worker ativo, ícone serve, interação
+funciona). Depois Rubens pediu pra ir direto pro Apontador real, testando com funcionários
+reais mas num **mês de teste** isolado (pra não sujar setembro/2026 real).
+
+**Implementado no `apontador.html` de verdade**:
+- `manifest.json` (nome "Apontador — Concretta", `start_url`/`scope` relativos ao próprio
+  arquivo, `display: standalone`, cor do tema `#0b1330`, ícones 192/512) e `sw.js` (service
+  worker mínimo — só instalável, **sem cache offline** de propósito, decisão tomada antes de
+  construir; evoluir pra offline só se fizer falta).
+- Ícones novos na raiz do repo: `icon-192.png`, `icon-512.png`, `icon-180.png` (apple-touch-
+  icon), `icon-32.png` — clipboard com check, gerados via Pillow na cor exata do hero
+  (`#0b1330`→`#1c3fb8`).
+- `<head>` do `apontador.html` ganhou `<link rel="manifest">`, `<meta name="theme-color">`,
+  `<link rel="apple-touch-icon">`. Hero ganhou um botão "⬇ Instalar app" (só aparece quando o
+  navegador dispara `beforeinstallprompt`) + uma linha de status (detecta se já está rodando
+  "standalone", ou mostra a instrução do iOS — Compartilhar → Adicionar à Tela de Início,
+  já que iOS Safari não tem `beforeinstallprompt`).
+- **Só o `apontador.html` linka o manifest** — `index.html`/`cartoes.html` não viram parte do
+  mesmo "app instalável", de propósito (o pedido era especificamente sobre o Apontador).
+
+**Descoberta importante durante o teste**: a ideia original era usar uma data bem no futuro
+(2099) como "mês de teste" pra nunca confundir com dado real — mas `dataValidaParaLancamento()`
+**bloqueia qualquer data futura de propósito** (reseta pra hoje com alerta). Ajustado com o
+Rubens pra usar **01/01/2020** no lugar (passado funciona normal — lançamento retroativo é
+suportado — e é igualmente impossível de confundir, já que o sistema nem existia em 2020).
+**`pontos/2020-01` fica reservado como o "mês de teste"** daqui pra frente — qualquer sessão
+futura que precisar testar o Apontador com dado real pode usar esse mês sem medo de sujar
+produção.
+
+Testado local: manifest/service worker carregam certo no arquivo real; lançamento retroativo
+em 01/01/2020 pra Carlos André (COLÉGIO MILITAR, dia inteiro) gravou normalmente sem o bloqueio
+de data futura disparar — confirmado no Firestore e revertido em seguida (dia limpo de volta,
+mês fica como referência vazia pronta pra uso).
+
 ## Fechamento de Ponto (02/09/2026) — HISTÓRICO, removido em 03/09/2026 (ver seção acima)
 
 4ª aba do segmentado, ao lado da Conferência de Ponto — mesmo mês selecionado (`mesConferencia`
