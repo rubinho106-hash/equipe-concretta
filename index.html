@@ -1930,6 +1930,24 @@ function opcoesObra(valorAtual){
   return opts.join("");
 }
 
+// Colore o select da tabela de dias igual o chip do resumo por obra (mesma
+// funcao corAvatar) quando o valor e uma obra de verdade -- marcador
+// (SÁBADO/DOMINGO/FERIADO/FALTA) e vazio continuam com o estilo padrao
+// (classe .marcado ou nenhum), pedido do Rubens pra bater visualmente com
+// o resumo logo acima da tabela.
+function aplicarCorObraSelect(sel, valor){
+  if(valor && !ehMarcador(valor)){
+    const cor = corAvatar(valor);
+    sel.style.background = cor + "1a";
+    sel.style.borderColor = cor + "55";
+    sel.style.color = cor;
+  } else {
+    sel.style.background = "";
+    sel.style.borderColor = "";
+    sel.style.color = "";
+  }
+}
+
 // quinzena (1 ou 2) que o cartao esta mostrando no momento -- filtra quais
 // dias aparecem na tabela e qual quinzena o pill de status do cabecalho
 // reflete/alterna. Nao tem mais um toggle dentro do cartao pra mudar isso
@@ -2012,6 +2030,7 @@ function renderFichaConteudo(){
     const selM = document.createElement("select");
     selM.className = "obra-select" + (ehMarcador(diaObj.m) ? " marcado" : "");
     selM.innerHTML = opcoesObra(diaObj.m || "");
+    aplicarCorObraSelect(selM, diaObj.m);
     selM.onchange = () => salvarDia(dia, "m", selM.value);
     tdM.appendChild(selM);
 
@@ -2019,6 +2038,7 @@ function renderFichaConteudo(){
     const selT = document.createElement("select");
     selT.className = "obra-select" + (ehMarcador(diaObj.t) ? " marcado" : "");
     selT.innerHTML = opcoesObra(diaObj.t || "");
+    aplicarCorObraSelect(selT, diaObj.t);
     selT.onchange = () => salvarDia(dia, "t", selT.value);
     tdT.appendChild(selT);
 
