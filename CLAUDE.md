@@ -742,6 +742,26 @@ em 01/01/2020 pra Carlos André (COLÉGIO MILITAR, dia inteiro) gravou normalmen
 de data futura disparar — confirmado no Firestore e revertido em seguida (dia limpo de volta,
 mês fica como referência vazia pronta pra uso).
 
+## "Mês teste" ganha card próprio na Conferência de Ponto e no Banco de Dados (commit `0fdd8b2`, 04/09/2026)
+
+Rubens mandou print da grade de cards de mês com um retângulo desenhado logo depois de
+JANEIRO/2027, pedindo "criar mes teste / 2026" — confirmado via pergunta que era pra apontar
+pro **mesmo mês reservado 2020-01** da seção acima (não um mês novo dentro de 2026).
+
+`calcularListaMeses()` ganhou uma constante `MES_TESTE = "2020-01"`, sempre adicionada por
+último na lista (depois do intervalo cronológico normal `MES_INICIO`→+4 meses). Dois lugares
+que consomem `listaMeses` ganharam tratamento especial pra essa chave:
+- **`renderMesTabs()`** (cards grandes da Conferência de Ponto): em vez do label/chave/pill
+  normais (`infoMes()` computaria "JANEIRO / 2020" de verdade), mostra "🧪 Mês teste" / "não é
+  folha real" / pill roxa "TESTE", com borda tracejada (`.mes-tab.teste`) — visualmente
+  impossível de confundir com um mês real.
+- **`popularFiltrosApontamentos()`** (select de período do Banco de Dados/Apontamentos): mesma
+  troca de label pra "🧪 Mês teste" no `<option>`.
+
+Testado local: card aparece exatamente na posição indicada (depois de Janeiro/2027), clicar
+nele carrega a lista normal (todos pendentes, já que 2020-01 está vazio) sem erro; o select do
+Banco de Dados também lista "🧪 Mês teste" como opção. Nada foi gravado durante o teste.
+
 ## Fechamento de Ponto (02/09/2026) — HISTÓRICO, removido em 03/09/2026 (ver seção acima)
 
 4ª aba do segmentado, ao lado da Conferência de Ponto — mesmo mês selecionado (`mesConferencia`
