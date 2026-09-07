@@ -842,6 +842,22 @@ recriado via `innerHTML` a cada abertura, diferente do handle anterior), o `text
 voltou a ser simples de novo, sem span nenhum. Testado local: ícone aparece no vão certo, arrastar por ele
 move o cartão, nome/PIX continuam selecionáveis (`window.getSelection().toString()` confirmado de novo).
 
+## Selects da tabela de dias ganham a cor da obra, igual o chip do resumo (commit `51c8a42`, 04/09/2026)
+
+Rubens mandou print com duas setas ligando o chip "CRECHE" do resumo aos selects "CRECHE" da tabela de
+dias, pedindo pra bater a cor. Antes os selects de obra real eram sempre texto preto padrão — só
+SÁBADO/DOMINGO/FERIADO/FALTA tinham cor (vermelho, via `.obra-select.marcado`).
+
+Nova função `aplicarCorObraSelect(sel, valor)`: quando o valor é uma obra de verdade (não vazio, não
+marcador), aplica a mesma fórmula de cor do chip (`corAvatar(valor)` — background `${cor}1a`, borda
+`${cor}55`, texto `${cor}`) via `style` inline no `<select>`; pra marcador/vazio, limpa o inline style
+e deixa a classe `.marcado` (ou o padrão) cuidar sozinha. Chamada logo depois de montar cada
+`<select>` de manhã/tarde no loop de `renderFichaConteudo()` — como `salvarDia()` já re-chama
+`abrirFicha()` depois de gravar, a cor se atualiza sozinha a cada edição, sem código extra.
+
+Testado local: CRECHE nos dias 01-04 apareceu com fundo/borda laranja clarinho igual o chip "CRECHE
+3.5" do resumo; SÁBADO/DOMINGO continuaram vermelhos; dias vazios continuaram neutros. Nada gravado.
+
 ## Filtro de quinzena no cartão do admin — estado final (03/09/2026)
 
 Passou por três versões no mesmo dia até chegar no formato atual:
