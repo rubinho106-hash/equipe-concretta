@@ -372,6 +372,19 @@ const NOMES_MESES = ["JANEIRO","FEVEREIRO","MARÇO","ABRIL","MAIO","JUNHO","JULH
 const MARCADORES = ["SÁBADO", "DOMINGO", "FERIADO", "FALTA"];
 function ehMarcador(v){ return MARCADORES.includes(v); }
 
+// Mesmo esquema de cor do index.html (colorir por obra igual o chip do
+// resumo) -- aqui e uma celula de texto, nao um select, entao so a cor do
+// texto muda (mesma familia visual do .marcado, que ja e so texto colorido).
+function aplicarCorObraCelula(td, valor){
+  if(valor && !ehMarcador(valor)){
+    td.style.color = corAvatar(valor);
+    td.style.fontWeight = "700";
+  } else {
+    td.style.color = "";
+    td.style.fontWeight = "";
+  }
+}
+
 // Mesma logica do index.html: statusConferencia pode ser string legada ou
 // objeto {q1,q2} desde que o status virou por quinzena la.
 function statusQuinzena(info, quinzena){
@@ -564,10 +577,12 @@ async function carregarMes(mes){
     const tdM = document.createElement("td");
     tdM.textContent = diaObj.m || "—";
     tdM.className = diaObj.m ? (ehMarcador(diaObj.m) ? "marcado" : "") : "vazio";
+    aplicarCorObraCelula(tdM, diaObj.m);
 
     const tdT = document.createElement("td");
     tdT.textContent = diaObj.t || "—";
     tdT.className = diaObj.t ? (ehMarcador(diaObj.t) ? "marcado" : "") : "vazio";
+    aplicarCorObraCelula(tdT, diaObj.t);
 
     if(diaObj.m && !ehMarcador(diaObj.m)){ porObra[diaObj.m] = (porObra[diaObj.m]||0) + 0.5; totalQuinzena += 0.5; }
     if(diaObj.t && !ehMarcador(diaObj.t)){ porObra[diaObj.t] = (porObra[diaObj.t]||0) + 0.5; totalQuinzena += 0.5; }
