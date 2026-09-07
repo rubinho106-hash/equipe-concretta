@@ -742,7 +742,7 @@ em 01/01/2020 pra Carlos André (COLÉGIO MILITAR, dia inteiro) gravou normalmen
 de data futura disparar — confirmado no Firestore e revertido em seguida (dia limpo de volta,
 mês fica como referência vazia pronta pra uso).
 
-## "Mês teste" ganha card próprio na Conferência de Ponto e no Banco de Dados (commit `0fdd8b2`, 04/09/2026)
+## "Mês teste" — HISTÓRICO, revertido no mesmo dia (commit `1f037c1`, 04/09/2026)
 
 Rubens mandou print da grade de cards de mês com um retângulo desenhado logo depois de
 JANEIRO/2027, pedindo "criar mes teste / 2026" — confirmado via pergunta que era pra apontar
@@ -762,7 +762,7 @@ Testado local: card aparece exatamente na posição indicada (depois de Janeiro/
 nele carrega a lista normal (todos pendentes, já que 2020-01 está vazio) sem erro; o select do
 Banco de Dados também lista "🧪 Mês teste" como opção. Nada foi gravado durante o teste.
 
-## Apontador ganha "Modo teste" travado no mês teste (commit `17d4c97`, 04/09/2026)
+## Apontador — "Modo teste" — HISTÓRICO, revertido no mesmo dia (commit `17d4c97`, 04/09/2026)
 
 Rubens perguntou se dava pra travar o Apontador no mês teste, só com opção de escolher o dia —
 em vez de um `<input type="date">` normal (que deixa escolher qualquer ano/mês/dia, arriscando
@@ -782,6 +782,16 @@ Testado local: entrar via `?teste=1` esconde o calendário e mostra o select de 
 dia mantém mês/ano travados (`mesCarregado` sempre `"2020-01"`); lançamento real (Eliton
 Granjeira Lima, PRAÇA G, dia 05, dia inteiro) gravou certinho em `pontos/2020-01` — confirmado
 no Firestore e revertido em seguida.
+
+**Revertido no mesmo dia (commit `1f037c1`)**: Rubens pediu "apagar mes teste sitema e
+app" — removido de vez tanto do `index.html` (card "Mês teste"/`MES_TESTE`/tratamento especial
+em `renderMesTabs()` e `popularFiltrosApontamentos()`) quanto do `apontador.html` ("Modo teste"
+inteiro — link, banner, select de dia, bloco JS). **O app instalável (PWA) continua** — só o
+conceito de "mês reservado pra teste" saiu, não o manifest/service worker/ícone/botão
+"Instalar app" da seção acima. Também apagados os dois documentos residuais que sobraram em
+`pontos/2020-01` (Carlos André e Eliton Granjeira Lima, ambos vazios de dado real, só
+estrutura de SÁBADO/DOMINGO pré-preenchida). Se um mês de teste for necessário de novo no
+futuro, reconstruir do zero — não presumir que `2020-01` ainda está reservado.
 
 ## Fechamento de Ponto (02/09/2026) — HISTÓRICO, removido em 03/09/2026 (ver seção acima)
 
