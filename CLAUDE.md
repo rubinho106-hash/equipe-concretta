@@ -806,6 +806,32 @@ Encarregado R$200. Aplicado a todos os 32 via `valorDiaria` no cadastro. Usar es
 funcionário novo — se aparecer uma função fora dessas quatro, perguntar ao Rubens antes de inventar um
 valor.
 
+## Cabeçalho do cartão do admin: fonte maior, texto selecionável, área de arrastar reduzida (commit `b335b72`, 04/09/2026)
+
+Rubens pediu (com print marcando nome/função/PIX e a dica "arraste o topo pra mover"): aumentar a
+fonte do cabeçalho, permitir selecionar/copiar esse texto (principalmente o PIX), e diminuir a área
+de "arrastar pra mover" — antes o `.ficha-head` inteiro (nome + função + PIX + pill de status) era
+ao mesmo tempo `cursor:move` e `user-select:none`, então qualquer tentativa de selecionar o PIX pra
+copiar começava um arraste do cartão em vez de selecionar o texto.
+
+- **Fonte**: `#ficha-nome` (`.ficha-head h2`) 18px→21px; função (`.ficha-head .modal-sub`) 12.5px→14px;
+  `.ficha-pix` 11px→13px; `.ficha-periodo` 11.5px→13px.
+- **Seleção**: `.ficha-head` perdeu `cursor:move`/`user-select:none`, ganhou `user-select:text`
+  explícito (mesmo pra `.ficha-pix`, que já tinha sua própria regra).
+- **Área de arrastar**: reduzida da faixa inteira do cabeçalho pra só a dica textual, que virou um
+  `<span id="ficha-drag-handle" class="ficha-drag-handle">✥ arraste aqui pra mover</span>` dentro de
+  `.ficha-dica` (texto do hint também mudou de "arraste o topo" pra "arraste aqui", já que não é mais
+  o topo inteiro). Esse span carrega sozinho `cursor:move`+`user-select:none`, com um padding negativo
+  pra manter uma área de clique confortável sem crescer visualmente.
+- **Listener via delegação, não direto no handle**: como `abrirFicha()` recria esse span via
+  `innerHTML` toda vez que o cartão abre, um listener attachado direto nele se perderia depois da
+  primeira abertura — o `mousedown`/`touchstart` de mover ficou no `.ficha-modal` (elemento estático)
+  checando `e.target.closest("#ficha-drag-handle")`, em vez de no `.ficha-head` como antes.
+
+Testado local: triple-click no PIX selecionou o texto (`window.getSelection().toString()` confirmou);
+arrastar pelo handle pequeno moveu o cartão normalmente; arrastar pelo nome não moveu nada e só
+selecionou texto (verificado com um `left_click_drag` real sobre o nome). Nada foi escrito no banco.
+
 ## Filtro de quinzena no cartão do admin — estado final (03/09/2026)
 
 Passou por três versões no mesmo dia até chegar no formato atual:
