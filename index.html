@@ -539,19 +539,26 @@
   .ficha-pix{ font-size: 13px; color: var(--muted); margin-top: 2px; font-variant-numeric: tabular-nums; user-select: text; }
   .ficha-periodo{ font-size: 13px; color: var(--muted); flex-shrink: 0; }
   .ficha-dica{ font-size: 10.5px; color: var(--muted); margin-top: 1px; flex-shrink: 0; }
-  /* So essa pastilha e a area de arrastar pra mover o cartao -- antes o
+  /* So esse icone e a area de arrastar pra mover o cartao -- antes o
      cabecalho inteiro (nome/funcao/PIX) era arrastavel, o que impedia
      selecionar/copiar esse texto (qualquer clique ali comecava um drag em
-     vez de selecionar). Area pequena de propósito. */
+     vez de selecionar). Fica no vao vazio entre o nome e a pastilha de
+     status, onde o Rubens marcou que fazia mais sentido ficar. */
   .ficha-drag-handle{
     cursor: move;
     user-select: none;
-    display: inline-block;
-    padding: 3px 6px;
-    margin: -3px -6px;
-    border-radius: 5px;
+    flex-shrink: 0;
+    align-self: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    font-size: 16px;
+    color: var(--muted);
+    border-radius: 50%;
   }
-  .ficha-drag-handle:hover{ background: var(--surface-2); }
+  .ficha-drag-handle:hover{ background: var(--surface-2); color: var(--ink); }
   .ficha-resumo{
     flex-shrink: 0;
     margin-top: 8px;
@@ -845,10 +852,11 @@
         <div class="modal-sub" id="ficha-funcao">—</div>
         <div class="ficha-pix" id="ficha-pix">—</div>
       </div>
+      <span class="ficha-drag-handle" id="ficha-drag-handle" title="Arraste pra mover o cartão">✥</span>
       <button type="button" class="pill" id="ficha-status">—</button>
     </div>
     <div class="ficha-periodo" id="ficha-periodo">—</div>
-    <div class="ficha-dica">⤡ arraste qualquer borda ou canto pra redimensionar · <span class="ficha-drag-handle" id="ficha-drag-handle">✥ arraste aqui pra mover</span></div>
+    <div class="ficha-dica">⤡ arraste qualquer borda ou canto pra redimensionar</div>
     <div class="ficha-resumo">
       <div class="ficha-resumo-titulo">Resumo de dias por obra</div>
       <div class="ficha-resumo-chips" id="ficha-resumo-chips"></div>
@@ -1947,8 +1955,8 @@ async function abrirFicha(f, quinzenaAlvo){
   document.getElementById("ficha-pix").textContent = "PIX: " + (f.pix || "—");
   document.getElementById("ficha-periodo").textContent = label + " · " + periodo;
 
-  document.querySelector("#ficha-overlay .ficha-dica").innerHTML =
-    '⤡ arraste qualquer borda ou canto pra redimensionar · <span class="ficha-drag-handle" id="ficha-drag-handle">✥ arraste aqui pra mover</span>';
+  document.querySelector("#ficha-overlay .ficha-dica").textContent =
+    "⤡ arraste qualquer borda ou canto pra redimensionar";
 
   renderFichaConteudo();
 
