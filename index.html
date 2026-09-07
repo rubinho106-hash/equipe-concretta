@@ -386,8 +386,6 @@
   .mes-pill-atual{ background: var(--good-bg); color: var(--good-ink); }
   .mes-pill-encerrado{ background: var(--surface-2); color: var(--muted); }
   .mes-pill-futuro{ background: var(--surface-2); color: var(--muted); }
-  .mes-pill-teste{ background: #ede9fe; color: #6d28d9; }
-  .mes-tab.teste{ border-style: dashed; }
 
   .apont-header h2{ font-size: 20px; margin-bottom: 2px; }
   .apont-header .modal-sub{ margin-bottom: 0; }
@@ -1494,11 +1492,6 @@ document.getElementById("obras-busca").addEventListener("input", (e) => {
   renderObras();
 });
 
-// "2020-01" e o mes reservado pra teste (Apontador e aqui) -- passado, fora
-// do intervalo real de meses do sistema, entao nunca colide com folha de
-// pagamento de verdade. Ver CLAUDE.md ("mes de teste").
-const MES_TESTE = "2020-01";
-
 function calcularListaMeses(){
   const atual = mesAtualReal();
   const limite = somarMeses(atual, 4);
@@ -1508,7 +1501,6 @@ function calcularListaMeses(){
     meses.push(cursor);
     cursor = somarMeses(cursor, 1);
   }
-  meses.push(MES_TESTE); // sempre por ultimo, card separado visualmente
   return meses;
 }
 
@@ -1527,20 +1519,18 @@ function renderMesTabs(atual){
   if(!cont) return;
   cont.innerHTML = "";
   listaMeses.forEach(mes => {
-    const ehTeste = mes === MES_TESTE;
     const { label } = infoMes(mes);
     const tab = document.createElement("div");
-    tab.className = "mes-tab" + (mes === mesConferencia ? " selected" : "") + (ehTeste ? " teste" : "");
+    tab.className = "mes-tab" + (mes === mesConferencia ? " selected" : "");
     const nomeDiv = document.createElement("div");
     nomeDiv.className = "mes-tab-nome";
-    nomeDiv.textContent = ehTeste ? "🧪 Mês teste" : label;
+    nomeDiv.textContent = label;
     const chaveDiv = document.createElement("div");
     chaveDiv.className = "mes-tab-chave";
-    chaveDiv.textContent = ehTeste ? "não é folha real" : mes;
+    chaveDiv.textContent = mes;
     const pill = document.createElement("span");
     let classe = "mes-pill-futuro", texto = "PRÓXIMO";
-    if(ehTeste){ classe = "mes-pill-teste"; texto = "TESTE"; }
-    else if(mes === atual){ classe = "mes-pill-atual"; texto = "MÊS ATUAL"; }
+    if(mes === atual){ classe = "mes-pill-atual"; texto = "MÊS ATUAL"; }
     else if(mes < atual){ classe = "mes-pill-encerrado"; texto = "ENCERRADO"; }
     pill.className = "mes-pill " + classe;
     pill.textContent = texto;
@@ -1607,7 +1597,7 @@ function popularFiltrosApontamentos(){
 
   const periodoAtual = selPeriodo.value;
   selPeriodo.innerHTML = listaMeses.map(mes => {
-    const label = mes === MES_TESTE ? "🧪 Mês teste" : infoMes(mes).label;
+    const { label } = infoMes(mes);
     return `<option value="${mes}">${label}</option>`;
   }).join("");
   selPeriodo.value = periodoAtual && listaMeses.includes(periodoAtual) ? periodoAtual : mesAtualReal();
