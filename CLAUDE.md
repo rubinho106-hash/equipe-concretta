@@ -833,6 +833,22 @@ Testado local: cliquei "Limpar lançamentos" de verdade, confirmei que aparece o
 de "Fechar dia" (estava desabilitado pelo gate normal da equipe incompleta) por prudência —
 mesma função já validada no outro botão cobre a lógica.
 
+## Apontador: trava explícita em todos os caminhos de escrita (commit `5a77368`, 07/09/2026)
+
+Rubens reforçou: "após dia fechado app apontador não deve editar mais nada". Auditoria de
+todos os pontos que gravam no Firestore no `apontador.html` encontrou 3 sem checagem explícita
+de `isFechado()` — dependiam só do atributo `disabled` do botão (que bloqueia o clique real,
+mas não uma chamada direta bypassando a UI): `aplicar(status)` (a função que de fato grava o
+lançamento, chamada pelo "Confirmar" do modal), o handler de "Fechar dia" e o de "Limpar
+lançamentos". Os outros pontos (`abrir()` ao clicar num funcionário, "Marcar equipe") já
+tinham essa checagem. Adicionado `if(isFechado())return;` no topo dos 3.
+
+Testado local sem escrita real: simulei `fechadoAtual = true` em memória, chamei `render()`
+(confirmei botões desabilitados/ocultos e todas as linhas de funcionário desabilitadas), e
+chamei `aplicar("full")` **direto pelo console, bypassando a UI** com um funcionário fake —
+confirmado que retorna antes de chegar em `fecharModal()`/`aplicarLancamento()` (a variável
+`atual` não foi resetada, prova que nem chegou lá). Resetei `fechadoAtual` depois.
+
 ## Apontador — "Modo teste" — HISTÓRICO, revertido no mesmo dia (commit `17d4c97`, 04/09/2026)
 
 Rubens perguntou se dava pra travar o Apontador no mês teste, só com opção de escolher o dia —
