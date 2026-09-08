@@ -265,7 +265,7 @@
 
   .obra-row{
     display: grid;
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: auto 1fr auto auto;
     align-items: center;
     gap: 14px;
     padding: 14px 18px;
@@ -278,6 +278,7 @@
     flex-shrink: 0;
   }
   .obra-nome{ font-weight: 600; font-size: 14px; }
+  .obra-apontador{ font-size: 12.5px; color: var(--muted); white-space: nowrap; }
 
   .empty-state, .loading-state{
     padding: 60px 20px;
@@ -891,6 +892,12 @@
         <label for="f-obra-nome">Nome da obra</label>
         <input id="f-obra-nome" required autocomplete="off" placeholder="Ex: CRAS, Praça G">
       </div>
+      <div class="field">
+        <label for="f-obra-apontador">Apontador responsável</label>
+        <select id="f-obra-apontador">
+          <option value="">— Nenhum —</option>
+        </select>
+      </div>
       <div class="modal-actions">
         <button type="button" class="link-danger" id="btn-excluir-obra" hidden>Excluir obra</button>
         <div class="modal-actions-right">
@@ -1427,6 +1434,10 @@ function renderObras(){
     nome.className = "obra-nome";
     nome.textContent = o.nome;
 
+    const apontador = document.createElement("div");
+    apontador.className = "obra-apontador";
+    apontador.textContent = o.apontadorNome ? "Apontador: " + o.apontadorNome : "";
+
     const actions = document.createElement("div");
     actions.className = "row-actions";
     const editBtn = document.createElement("button");
@@ -1438,6 +1449,7 @@ function renderObras(){
 
     row.appendChild(dot);
     row.appendChild(nome);
+    row.appendChild(apontador);
     row.appendChild(actions);
     lista.appendChild(row);
   });
@@ -1447,6 +1459,17 @@ function abrirModalObra(o){
   editandoObraId = o ? o.id : null;
   document.getElementById("obra-modal-title").textContent = o ? "Editar obra" : "Nova obra";
   document.getElementById("f-obra-nome").value = o ? o.nome || "" : "";
+
+  // Apontador responsável -- só organizacional por enquanto (não trava
+  // nada, mesmo espírito do "obra padrão" do funcionário), sourced dos
+  // funcionários Ativos, ordenados por nome.
+  const selApontador = document.getElementById("f-obra-apontador");
+  selApontador.innerHTML = '<option value="">— Nenhum —</option>'
+    + todos.filter(f => f.status !== "Inativo")
+      .sort((a, b) => (a.nome||"").localeCompare(b.nome||"", "pt-BR"))
+      .map(f => `<option value="${f.id}">${escapeHtml(f.nome)}</option>`).join("");
+  selApontador.value = o && o.apontadorId ? o.apontadorId : "";
+
   document.getElementById("btn-excluir-obra").hidden = !o;
   document.getElementById("obra-overlay").hidden = false;
   document.getElementById("f-obra-nome").focus();
@@ -1467,14 +1490,28 @@ document.getElementById("form-obra").addEventListener("submit", async (e) => {
   const nome = document.getElementById("f-obra-nome").value.trim();
   if(!nome){ toast("Preencha o nome da obra."); return; }
 
+  const apontadorId = document.getElementById("f-obra-apontador").value;
+  const apontadorFunc = apontadorId ? todos.find(f => f.id === apontadorId) : null;
+
   const btn = document.getElementById("btn-salvar-obra");
   btn.disabled = true;
   try {
     if(editandoObraId){
-      await db.doc("obras/" + editandoObraId).update({ nome });
+      // FieldValue.delete() só é válido num update() -- aqui a obra já
+      // existe, então "— Nenhum —" precisa de fato apagar os campos.
+      const dadosObra = apontadorFunc
+        ? { nome, apontadorId, apontadorNome: apontadorFunc.nome }
+        : { nome, apontadorId: firebase.firestore.FieldValue.delete(), apontadorNome: firebase.firestore.FieldValue.delete() };
+      await db.doc("obras/" + editandoObraId).update(dadosObra);
       toast("Obra atualizada.");
     } else {
-      await db.collection("obras").add({ nome });
+      // Nova obra: add() faz um set() sem merge -- FieldValue.delete()
+      // não é permitido aqui, então simplesmente omite os campos quando
+      // nenhum apontador foi escolhido.
+      const dadosObra = apontadorFunc
+        ? { nome, apontadorId, apontadorNome: apontadorFunc.nome }
+        : { nome };
+      await db.collection("obras").add(dadosObra);
       toast("Obra cadastrada.");
     }
     fecharModalObra();
