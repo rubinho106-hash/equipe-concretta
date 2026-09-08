@@ -788,6 +788,31 @@ que o fluxo grava igual antes) — **como isso não fazia parte do dado real do 
 revertido na hora (limpo `dias.7.m/t` e o cache `ultimaObraNome/Data` de volta pro valor real
 anterior, 2026-09-05).
 
+## Apontador não reabre mais dia fechado (commit `25fbc27`, 07/09/2026)
+
+Rubens pediu: "apontador nao pode reabrir dia. dias sao lancados para sistema somoente apos
+apontador fechar dia". Perguntado onde ficaria a correção de um dia já fechado, confirmou que
+o painel principal (`index.html`) já edita livre independente do fechamento — não precisa de
+nenhuma tela de reabertura em lugar nenhum.
+
+Removido do `apontador.html`: o botão `#reabrirDia`, o listener de clique que gravava
+`fechado:false` de volta em `fechamentosDia/{obra_data}`, e a linha de `render()` que
+controlava a visibilidade desse botão. O banner de dia fechado mudou de "Os lançamentos estão
+bloqueados até reabrir" pra "Os lançamentos ficam bloqueados por aqui — qualquer correção
+precisa ser feita no painel principal". Fechar um dia por essa interface agora é definitivo:
+não existe mais caminho de volta por aqui, só pelo `index.html`.
+
+Aproveitei pra corrigir um comentário histórico da seção do PASSO 5 (linhas ~185-196) que ainda
+citava "Reabrir dia" como pendente do Passo 7 — o Passo 7 (mover Fechar Dia pro Firestore) já
+tinha sido feito, e agora a função nem existe mais.
+
+Testado local sem nenhuma escrita real: simulei `fechadoAtual = true` direto na memória da
+página (sem tocar `fechamentosDia` no Firestore) e chamei `render()` — confirmei banner com o
+texto novo, botão "Fechar dia" escondido, `#reabrirDia` ausente do DOM (`null`), e "Marcar
+equipe" continuando travado. Resetei `fechadoAtual = false` depois. Zero writes no banco real
+nesse teste — evita o problema de não ter mais como desfazer um "Fechar dia" de teste agora
+que a UI de reabertura não existe.
+
 ## Apontador — "Modo teste" — HISTÓRICO, revertido no mesmo dia (commit `17d4c97`, 04/09/2026)
 
 Rubens perguntou se dava pra travar o Apontador no mês teste, só com opção de escolher o dia —
