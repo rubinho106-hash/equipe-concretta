@@ -38,6 +38,9 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"IBM Plex Sans",
 .install-row{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;min-height:20px}
 .install-btn{background:#fff;color:var(--hero-2);border:0;border-radius:9px;padding:9px 14px;font-weight:700;font-size:12.5px;cursor:pointer}
 .install-status{font-size:11.5px;color:#cbd5f7}
+.login-status-row{margin-top:12px;display:flex;gap:10px;align-items:center;font-size:12.5px;color:#cbd5f7}
+.sair-btn{background:rgba(255,255,255,.12);color:#fff;border:0;border-radius:8px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer}
+.erro-login{margin-top:12px;padding:10px 12px;border-radius:9px;background:rgba(179,38,30,.1);color:var(--danger-ink);font-size:13px;font-weight:600}
 
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-top:14px;box-shadow:var(--shadow)}
 label{display:block;color:var(--muted);font-size:11px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;margin:8px 0 6px}
@@ -113,8 +116,22 @@ button:disabled{opacity:.45;cursor:not-allowed}
       <button class="install-btn" id="btnInstalar" style="display:none">⬇ Instalar app</button>
       <span class="install-status" id="statusInstalar"></span>
     </div>
+    <div class="login-status-row" id="loginStatusRow" style="display:none">
+      <span id="nomeLogado"></span>
+      <button class="sair-btn" id="btnSair" type="button">Sair</button>
+    </div>
   </div>
 
+  <div class="card" id="telaLogin">
+    <label for="loginUsuario">Usuário</label>
+    <input id="loginUsuario" type="text" placeholder="ex: weslen" autocomplete="username">
+    <label for="loginSenha">Senha</label>
+    <input id="loginSenha" type="password" placeholder="Senha" autocomplete="current-password">
+    <div class="erro-login" id="loginErro" style="display:none"></div>
+    <button class="primary" id="btnLoginEntrar" style="margin-top:14px;width:100%">Entrar</button>
+  </div>
+
+  <div id="appConteudo" style="display:none">
   <div class="card lock-card" id="cardTravado" style="display:none">
     <div class="lock-date" id="travadoData">--</div>
     <div class="lock-clock" id="travadoRelogio">--:--:--</div>
@@ -166,6 +183,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
       <button id="limparDia" class="danger">Limpar lançamentos</button>
     </div>
   </div>
+  </div>
 </div>
 
 <div class="modal-backdrop" id="backdrop">
@@ -199,6 +217,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script>
 // ---------------- Firebase (mesmo projeto do index.html/cartoes.html) ----------------
@@ -212,6 +231,105 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+const auth = firebase.auth();
+
+// ---------------- Login (Fase 2 da análise de confiabilidade) ----------------
+// Cada apontador tem 1 conta (não mais um link aberto pra qualquer um) --
+// "usuário" (sem precisar digitar e-mail) é mapeado internamente pra
+// usuario@concretta-login.local, já que o provedor Email/Senha do Firebase
+// Auth exige um identificador em formato de e-mail. Aceita também um
+// e-mail completo já digitado (contas criadas fora do padrão combinado).
+// O vínculo de qual funcionário/obras cada conta enxerga fica em
+// usuarios/{uid} (role:"admin"|"apontador", funcionarioId pro apontador) --
+// as regras do Firestore continuam abertas por enquanto (só a interface
+// trava; ver CLAUDE.md pra próximos passos).
+const DOMINIO_LOGIN = "concretta-login.local";
+function emailDoUsuario(usuario){
+  const limpo = usuario.trim().toLowerCase();
+  if(limpo.includes("@")) return limpo;
+  return limpo.replace(/\s+/g, "") + "@" + DOMINIO_LOGIN;
+}
+let perfilAtual = null;   // { role, funcionarioId?, nome } -- de usuarios/{uid}
+let obrasPermitidas = null; // array de nomes de obra, ou null = ve todas (admin)
+
+function mostrarErroLogin(msg){
+  const el = document.getElementById("loginErro");
+  el.textContent = msg;
+  el.style.display = "block";
+}
+function limparErroLogin(){
+  document.getElementById("loginErro").style.display = "none";
+}
+const MENSAGENS_ERRO_LOGIN = {
+  "auth/invalid-credential": "Usuário ou senha incorretos.",
+  "auth/user-not-found": "Usuário não encontrado.",
+  "auth/wrong-password": "Senha incorreta.",
+  "auth/too-many-requests": "Muitas tentativas — espera um pouco e tenta de novo.",
+  "auth/invalid-email": "Usuário inválido.",
+  "auth/network-request-failed": "Sem conexão — verifica a internet e tenta de novo.",
+  "auth/configuration-not-found": "Login ainda não está configurado. Fala com o administrador."
+};
+async function tentarEntrar(){
+  limparErroLogin();
+  const usuario = document.getElementById("loginUsuario").value.trim();
+  const senha = document.getElementById("loginSenha").value;
+  if(!usuario || !senha){ mostrarErroLogin("Preencha usuário e senha."); return; }
+  const btn = document.getElementById("btnLoginEntrar");
+  btn.disabled = true; btn.textContent = "Entrando…";
+  try {
+    await auth.signInWithEmailAndPassword(emailDoUsuario(usuario), senha);
+  } catch(e){
+    mostrarErroLogin(MENSAGENS_ERRO_LOGIN[e.code] || "Não deu pra entrar — tenta de novo.");
+  } finally {
+    btn.disabled = false; btn.textContent = "Entrar";
+  }
+}
+document.getElementById("btnLoginEntrar").addEventListener("click", tentarEntrar);
+document.getElementById("loginSenha").addEventListener("keydown", e => { if(e.key==="Enter") tentarEntrar(); });
+document.getElementById("loginUsuario").addEventListener("keydown", e => { if(e.key==="Enter") document.getElementById("loginSenha").focus(); });
+document.getElementById("btnSair").addEventListener("click", () => auth.signOut());
+
+async function carregarPerfil(uid){
+  const snap = await db.doc("usuarios/" + uid).get();
+  if(!snap.exists) return null;
+  return snap.data();
+}
+async function obrasDoApontador(funcionarioId){
+  const snap = await db.collection("obras").where("apontadorId", "==", funcionarioId).get();
+  return snap.docs.map(d => d.data().nome);
+}
+
+auth.onAuthStateChanged(async (user) => {
+  const telaLogin = document.getElementById("telaLogin");
+  const appConteudo = document.getElementById("appConteudo");
+  if(!user){
+    perfilAtual = null; obrasPermitidas = null;
+    telaLogin.style.display = "block";
+    appConteudo.style.display = "none";
+    document.getElementById("loginStatusRow").style.display = "none";
+    document.getElementById("loginSenha").value = "";
+    return;
+  }
+
+  perfilAtual = await carregarPerfil(user.uid);
+  if(!perfilAtual){
+    telaLogin.style.display = "block";
+    appConteudo.style.display = "none";
+    mostrarErroLogin("Essa conta não tem perfil configurado. Fala com o administrador.");
+    await auth.signOut();
+    return;
+  }
+
+  obrasPermitidas = perfilAtual.role === "apontador"
+    ? await obrasDoApontador(perfilAtual.funcionarioId)
+    : null; // admin ve todas
+
+  document.getElementById("nomeLogado").textContent = perfilAtual.nome || user.email;
+  document.getElementById("loginStatusRow").style.display = "flex";
+  telaLogin.style.display = "none";
+  appConteudo.style.display = "block";
+  iniciarDados();
+});
 
 // PASSO 5 do roadmap (04/09/2026): os lançamentos deixam de ir pro
 // localStorage e passam a gravar direto em
@@ -323,11 +441,19 @@ async function iniciarDados(){
       db.collection("funcionarios").orderBy("nome").get()
     ]);
     OBRAS = obrasSnap.docs.map(d => d.data().nome);
+    // Apontador só vê a(s) obra(s) que ele é o responsável cadastrado
+    // (obrasPermitidas, calculado no login) -- admin (obrasPermitidas
+    // null) continua vendo todas, igual sempre foi.
+    if(obrasPermitidas) OBRAS = OBRAS.filter(o => obrasPermitidas.includes(o));
     todos = funcSnap.docs
       .map(d => ({ id: d.id, ...d.data() }))
       .filter(f => f.status !== "Inativo");
 
     obra.innerHTML = "";
+    if(!OBRAS.length){
+      lista.innerHTML = '<div style="padding:16px;color:var(--muted)">Essa conta ainda não está associada a nenhuma obra. Fala com o administrador.</div>';
+      return;
+    }
     OBRAS.forEach(o=>{
       const op=document.createElement("option");
       op.value=o;op.textContent=o;obra.appendChild(op);
@@ -1005,7 +1131,8 @@ document.querySelectorAll(".sum").forEach(b => {
   });
 });
 
-iniciarDados();
+// iniciarDados() agora é chamada pelo onAuthStateChanged() acima, só
+// depois de confirmar o login e carregar o perfil (não mais direto aqui).
 
 // ---------------- PWA: service worker + botao de instalar ----------------
 // Decisao (04/09/2026): so instalavel, sem cache offline por enquanto --
