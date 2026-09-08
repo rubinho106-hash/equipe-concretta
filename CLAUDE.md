@@ -1036,6 +1036,59 @@ lista certo), reabri o modal confirmando o valor pré-selecionado, revertido pra
 criar uma obra nova sem apontador (sem erro) e apaguei a obra de teste depois — as 5 obras reais
 ficaram exatamente como estavam antes do teste.
 
+## Login real por conta — Fase 2, Auth completo (commits `3e9bc0b` e `3ed38b7`, 08/09/2026)
+
+Rubens perguntou "login e senha de cada apontador?" depois de cadastrar o apontador responsável
+de cada obra — isso revelou que **um apontador pode responder por mais de uma obra** (Weslen Da
+Silva Alves está em CRAS/CRECHE/PRAÇA G ao mesmo tempo), o que mudava a decisão anterior de "1
+conta por obra". Confirmado via AskUserQuestion: **1 login por PESSOA**, não por obra — ao
+entrar, o apontador vê só a(s) obra(s) que ele é responsável.
+
+**Contas criadas no Console** (Authentication → Users, projeto `concretta-equipe`): 4 contas
+reais, todas `usuario@concretta-login.local`:
+- `admin` → Rubens (role admin) — UID `G8wEeiN2pqgwschKfLE5deuihzk2`
+- `weslen` → Weslen Da Silva Alves (CRAS/CRECHE/PRAÇA G) — UID `oejwvy5h9Qbdc6qPKBiCJMgwOBh2`
+- `willian` → Willian de Souza (COLÉGIO MILITAR) — UID `QGB8m7rfZVMEWwdbp4jLCSgMXDB3`
+- `esdra` → Esdra de Jesus Tavares (PARQUE IMPERIAL) — UID `956XXR5ZfZSbB8kygLGB2o8FqHC3`
+
+(A conta `rubinho106@gmail.com` criada durante o protótipo de teste também existe no projeto,
+sem perfil em `usuarios/` — login com ela cai no fluxo de "conta sem perfil configurado".)
+
+**Vínculo de perfil**: nova coleção `usuarios/{uid}` = `{role:"admin"}` ou
+`{role:"apontador", funcionarioId, nome}` — `funcionarioId` liga a conta ao mesmo id usado em
+`obras/{id}.apontadorId` (o campo "Apontador responsável" cadastrado logo acima). No login,
+`obrasDoApontador(funcionarioId)` consulta `obras.where("apontadorId","==",funcionarioId)` e
+trava o `<select id="obra">` do Apontador só naquelas obras — se a lista vier vazia (apontador
+sem obra associada ainda), mostra aviso em vez de travar. Admin (`obrasPermitidas=null`)
+continua vendo todas as obras, sem restrição.
+
+**Mecanismo de login** (igual ao protótipo `apontador-teste-login.html`, agora embutido nas
+páginas reais): "usuário" mapeado internamente pra `usuario@concretta-login.local` (aceita
+e-mail completo também), `firebase.auth()` do mesmo projeto, mensagens de erro específicas (sem
+`confirm()`/`alert()` nativo). `index.html` exige especificamente `role:"admin"` — uma conta de
+apontador que tentar entrar lá é rejeitada com "Essa conta não tem acesso ao painel principal".
+Botão "Sair" no hero das duas páginas desloga (`auth.signOut()`). `iniciarDados()`/`iniciar()`
+só rodam depois do login confirmado (a chamada incondicional de antes foi removida).
+
+**`cartoes.html` não foi tocado** — continua aberto sem login, decisão já confirmada antes.
+
+**Importante, ainda pendente**: as regras do Firestore continuam abertas (`allow read, write: if
+true`) — por enquanto só a *interface* exige login, alguém com conhecimento técnico ainda
+poderia escrever direto via API sem passar pela tela. Apertar as regras (exigir
+`request.auth != null`, e no caso do apontador, também conferir que a obra sendo escrita bate
+com `usuarios/{uid}.funcionarioId` via `obras`) é o próximo passo, recomendado só depois de
+validar o login com uso real por um tempo — mudar regras é a etapa mais arriscada (pode travar
+todo mundo fora se sair errado).
+
+Testado local contra produção: perfil e obras carregados certos pra Weslen (3 obras) e pro
+admin (5 obras, sem restrição) via simulação direta de estado; validação de campo vazio;
+"conta sem perfil" testada com UID inexistente; conta de apontador (Weslen) corretamente
+rejeitada pelo check de role no `index.html`. Criar uma conta de teste temporária pro ciclo
+completo sign-in/sign-out real foi bloqueado pelo classificador de permissões do Claude Code
+(ação de criação de conta é sensível) — o resto da lógica foi coberta por simulação de estado,
+sem precisar de senha real; o teste de login de verdade ponta a ponta fica por conta do Rubens
+usando as contas reais.
+
 ## Apontador — "Modo teste" — HISTÓRICO, revertido no mesmo dia (commit `17d4c97`, 04/09/2026)
 
 Rubens perguntou se dava pra travar o Apontador no mês teste, só com opção de escolher o dia —
