@@ -500,7 +500,7 @@ function atualizarRelogio(){
   const mm = String(agora.getMinutes()).padStart(2, "0");
   const ss = String(agora.getSeconds()).padStart(2, "0");
   document.getElementById("heroRelogio").textContent = "🕒 " + hh + ":" + mm;
-  document.getElementById("heroRelogioNota").style.display = dentroDoHorario() ? "none" : "block";
+  document.getElementById("heroRelogioNota").style.display = foraDoHorarioAgora() ? "block" : "none";
   const relogioTravado = document.getElementById("travadoRelogio");
   if(relogioTravado){
     relogioTravado.textContent = `${hh}:${mm}:${ss}`;
@@ -621,12 +621,23 @@ function equipeDaObra(lista){
     });
 }
 
+// Admin não trava por horário em obra nenhuma (só o "dia fechado" continua
+// valendo pra ele, igual sempre foi) -- quem trava sempre fora do horário
+// é o apontador, mesmo que o dia já esteja fechado (pedido do Rubens
+// depois de comparar prints: antes "já fechado" liberava a tela normal
+// fora do horário pra qualquer perfil, o que ele não queria pro
+// apontador, só pro admin).
+function foraDoHorarioAgora(){
+  if(perfilAtual && perfilAtual.role === "admin") return false;
+  return !dentroDoHorario();
+}
+
 function render(){
-  // Fora do horário permitido (e o dia ainda não fechado): troca o card
-  // inteiro por uma "tela travada" com relógio grande, pedido do Rubens
-  // (print de referência) -- nada do formulário fica visível ou é
-  // montado enquanto isso.
-  const foraHorario = !isFechado() && !dentroDoHorario();
+  // Fora do horário permitido: troca o card inteiro por uma "tela
+  // travada" com relógio grande, pedido do Rubens (print de referência) --
+  // nada do formulário fica visível ou é montado enquanto isso. Não se
+  // aplica ao admin (ver foraDoHorarioAgora acima).
+  const foraHorario = foraDoHorarioAgora();
   document.getElementById("cardTravado").style.display = foraHorario ? "block" : "none";
   document.getElementById("cardPrincipal").style.display = foraHorario ? "none" : "block";
   if(foraHorario) return;
@@ -742,7 +753,7 @@ function render(){
 function abrir(f){
   if(!dataValidaParaLancamento())return;
   if(isFechado())return;
-  if(!dentroDoHorario())return;
+  if(foraDoHorarioAgora())return;
   if(salvando)return;
   atual=f;modalNome.textContent=f.nome;
   mostrarEscolhas();
@@ -975,7 +986,7 @@ async function aplicarLancamento(func, status){
 async function aplicar(status){
   if(!atual)return;
   if(isFechado())return;
-  if(!dentroDoHorario())return;
+  if(foraDoHorarioAgora())return;
   if(salvando)return;
   const func = atual;
   fecharModal();
@@ -995,7 +1006,7 @@ backdrop.addEventListener("click",e=>{if(e.target===backdrop)fecharModal()});
 document.getElementById("todosDia").addEventListener("click",async ()=>{
   if(!dataValidaParaLancamento())return;
   if(isFechado())return;
-  if(!dentroDoHorario())return;
+  if(foraDoHorarioAgora())return;
   if(salvando)return;
   await executarComSalvamento(async () => {
     const dia = diaDaData();
@@ -1045,7 +1056,7 @@ document.getElementById("todosDia").addEventListener("click",async ()=>{
 
 document.getElementById("fecharDia").addEventListener("click",async ()=>{
   if(isFechado())return;
-  if(!dentroDoHorario())return;
+  if(foraDoHorarioAgora())return;
   if(!dataValidaParaLancamento())return;
   if(salvando)return;
   const pendentes=equipeDaObra(todos).filter(f=>statusParaExibir(f.id).cls==="pending");
@@ -1067,7 +1078,7 @@ document.getElementById("fecharDia").addEventListener("click",async ()=>{
 
 document.getElementById("limparDia").addEventListener("click",async ()=>{
   if(isFechado())return;
-  if(!dentroDoHorario())return;
+  if(foraDoHorarioAgora())return;
   if(salvando)return;
   if(!(await confirmarAcaoGeral("Apagar os lançamentos desta obra nesta data?")))return;
   await executarComSalvamento(async () => {
