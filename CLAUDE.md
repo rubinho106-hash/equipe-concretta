@@ -762,6 +762,32 @@ Testado local: card aparece exatamente na posição indicada (depois de Janeiro/
 nele carrega a lista normal (todos pendentes, já que 2020-01 está vazio) sem erro; o select do
 Banco de Dados também lista "🧪 Mês teste" como opção. Nada foi gravado durante o teste.
 
+## Apontador: tela de confirmação própria antes de aplicar qualquer status (commit `2660942`, 04/09/2026)
+
+Rubens pediu (print do modal de escolha — Dia inteiro/Manhã/Tarde/Falta) pra sempre pedir
+confirmação antes de aplicar qualquer uma das 4 opções — antes só existia confirmação
+(via `confirm()` nativo) no caso de conflito (sobrescrever obra diferente já lançada); uma
+escolha sem conflito aplicava na hora, sem nenhuma chance de desfazer um toque errado.
+
+Implementado como uma **segunda tela dentro do mesmo modal** (não `confirm()` nativo — esse
+trava silenciosamente em navegadores embutidos tipo WhatsApp/Instagram, mesmo problema já
+documentado no `index.html`/`confirmarAcao()`): clicar numa opção troca `#choicesView` por
+`#confirmarView` ("Confirma 'Dia inteiro' pra Fulano?" + botões Confirmar/Voltar), sem gravar
+nada ainda. Só o clique em "Confirmar" chama `aplicar(status)` de verdade — "Voltar" retorna
+pra tela de opções sem aplicar nada. `abrir()`/`fecharModal()` sempre resetam pra
+`mostrarEscolhas()`, então abrir um funcionário novo (ou fechar o modal) nunca deixa a tela
+presa na confirmação de outra pessoa. O `confirm()` nativo de conflito (dentro de
+`aplicarLancamento()`) continua existindo como está — não foi tocado, só ganhou essa
+confirmação extra por cima pra todo mundo.
+
+Testado local, com cuidado (dado real de produção): abri Raimundo Gaspar (já "Dia Inteiro"),
+cliquei "Dia inteiro" → apareceu a tela de confirmação → cliquei "Voltar" → nada mudou,
+confirmado. Depois testei o fluxo completo em Carlos André (que estava "Não lançado" de
+verdade) → "Dia inteiro" → "Confirmar" → gravou de verdade em COLÉGIO MILITAR dia 07 (prova
+que o fluxo grava igual antes) — **como isso não fazia parte do dado real do dia 07**,
+revertido na hora (limpo `dias.7.m/t` e o cache `ultimaObraNome/Data` de volta pro valor real
+anterior, 2026-09-05).
+
 ## Apontador — "Modo teste" — HISTÓRICO, revertido no mesmo dia (commit `17d4c97`, 04/09/2026)
 
 Rubens perguntou se dava pra travar o Apontador no mês teste, só com opção de escolher o dia —
