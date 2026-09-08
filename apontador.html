@@ -167,6 +167,17 @@ button:disabled{opacity:.45;cursor:not-allowed}
   </div>
 </div>
 
+<div class="modal-backdrop" id="confirmGeralBackdrop">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmGeralTitulo">
+    <h3 id="confirmGeralTitulo">Confirmar</h3>
+    <div class="sub" id="confirmGeralTexto" style="white-space:pre-line">Tem certeza?</div>
+    <div class="choices">
+      <button class="choice absentbtn" id="confirmGeralOk">Confirmar</button>
+      <button class="choice cancelbtn" id="confirmGeralCancelar">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script>
@@ -499,6 +510,21 @@ function pedirConfirmacao(status){
   document.getElementById("confirmarView").style.display="grid";
 }
 
+// Modal de confirmacao generico, mesmo motivo do de cima -- usado por
+// "Fechar dia" e "Limpar lançamentos" no lugar do confirm() nativo.
+let confirmGeralResolver = null;
+function confirmarAcaoGeral(mensagem){
+  document.getElementById("confirmGeralTexto").textContent = mensagem;
+  document.getElementById("confirmGeralBackdrop").style.display = "flex";
+  return new Promise((resolve) => { confirmGeralResolver = resolve; });
+}
+function fecharConfirmacaoGeral(resultado){
+  document.getElementById("confirmGeralBackdrop").style.display = "none";
+  if(confirmGeralResolver){ confirmGeralResolver(resultado); confirmGeralResolver = null; }
+}
+document.getElementById("confirmGeralOk").addEventListener("click", () => fecharConfirmacaoGeral(true));
+document.getElementById("confirmGeralCancelar").addEventListener("click", () => fecharConfirmacaoGeral(false));
+
 // Grava a cache de "ultima obra" (mesma logica do salvarDia() no
 // index.html) -- so quando o resultado final e uma obra real, nunca pra
 // falta. Fire-and-forget pro Firestore (se falhar, nao deve travar o
@@ -641,7 +667,7 @@ document.getElementById("fecharDia").addEventListener("click",async ()=>{
     alert("Ainda existem funcionários pendentes.");
     return;
   }
-  if(!confirm(`Fechar o dia ${data.value.split("-").reverse().join("/")} da obra ${obra.value}?\n\nDepois disso os lançamentos ficarão bloqueados.`))return;
+  if(!(await confirmarAcaoGeral(`Fechar o dia ${data.value.split("-").reverse().join("/")} da obra ${obra.value}?\n\nDepois disso os lançamentos ficarão bloqueados.`)))return;
   await db.doc("fechamentosDia/" + chaveFechamento()).set({
     obra: obra.value,
     data: data.value,
@@ -653,7 +679,7 @@ document.getElementById("fecharDia").addEventListener("click",async ()=>{
 });
 
 document.getElementById("limparDia").addEventListener("click",async ()=>{
-  if(!confirm("Apagar os lançamentos desta obra nesta data?"))return;
+  if(!(await confirmarAcaoGeral("Apagar os lançamentos desta obra nesta data?")))return;
   const dia = diaDaData();
   const obraSel = obra.value;
   const dataStr = mesCarregado + "-" + String(dia).padStart(2,"0");
