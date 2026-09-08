@@ -153,13 +153,17 @@ button:disabled{opacity:.45;cursor:not-allowed}
 <div class="modal-backdrop" id="backdrop">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalNome">
     <h3 id="modalNome">Funcionário</h3>
-    <div class="sub">Selecione a situação</div>
-    <div class="choices">
+    <div class="sub" id="modalSub">Selecione a situação</div>
+    <div class="choices" id="choicesView">
       <button class="choice fullbtn" data-status="full">Dia inteiro • 1 diária</button>
       <button class="choice halfbtn" data-status="morning">Manhã • 0,5 diária</button>
       <button class="choice halfbtn" data-status="afternoon">Tarde • 0,5 diária</button>
       <button class="choice absentbtn" data-status="absent">Falta • 0</button>
       <button class="choice cancelbtn" id="cancelar">Cancelar</button>
+    </div>
+    <div class="choices" id="confirmarView" style="display:none">
+      <button class="choice fullbtn" id="btnConfirmar">Confirmar</button>
+      <button class="choice cancelbtn" id="btnVoltar">Voltar</button>
     </div>
   </div>
 </div>
@@ -467,9 +471,33 @@ function render(){
 function abrir(f){
   if(!dataValidaParaLancamento())return;
   if(isFechado())return;
-  atual=f;modalNome.textContent=f.nome;backdrop.style.display="flex";
+  atual=f;modalNome.textContent=f.nome;
+  mostrarEscolhas();
+  backdrop.style.display="flex";
 }
-function fecharModal(){atual=null;backdrop.style.display="none"}
+function fecharModal(){atual=null;backdrop.style.display="none";mostrarEscolhas()}
+
+// Tela de confirmacao propria (nao confirm() nativo -- esse trava
+// silenciosamente em navegadores embutidos tipo WhatsApp/Instagram, mesmo
+// problema ja documentado no index.html). Toda escolha (mesmo sem
+// conflito nenhum) passa por aqui antes de gravar de verdade -- pedido do
+// Rubens depois de ver o quao facil e tocar no botao errado sem querer.
+const ROTULO_STATUS = {full:"Dia inteiro", morning:"Manhã", afternoon:"Tarde", absent:"Falta"};
+let statusPendente = null;
+
+function mostrarEscolhas(){
+  statusPendente = null;
+  document.getElementById("choicesView").style.display="grid";
+  document.getElementById("confirmarView").style.display="none";
+  document.getElementById("modalSub").textContent="Selecione a situação";
+}
+function pedirConfirmacao(status){
+  if(!atual)return;
+  statusPendente = status;
+  document.getElementById("modalSub").textContent = `Confirma "${ROTULO_STATUS[status]}" pra ${atual.nome}?`;
+  document.getElementById("choicesView").style.display="none";
+  document.getElementById("confirmarView").style.display="grid";
+}
 
 // Grava a cache de "ultima obra" (mesma logica do salvarDia() no
 // index.html) -- so quando o resultado final e uma obra real, nunca pra
@@ -559,9 +587,13 @@ async function aplicar(status){
 }
 
 document.querySelectorAll("[data-status]").forEach(b=>{
-  b.addEventListener("click",()=>aplicar(b.dataset.status));
+  b.addEventListener("click",()=>pedirConfirmacao(b.dataset.status));
 });
 document.getElementById("cancelar").addEventListener("click",fecharModal);
+document.getElementById("btnVoltar").addEventListener("click",mostrarEscolhas);
+document.getElementById("btnConfirmar").addEventListener("click",()=>{
+  aplicar(statusPendente); // aplicar() ja chama fecharModal(), que reseta a tela de escolhas
+});
 backdrop.addEventListener("click",e=>{if(e.target===backdrop)fecharModal()});
 
 document.getElementById("todosDia").addEventListener("click",async ()=>{
