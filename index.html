@@ -118,6 +118,10 @@
     text-decoration: none;
   }
   .hero-link:hover{ background: rgba(255,255,255,.16); }
+  .login-status-row{ margin-top: 14px; display: flex; gap: 10px; align-items: center; font-size: 12.5px; color: #cbd5f7; }
+  .sair-btn{ background: rgba(255,255,255,.12); color: #fff; border: 0; border-radius: 8px; padding: 6px 12px; font-size: 11.5px; font-weight: 700; cursor: pointer; }
+  .login-card{ max-width: 360px; margin: 14px 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
+  .erro-login{ margin-top: 12px; padding: 10px 12px; border-radius: 9px; background: rgba(179,38,30,.1); color: var(--danger-ink); font-size: 13px; font-weight: 600; }
   .hero-stat{
     background: rgba(255,255,255,.1);
     border: 1px solid rgba(255,255,255,.18);
@@ -670,6 +674,25 @@
     </div>
   </div>
 
+  <div class="login-status-row" id="loginStatusRow" style="display:none">
+    <span id="nomeLogado"></span>
+    <button class="sair-btn" id="btnSair" type="button">Sair</button>
+  </div>
+
+  <div class="login-card" id="telaLogin">
+    <div class="field">
+      <label for="loginUsuario">Usuário</label>
+      <input id="loginUsuario" type="text" placeholder="ex: admin" autocomplete="username">
+    </div>
+    <div class="field">
+      <label for="loginSenha">Senha</label>
+      <input id="loginSenha" type="password" placeholder="Senha" autocomplete="current-password">
+    </div>
+    <div class="erro-login" id="loginErro" style="display:none"></div>
+    <button class="btn btn-primary" id="btnLoginEntrar" style="margin-top:8px;width:100%">Entrar</button>
+  </div>
+
+  <div id="appConteudo" style="display:none">
   <div class="segmented">
     <button id="seg-equipe" class="active">Lista de Funcionários</button>
     <button id="seg-conferencia">Conferência de Ponto</button>
@@ -793,6 +816,7 @@
       <div class="empty-state" id="obras-empty-state" hidden>Nenhuma obra cadastrada.</div>
       <div id="obras-lista"></div>
     </div>
+  </div>
   </div>
 </div>
 
@@ -926,6 +950,7 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script>
 // ---------------- Firebase ----------------
@@ -939,6 +964,84 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+const auth = firebase.auth();
+
+// ---------------- Login (Fase 2 da análise de confiabilidade) ----------------
+// Painel principal só abre pra quem tiver conta com role "admin" em
+// usuarios/{uid} -- mesmo mecanismo de login do apontador.html (mesmo
+// projeto Firebase, "usuário" mapeado internamente pra
+// usuario@concretta-login.local). As regras do Firestore continuam
+// abertas por enquanto (só a interface trava; ver CLAUDE.md).
+const DOMINIO_LOGIN = "concretta-login.local";
+function emailDoUsuario(usuario){
+  const limpo = usuario.trim().toLowerCase();
+  if(limpo.includes("@")) return limpo;
+  return limpo.replace(/\s+/g, "") + "@" + DOMINIO_LOGIN;
+}
+function mostrarErroLogin(msg){
+  const el = document.getElementById("loginErro");
+  el.textContent = msg;
+  el.style.display = "block";
+}
+function limparErroLogin(){
+  document.getElementById("loginErro").style.display = "none";
+}
+const MENSAGENS_ERRO_LOGIN = {
+  "auth/invalid-credential": "Usuário ou senha incorretos.",
+  "auth/user-not-found": "Usuário não encontrado.",
+  "auth/wrong-password": "Senha incorreta.",
+  "auth/too-many-requests": "Muitas tentativas — espera um pouco e tenta de novo.",
+  "auth/invalid-email": "Usuário inválido.",
+  "auth/network-request-failed": "Sem conexão — verifica a internet e tenta de novo.",
+  "auth/configuration-not-found": "Login ainda não está configurado."
+};
+async function tentarEntrar(){
+  limparErroLogin();
+  const usuario = document.getElementById("loginUsuario").value.trim();
+  const senha = document.getElementById("loginSenha").value;
+  if(!usuario || !senha){ mostrarErroLogin("Preencha usuário e senha."); return; }
+  const btn = document.getElementById("btnLoginEntrar");
+  btn.disabled = true; btn.textContent = "Entrando…";
+  try {
+    await auth.signInWithEmailAndPassword(emailDoUsuario(usuario), senha);
+  } catch(e){
+    mostrarErroLogin(MENSAGENS_ERRO_LOGIN[e.code] || "Não deu pra entrar — tenta de novo.");
+  } finally {
+    btn.disabled = false; btn.textContent = "Entrar";
+  }
+}
+document.getElementById("btnLoginEntrar").addEventListener("click", tentarEntrar);
+document.getElementById("loginSenha").addEventListener("keydown", e => { if(e.key==="Enter") tentarEntrar(); });
+document.getElementById("loginUsuario").addEventListener("keydown", e => { if(e.key==="Enter") document.getElementById("loginSenha").focus(); });
+document.getElementById("btnSair").addEventListener("click", () => auth.signOut());
+
+auth.onAuthStateChanged(async (user) => {
+  const telaLogin = document.getElementById("telaLogin");
+  const appConteudo = document.getElementById("appConteudo");
+  if(!user){
+    telaLogin.style.display = "block";
+    appConteudo.style.display = "none";
+    document.getElementById("loginStatusRow").style.display = "none";
+    document.getElementById("loginSenha").value = "";
+    return;
+  }
+
+  const perfilSnap = await db.doc("usuarios/" + user.uid).get();
+  const perfil = perfilSnap.exists ? perfilSnap.data() : null;
+  if(!perfil || perfil.role !== "admin"){
+    telaLogin.style.display = "block";
+    appConteudo.style.display = "none";
+    mostrarErroLogin(perfil ? "Essa conta não tem acesso ao painel principal." : "Essa conta não tem perfil configurado. Fala com o administrador.");
+    await auth.signOut();
+    return;
+  }
+
+  document.getElementById("nomeLogado").textContent = perfil.nome || user.email;
+  document.getElementById("loginStatusRow").style.display = "flex";
+  telaLogin.style.display = "none";
+  appConteudo.style.display = "block";
+  iniciar();
+});
 
 const AVATAR_COLORS = ["#2451d6","#157a4a","#a85417","#7c3aed","#0f766e","#be185d","#4338ca","#b45309"];
 function corAvatar(nome){
@@ -2371,7 +2474,8 @@ document.addEventListener("touchmove", (e) => {
 }, { passive: true });
 document.addEventListener("touchend", pararAcaoFicha);
 
-iniciar();
+// iniciar() agora é chamada pelo onAuthStateChanged() lá em cima, só
+// depois de confirmar login com role "admin" (não mais direto aqui).
 </script>
 </body>
 </html>
