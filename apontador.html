@@ -602,6 +602,7 @@ async function aplicarLancamento(func, status){
 
 async function aplicar(status){
   if(!atual)return;
+  if(isFechado())return;
   const func = atual;
   fecharModal();
   const ok = await aplicarLancamento(func, status);
@@ -661,6 +662,7 @@ document.getElementById("todosDia").addEventListener("click",async ()=>{
 });
 
 document.getElementById("fecharDia").addEventListener("click",async ()=>{
+  if(isFechado())return;
   if(!dataValidaParaLancamento())return;
   const pendentes=equipeDaObra(todos).filter(f=>statusParaExibir(f.id).cls==="pending");
   if(pendentes.length){
@@ -679,6 +681,7 @@ document.getElementById("fecharDia").addEventListener("click",async ()=>{
 });
 
 document.getElementById("limparDia").addEventListener("click",async ()=>{
+  if(isFechado())return;
   if(!(await confirmarAcaoGeral("Apagar os lançamentos desta obra nesta data?")))return;
   const dia = diaDaData();
   const obraSel = obra.value;
