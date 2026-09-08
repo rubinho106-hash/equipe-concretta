@@ -121,7 +121,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
       <span id="count" class="status">0 funcionários</span>
     </div>
 
-    <div id="fechadoBanner" class="closed-banner" style="display:none">Dia fechado. Os lançamentos estão bloqueados até reabrir.</div>
+    <div id="fechadoBanner" class="closed-banner" style="display:none">Dia fechado. Os lançamentos ficam bloqueados por aqui — qualquer correção precisa ser feita no painel principal.</div>
 
     <div style="margin-top:12px">
       <input id="buscaFunc" type="text" placeholder="🔍 Buscar funcionário...">
@@ -144,7 +144,6 @@ button:disabled{opacity:.45;cursor:not-allowed}
 
     <div class="row" style="margin-top:14px">
       <button id="fecharDia" class="success" disabled>Fechar dia</button>
-      <button id="reabrirDia" class="secondary" style="display:none">Reabrir dia</button>
       <button id="limparDia" class="danger">Limpar lançamentos</button>
     </div>
   </div>
@@ -193,8 +192,10 @@ const db = firebase.firestore();
 // conflito e a antiga função complementar() saem: com dado real, marcar
 // manhã numa obra e tarde noutra já É complementar por natureza (cada
 // período grava sua própria obra, sem precisar de lógica extra pra
-// permitir isso). Só "Fechar dia"/"Reabrir dia" continuam em
-// localStorage por enquanto -- isso é o Passo 7, ainda não feito.
+// permitir isso). "Fechar dia" foi pro Firestore no Passo 7
+// (fechamentosDia/{obra_data}) -- e não existe mais "Reabrir dia": uma
+// vez fechado por aqui, a única forma de corrigir é pelo painel
+// principal (index.html), que edita livre independente do fechamento.
 
 // Mesma lógica de corAvatar()/iniciais() do site principal -- paleta
 // idêntica, então o mesmo funcionário cai na mesma cor em todo canto.
@@ -464,7 +465,6 @@ function render(){
   document.getElementById("todosDia").disabled=fechado||!equipe.length;
   document.getElementById("limparDia").disabled=fechado;
   document.getElementById("fecharDia").style.display=fechado?"none":"inline-block";
-  document.getElementById("reabrirDia").style.display=fechado?"inline-block":"none";
   document.getElementById("fecharDia").disabled=pending>0||!equipe.length;
 }
 
@@ -649,16 +649,6 @@ document.getElementById("fecharDia").addEventListener("click",async ()=>{
     atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
   }, { merge: true });
   fechadoAtual = true;
-  render();
-});
-
-document.getElementById("reabrirDia").addEventListener("click",async ()=>{
-  if(!confirm("Reabrir este dia para permitir correções?"))return;
-  await db.doc("fechamentosDia/" + chaveFechamento()).set({
-    fechado: false,
-    atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
-  }, { merge: true });
-  fechadoAtual = false;
   render();
 });
 
