@@ -1008,6 +1008,34 @@ contas, uma por obra, cada uma travada só naquela obra).
 Link ao vivo (não linkado de lugar nenhum, só quem tiver a URL acessa, igual o `cartoes.html`
 foi no início): `https://rubinho106-hash.github.io/equipe-concretta/apontador-teste-login.html`
 
+**Confirmado funcionando ao vivo (08/09/2026, commit `65f3a33`)**: Rubens ativou Email/Password
+e criou a conta de teste, mas com o Gmail pessoal dele em vez do domínio combinado
+(`admin@concretta-teste.local`) — em vez de recriar a conta, `emailDoUsuario()` foi ajustada
+pra aceitar tanto um usuário simples (completa com `@concretta-teste.local`) quanto um e-mail
+completo já digitado (usa como está). Login testado e confirmado funcionando de ponta a ponta
+com o e-mail real. **Passo pendente removido** — Auth está ativo e funcionando no projeto.
+
+## Obras: campo "Apontador responsável" (commit `818855f`, 08/09/2026)
+
+Rubens apontou (print com caixa vermelha) o espaço vazio entre o nome da obra e o lápis de
+editar na lista de Obras, pedindo pra cadastrar ali o apontador responsável de cada obra —
+confirmado via AskUserQuestion: escolher 1 funcionário já cadastrado (não ligado ao login por
+obra da Fase 2/Auth, que fica separado por enquanto — só organizacional).
+
+Modal de obra ganhou um `<select id="f-obra-apontador">` (funcionários Ativos, ordenados por
+nome, + "— Nenhum —"), salvando `apontadorId`/`apontadorNome` no documento da obra (mesmo padrão
+de cache já usado em `ultimaObraNome`/`obraPadrao` — nome cacheado junto do id pra exibir sem
+join). Lista de Obras mostra "Apontador: Fulano" na linha, quando tiver. Cuidado técnico:
+`FieldValue.delete()` só é válido dentro de um `update()` — no fluxo de "Nova obra" (que usa
+`add()`, um `set()` sem merge), o "— Nenhum —" simplesmente omite os campos em vez de tentar
+apagá-los.
+
+Testado local contra produção: atribuí Carlos André à COLÉGIO MILITAR (gravou e apareceu na
+lista certo), reabri o modal confirmando o valor pré-selecionado, revertido pra "— Nenhum —"
+(campos realmente apagados do documento, conferido lendo direto do servidor); testei também
+criar uma obra nova sem apontador (sem erro) e apaguei a obra de teste depois — as 5 obras reais
+ficaram exatamente como estavam antes do teste.
+
 ## Apontador — "Modo teste" — HISTÓRICO, revertido no mesmo dia (commit `17d4c97`, 04/09/2026)
 
 Rubens perguntou se dava pra travar o Apontador no mês teste, só com opção de escolher o dia —
