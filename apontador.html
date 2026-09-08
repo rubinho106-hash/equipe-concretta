@@ -67,7 +67,8 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .status.absent{color:var(--danger-ink);background:rgba(179,38,30,.12)}
 
 .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
-.sum{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:10px;text-align:center}
+.sum{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:10px;text-align:center;cursor:pointer;font:inherit;color:inherit;width:100%}
+.sum.active{border-color:var(--accent);background:#eaf0ff}
 .sum b{display:block;font-size:19px;color:var(--ink)}
 .sum span{font-size:10.5px;color:var(--muted);letter-spacing:.02em;text-transform:uppercase}
 
@@ -89,6 +90,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .halfbtn{background:var(--warn-ink)}
 .absentbtn{background:var(--danger-ink)}
 .cancelbtn{background:var(--surface-2);color:var(--ink);border:1px solid var(--line)}
+.clearbtn{background:var(--surface);color:var(--danger-ink);border:1px solid var(--danger-ink)}
 
 .closed-banner{margin-top:12px;padding:12px 14px;border-radius:10px;background:var(--warn-bg);border:1px solid #f0c49a;color:var(--warn-ink);font-size:13px;font-weight:600}
 
@@ -132,9 +134,10 @@ button:disabled{opacity:.45;cursor:not-allowed}
     </div>
 
     <div class="row" style="margin-top:14px">
-      <button id="todosDia" class="success">✓ Marcar equipe — Dia inteiro</button>
+      <button id="todosDia" class="success">✓ Preencher não lançados — Dia inteiro</button>
       <span id="count" class="status">0 funcionários</span>
     </div>
+    <div id="statusSalvar" style="display:none;margin-top:8px;font-size:12.5px;font-weight:700"></div>
 
     <div id="fechadoBanner" class="closed-banner" style="display:none">Dia fechado. Os lançamentos ficam bloqueados por aqui — qualquer correção precisa ser feita no painel principal.</div>
 
@@ -147,11 +150,12 @@ button:disabled{opacity:.45;cursor:not-allowed}
     </div>
 
     <div class="summary">
-      <div class="sum"><b id="sFull">0</b><span>Inteiros</span></div>
-      <div class="sum"><b id="sHalf">0</b><span>Meio período</span></div>
-      <div class="sum"><b id="sAbsent">0</b><span>Faltas</span></div>
-      <div class="sum"><b id="sPending">0</b><span>Pendentes</span></div>
+      <button type="button" class="sum" id="sumFull" data-cls="full"><b id="sFull">0</b><span>Inteiros</span></button>
+      <button type="button" class="sum" id="sumHalf" data-cls="half"><b id="sHalf">0</b><span>Meio período</span></button>
+      <button type="button" class="sum" id="sumAbsent" data-cls="absent"><b id="sAbsent">0</b><span>Faltas</span></button>
+      <button type="button" class="sum" id="sumPending" data-cls="pending"><b id="sPending">0</b><span>Pendentes</span></button>
     </div>
+    <div id="resumoNomes" style="display:none;margin-top:10px;padding:10px 12px;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;font-size:13px"></div>
 
     <div class="notice">
       <b>Total equivalente:</b> <span id="totalDiarias">0</span> diária(s)
@@ -173,6 +177,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
       <button class="choice halfbtn" data-status="morning">Manhã • 0,5 diária</button>
       <button class="choice halfbtn" data-status="afternoon">Tarde • 0,5 diária</button>
       <button class="choice absentbtn" data-status="absent">Falta • 0</button>
+      <button class="choice clearbtn" data-status="clear" id="opcaoLimpar" style="display:none">🗑 Limpar lançamento</button>
       <button class="choice cancelbtn" id="cancelar">Cancelar</button>
     </div>
     <div class="choices" id="confirmarView" style="display:none">
@@ -243,6 +248,16 @@ function iniciais(nome){
 const MARCADORES = ["SÁBADO", "DOMINGO", "FERIADO", "FALTA"];
 function ehMarcador(v){ return MARCADORES.includes(v); }
 
+// O banco não tem regras/validação (qualquer um com o link escreve) --
+// nome de funcionário entra direto em innerHTML em alguns lugares, então
+// precisa ser escapado antes, ou um nome com "<"/">" vira HTML de verdade
+// pra quem estiver olhando a lista.
+function escapeHtml(s){
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[c]));
+}
+
 const obra=document.getElementById("obra");
 const data=document.getElementById("data");
 const lista=document.getElementById("funcionarios");
@@ -255,6 +270,7 @@ let todos = []; // funcionários Ativos, [{id, nome, funcao, status, ...}]
 let dadosMes = {}; // funcId -> { dias: {...} } do mes atualmente carregado
 let mesCarregado = null; // "AAAA-MM" -- qual mes esta em dadosMes agora
 let fechadoAtual = false; // se a combinacao obra+data selecionada agora esta fechada
+let filtroResumo = null; // "full"|"half"|"absent"|"pending"|null -- card do resumo clicado
 
 function mesDaData(){ return data.value.slice(0,7); }
 function diaDaData(){ return Number(data.value.split("-")[2]); }
@@ -287,7 +303,20 @@ async function garantirDocPontos(funcId, mes){
   return ref;
 }
 
+// Achado da análise: uma falha de conexão aparecia igual a "nenhum dia
+// lançado" (cartão vazio), sem deixar claro que era erro. Agora mostra um
+// aviso explícito com botão pra tentar de novo, e cobre também as leituras
+// que rodavam fora do try (mês/fechamento), que antes travavam silenciosas.
+function mostrarErroCarregamento(){
+  lista.innerHTML = `<div style="padding:16px;text-align:center">
+    <div style="color:var(--danger-ink);margin-bottom:10px;font-weight:600">Não foi possível carregar os dados.</div>
+    <button class="secondary" id="btnTentarNovamente" type="button">Tentar novamente</button>
+  </div>`;
+  document.getElementById("btnTentarNovamente").addEventListener("click", iniciarDados);
+}
+
 async function iniciarDados(){
+  lista.innerHTML = '<div style="padding:16px;color:var(--muted)">Carregando equipe…</div>';
   try {
     const [obrasSnap, funcSnap] = await Promise.all([
       db.collection("obras").orderBy("nome").get(),
@@ -297,19 +326,19 @@ async function iniciarDados(){
     todos = funcSnap.docs
       .map(d => ({ id: d.id, ...d.data() }))
       .filter(f => f.status !== "Inativo");
+
+    obra.innerHTML = "";
+    OBRAS.forEach(o=>{
+      const op=document.createElement("option");
+      op.value=o;op.textContent=o;obra.appendChild(op);
+    });
+
+    await carregarDadosMes(mesDaData());
+    await carregarFechado();
   } catch(e){
-    lista.innerHTML = '<div style="padding:16px;color:var(--danger-ink)">Não deu pra carregar os dados agora — recarregue a página.</div>';
+    mostrarErroCarregamento();
     return;
   }
-
-  obra.innerHTML = "";
-  OBRAS.forEach(o=>{
-    const op=document.createElement("option");
-    op.value=o;op.textContent=o;obra.appendChild(op);
-  });
-
-  await carregarDadosMes(mesDaData());
-  await carregarFechado();
   render();
 }
 
@@ -380,6 +409,28 @@ function isFechado(){ return fechadoAtual; }
 function diaDoFuncionario(funcId){
   return ((dadosMes[funcId]||{}).dias||{})[diaDaData()] || {};
 }
+
+// Conferência (index.html) vira {q1,q2} independente do resto do ponto --
+// "Conferido" é um selo manual que não sabe sozinho quando o dado por
+// baixo mudou. Qualquer edição real de dia feita por aqui precisa
+// devolver a quinzena daquele dia pra "Pendente", senão o cartão fica
+// "aprovado" com dado desatualizado. Mesma lógica de statusQuinzena() do
+// index.html -- grava sempre o objeto {q1,q2} inteiro (nunca um dot-path
+// em cima de statusConferencia), já que um doc antigo pode ter esse campo
+// como string solta em vez de objeto.
+function quinzenaDoDia(dia){ return dia <= 15 ? 1 : 2; }
+function statusConferenciaAtual(info){
+  const sc = (info || {}).statusConferencia;
+  if(sc && typeof sc === "object"){
+    return { q1: sc.q1 === "Conferido" ? "Conferido" : "Pendente", q2: sc.q2 === "Conferido" ? "Conferido" : "Pendente" };
+  }
+  return { q1: sc === "Conferido" ? "Conferido" : "Pendente", q2: sc === "Conferido" ? "Conferido" : "Pendente" };
+}
+function invalidarConferenciaPatch(info, dia){
+  const patch = statusConferenciaAtual(info);
+  patch["q" + quinzenaDoDia(dia)] = "Pendente";
+  return patch;
+}
 // Status exibido é sempre relativo à obra selecionada no momento (mesmo
 // comportamento já testado nos passos anteriores) -- se a pessoa tiver um
 // lançamento real em OUTRA obra nesse dia, aqui aparece "Não lançado" (a
@@ -414,9 +465,9 @@ function dataValidaParaLancamento(){
 function montaLinhaFuncionario(f){
   const st=statusParaExibir(f.id);
   const b=document.createElement("button");
-  b.className="emp";b.type="button";b.disabled=isFechado();
-  b.innerHTML=`<span class="emp-avatar" style="background:${corAvatar(f.nome)}">${iniciais(f.nome)}</span>`
-    +`<span class="emp-name">${f.nome}</span><span class="status ${st.cls}">${st.txt}</span>`;
+  b.className="emp";b.type="button";b.disabled=isFechado()||salvando;
+  b.innerHTML=`<span class="emp-avatar" style="background:${corAvatar(f.nome)}">${escapeHtml(iniciais(f.nome))}</span>`
+    +`<span class="emp-name">${escapeHtml(f.nome)}</span><span class="status ${st.cls}">${escapeHtml(st.txt)}</span>`;
   b.addEventListener("click",()=>abrir(f));
   return b;
 }
@@ -520,14 +571,31 @@ function render(){
   // empresa) -- a busca e so pra achar alguem na lista, nao e um filtro
   // de relatorio, mas o relatorio em si agora e por obra, nao global.
   let full=0, half=0, absent=0, pending=0, total=0;
+  const nomesPorCls = { full: [], half: [], absent: [], pending: [] };
   equipe.forEach(f=>{
     const st=statusParaExibir(f.id);
+    nomesPorCls[st.cls].push(f.nome);
     if(st.cls==="full") full++;
     else if(st.cls==="half") half++;
     else if(st.cls==="absent") absent++;
     else pending++;
     total += valorNestaObra(f.id);
   });
+
+  // Resumo clicável -- achado da análise: os 4 cards já mostravam a
+  // contagem, mas não dava pra ver quem estava em cada grupo sem procurar
+  // na lista inteira. Clicar num card mostra os nomes logo abaixo.
+  document.querySelectorAll(".sum").forEach(b => b.classList.toggle("active", b.dataset.cls === filtroResumo));
+  const resumoNomesEl = document.getElementById("resumoNomes");
+  if(filtroResumo){
+    const nomes = nomesPorCls[filtroResumo];
+    resumoNomesEl.style.display = "block";
+    resumoNomesEl.innerHTML = nomes.length
+      ? "<b>" + escapeHtml({full:"Inteiros",half:"Meio período",absent:"Faltas",pending:"Pendentes"}[filtroResumo]) + ":</b> " + nomes.map(escapeHtml).join(", ")
+      : "Ninguém nesse grupo.";
+  } else {
+    resumoNomesEl.style.display = "none";
+  }
 
   document.getElementById("sFull").textContent=full;
   document.getElementById("sHalf").textContent=half;
@@ -539,18 +607,24 @@ function render(){
   // no topo de render()) -- só falta o gate de dia fechado.
   const fechado=isFechado();
   document.getElementById("fechadoBanner").style.display=fechado?"block":"none";
-  document.getElementById("todosDia").disabled=fechado||!equipe.length;
-  document.getElementById("limparDia").disabled=fechado;
+  document.getElementById("todosDia").disabled=fechado||!equipe.length||salvando;
+  document.getElementById("limparDia").disabled=fechado||salvando;
   document.getElementById("fecharDia").style.display=fechado?"none":"inline-block";
-  document.getElementById("fecharDia").disabled=pending>0||!equipe.length;
+  document.getElementById("fecharDia").disabled=pending>0||!equipe.length||salvando;
 }
 
 function abrir(f){
   if(!dataValidaParaLancamento())return;
   if(isFechado())return;
   if(!dentroDoHorario())return;
+  if(salvando)return;
   atual=f;modalNome.textContent=f.nome;
   mostrarEscolhas();
+  // "Limpar lançamento" só faz sentido quando essa obra já tem algo
+  // lançado pra essa pessoa (manhã/tarde/dia inteiro nesta obra) -- Falta
+  // não pertence a obra nenhuma, então não tem o que limpar por aqui.
+  const st = statusParaExibir(f.id);
+  document.getElementById("opcaoLimpar").style.display = (st.cls==="full"||st.cls==="half") ? "block" : "none";
   backdrop.style.display="flex";
 }
 function fecharModal(){atual=null;backdrop.style.display="none";mostrarEscolhas()}
@@ -560,7 +634,7 @@ function fecharModal(){atual=null;backdrop.style.display="none";mostrarEscolhas(
 // problema ja documentado no index.html). Toda escolha (mesmo sem
 // conflito nenhum) passa por aqui antes de gravar de verdade -- pedido do
 // Rubens depois de ver o quao facil e tocar no botao errado sem querer.
-const ROTULO_STATUS = {full:"Dia inteiro", morning:"Manhã", afternoon:"Tarde", absent:"Falta"};
+const ROTULO_STATUS = {full:"Dia inteiro", morning:"Manhã", afternoon:"Tarde", absent:"Falta", clear:"Limpar lançamento"};
 let statusPendente = null;
 
 function mostrarEscolhas(){
@@ -592,6 +666,43 @@ function fecharConfirmacaoGeral(resultado){
 document.getElementById("confirmGeralOk").addEventListener("click", () => fecharConfirmacaoGeral(true));
 document.getElementById("confirmGeralCancelar").addEventListener("click", () => fecharConfirmacaoGeral(false));
 
+// Estado "Salvando.../Salvo/Falha ao salvar" -- achado da análise: nenhum
+// botão travava durante a escrita, dava pra clicar duas vezes e disparar
+// escritas concorrentes na mesma pessoa. `salvando` também é lido por
+// render() pra desabilitar tudo que grava enquanto uma operação está em
+// andamento.
+let salvando = false;
+function statusSalvarEl(){ return document.getElementById("statusSalvar"); }
+function mostrarStatusSalvar(texto, cor){
+  const el = statusSalvarEl();
+  el.textContent = texto;
+  el.style.color = cor || "var(--muted)";
+  el.style.display = texto ? "block" : "none";
+}
+async function executarComSalvamento(fn){
+  if(salvando) return; // ignora clique duplicado enquanto uma escrita já está em andamento
+  salvando = true;
+  mostrarStatusSalvar("Salvando…");
+  render();
+  let falhou = false;
+  let resultado;
+  try {
+    resultado = await fn();
+    // fn() pode devolver false quando nada foi gravado de verdade (usuário
+    // cancelou um conflito, ou não havia nada pra limpar) -- nesse caso não
+    // faz sentido piscar "Salvo".
+    if(resultado === false) mostrarStatusSalvar("");
+    else mostrarStatusSalvar("Salvo ✓", "var(--good-ink)");
+  } catch(e){
+    falhou = true;
+    mostrarStatusSalvar("Falha ao salvar — tenta de novo", "var(--danger-ink)");
+  } finally {
+    salvando = false;
+    render();
+  }
+  if(!falhou && resultado !== false) setTimeout(() => mostrarStatusSalvar(""), 2000);
+}
+
 // Grava a cache de "ultima obra" (mesma logica do salvarDia() no
 // index.html) -- so quando o resultado final e uma obra real, nunca pra
 // falta. Fire-and-forget pro Firestore (se falhar, nao deve travar o
@@ -602,6 +713,12 @@ document.getElementById("confirmGeralCancelar").addEventListener("click", () => 
 function atualizarUltimaObra(funcId){
   const dataStr = mesCarregado + "-" + String(diaDaData()).padStart(2,"0");
   const f = todos.find(x => x.id === funcId);
+  // Nunca deixa uma correção de um dia retroativo (data mais antiga que o
+  // cache atual) substituir "última obra" por uma obra velha -- achado da
+  // análise: corrigir um lançamento antigo reescrevia esse cache com a data
+  // sendo editada, não com a data de hoje, empurrando o valor pra trás no
+  // tempo. Só anda pra frente (ou grava quando ainda não existe cache).
+  if(f && f.ultimaObraData && f.ultimaObraData > dataStr) return;
   if(f){
     f.ultimaObraId = obra.value;
     f.ultimaObraNome = obra.value;
@@ -614,71 +731,129 @@ function atualizarUltimaObra(funcId){
   }).catch(()=>{});
 }
 
+// Escreve dentro de uma transação que primeiro confere se o dia ainda está
+// exatamente como estava na leitura fresca feita no início de
+// aplicarLancamento() -- se outro aparelho escreveu nesse meio-tempo
+// (entre ler e decidir/confirmar na tela), aborta com aviso em vez de
+// sobrescrever silenciosamente por cima (achado da análise: a checagem de
+// conflito usava só o cache local, sem reler o servidor).
+async function escreverComProtecao(ref, upd, dia, mEsperado, tEsperado){
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const info = snap.data() || { dias: {} };
+    const diaTx = (info.dias || {})[dia] || {};
+    if((diaTx.m||"") !== mEsperado || (diaTx.t||"") !== tEsperado){
+      const erro = new Error("Esse dia foi alterado por outro aparelho enquanto você decidia. Reabra o funcionário pra ver o valor atual antes de lançar de novo.");
+      erro.conflitoConcorrencia = true;
+      throw erro;
+    }
+    tx.update(ref, upd);
+  });
+  return await ref.get();
+}
+
 // Grava de verdade em funcionarios/{funcId}/pontos/{mes}, direto nos
 // campos dias.{dia}.m/dias.{dia}.t -- o mesmo doc que index.html e
-// cartoes.html leem. Le o estado atual (dadosMes, ja carregado) pra
-// decidir se ha conflito com uma obra diferente ja lancada, ou se precisa
-// limpar uma Falta orfa (Modelo A: falta nunca fica so num periodo).
+// cartoes.html leem. Lê o estado FRESCO do servidor (não o cache local
+// dadosMes, que pode estar minutos desatualizado) pra decidir se há
+// conflito, e a escrita final passa por escreverComProtecao() acima.
 async function aplicarLancamento(func, status){
   const dia = diaDaData();
-  const diaAtual = diaDoFuncionario(func.id);
+  const obraSel = obra.value;
+  const ref = await garantirDocPontos(func.id, mesCarregado);
+  const snapFresco = await ref.get();
+  const infoFresca = snapFresco.data() || { dias: {} };
+  const diaAtual = (infoFresca.dias || {})[dia] || {};
   const m = diaAtual.m || "", t = diaAtual.t || "";
   const mReal = m && !ehMarcador(m);
   const tReal = t && !ehMarcador(t);
-  const obraSel = obra.value;
 
-  if(status === "absent"){
-    // Falta = Modelo A, dia inteiro -- se ja tem trabalho real lancado
-    // (nessa obra ou noutra), confirma antes de apagar e sobrescrever.
-    if(mReal || tReal){
-      const obraExistente = mReal ? m : t;
-      const ok = confirm(`${func.nome} já tem "${obraExistente}" lançado nesse dia.\n\nMarcar Falta apaga esse lançamento e deixa o dia inteiro como falta. Confirma?`);
+  // Uma obra não pode substituir período que já pertence a um dia fechado
+  // por OUTRA obra -- só o painel principal corrige isso (achado da
+  // análise: o fechamento só considerava a obra selecionada agora, não a
+  // obra dona do período já lançado).
+  async function bloqueadoPorFechamento(obraDoConflito){
+    const snapF = await db.doc("fechamentosDia/" + data.value + "_" + obraDoConflito).get();
+    return snapF.exists && !!snapF.data().fechado;
+  }
+
+  try {
+    if(status === "clear"){
+      // Limpar o lançamento de 1 pessoa nesta obra -- só apaga os períodos
+      // que realmente pertencem a essa obra (mesmo critério do "Limpar
+      // lançamentos" em lote); Falta não é de obra nenhuma, não é tocada.
+      const upd = {};
+      if(m === obraSel) upd["dias."+dia+".m"] = "";
+      if(t === obraSel) upd["dias."+dia+".t"] = "";
+      if(!Object.keys(upd).length) return true;
+      upd.statusConferencia = invalidarConferenciaPatch(infoFresca, dia);
+      const snap = await escreverComProtecao(ref, upd, dia, m, t);
+      dadosMes[func.id] = snap.data();
+      return true;
+    }
+
+    if(status === "absent"){
+      // Falta = Modelo A, dia inteiro -- se ja tem trabalho real lancado
+      // (nessa obra ou noutra), confirma antes de apagar e sobrescrever.
+      if(mReal || tReal){
+        const obraExistente = mReal ? m : t;
+        if(await bloqueadoPorFechamento(obraExistente)){
+          alert(`${func.nome} já tem "${obraExistente}" lançado nesse dia, e esse dia já foi fechado por essa obra. A correção precisa ser feita no painel principal.`);
+          return false;
+        }
+        const ok = await confirmarAcaoGeral(`${func.nome} já tem "${obraExistente}" lançado nesse dia.\n\nMarcar Falta apaga esse lançamento e deixa o dia inteiro como falta. Confirma?`);
+        if(!ok) return false;
+      }
+      const upd = { ["dias."+dia+".m"]:"FALTA", ["dias."+dia+".t"]:"FALTA", statusConferencia: invalidarConferenciaPatch(infoFresca, dia) };
+      const snap = await escreverComProtecao(ref, upd, dia, m, t);
+      dadosMes[func.id] = snap.data();
+      return true;
+    }
+
+    const alvoM = status==="full" || status==="morning";
+    const alvoT = status==="full" || status==="afternoon";
+    const conflitoM = alvoM && mReal && m!==obraSel;
+    const conflitoT = alvoT && tReal && t!==obraSel;
+    if(conflitoM || conflitoT){
+      const obraConflito = conflitoM ? m : t;
+      if(await bloqueadoPorFechamento(obraConflito)){
+        alert(`${func.nome} já possui lançamento na obra "${obraConflito}" nesta data, e esse dia já foi fechado por essa obra. A correção precisa ser feita no painel principal.`);
+        return false;
+      }
+      const ok = await confirmarAcaoGeral(`${func.nome} já possui lançamento na obra "${obraConflito}" nesta data.\n\nDeseja substituir por "${obraSel}"?`);
       if(!ok) return false;
     }
-    const ref = await garantirDocPontos(func.id, mesCarregado);
-    await ref.update({ ["dias."+dia+".m"]:"FALTA", ["dias."+dia+".t"]:"FALTA" });
-    const snap = await ref.get();
+
+    const upd = {};
+    if(alvoM) upd["dias."+dia+".m"] = obraSel;
+    if(alvoT) upd["dias."+dia+".t"] = obraSel;
+    // limpa um período que NÃO está sendo gravado agora se ele for uma
+    // Falta órfã OU a MESMA obra que acabou de deixar de ser o alvo
+    // (achado da análise: trocar "Dia inteiro" por "Manhã" deixava a tarde
+    // grudada na mesma obra, ainda contando 1 diária inteira) -- período
+    // de OUTRA obra real continua preservado, sem mexer.
+    if(!alvoT && (t==="FALTA" || t===obraSel)) upd["dias."+dia+".t"] = "";
+    if(!alvoM && (m==="FALTA" || m===obraSel)) upd["dias."+dia+".m"] = "";
+    upd.statusConferencia = invalidarConferenciaPatch(infoFresca, dia);
+
+    const snap = await escreverComProtecao(ref, upd, dia, m, t);
     dadosMes[func.id] = snap.data();
+    atualizarUltimaObra(func.id);
     return true;
+  } catch(e){
+    if(e && e.conflitoConcorrencia){ alert(e.message); return false; }
+    throw e;
   }
-
-  const alvoM = status==="full" || status==="morning";
-  const alvoT = status==="full" || status==="afternoon";
-  const conflitoM = alvoM && mReal && m!==obraSel;
-  const conflitoT = alvoT && tReal && t!==obraSel;
-  if(conflitoM || conflitoT){
-    const obraConflito = conflitoM ? m : t;
-    const ok = confirm(`${func.nome} já possui lançamento na obra "${obraConflito}" nesta data.\n\nDeseja substituir por "${obraSel}"?`);
-    if(!ok) return false;
-  }
-
-  const upd = {};
-  if(alvoM) upd["dias."+dia+".m"] = obraSel;
-  if(alvoT) upd["dias."+dia+".t"] = obraSel;
-  // limpa uma Falta orfa do periodo que NAO esta sendo gravado agora
-  if(!alvoT && t==="FALTA") upd["dias."+dia+".t"] = "";
-  if(!alvoM && m==="FALTA") upd["dias."+dia+".m"] = "";
-
-  const ref = await garantirDocPontos(func.id, mesCarregado);
-  await ref.update(upd);
-  const snap = await ref.get();
-  dadosMes[func.id] = snap.data();
-  atualizarUltimaObra(func.id);
-  return true;
 }
 
 async function aplicar(status){
   if(!atual)return;
   if(isFechado())return;
   if(!dentroDoHorario())return;
+  if(salvando)return;
   const func = atual;
   fecharModal();
-  const ok = await aplicarLancamento(func, status);
-  if(!ok){
-    render();
-    return;
-  }
-  render();
+  await executarComSalvamento(() => aplicarLancamento(func, status));
 }
 
 document.querySelectorAll("[data-status]").forEach(b=>{
@@ -695,111 +870,140 @@ document.getElementById("todosDia").addEventListener("click",async ()=>{
   if(!dataValidaParaLancamento())return;
   if(isFechado())return;
   if(!dentroDoHorario())return;
-  const dia = diaDaData();
-  const obraSel = obra.value;
-  const conflitos=[];
+  if(salvando)return;
+  await executarComSalvamento(async () => {
+    const dia = diaDaData();
+    const obraSel = obra.value;
+    const conflitos=[];
 
-  // So marca quem esta na "Equipe da obra" (cadastrado via obraPadrao ou
-  // com lancamento recente ali) -- alguem de outra obra que precise ser
-  // lancado aqui e feito buscando o nome e marcando individualmente, nao
-  // por esse botao (pedido do Rubens, depois de "Marcar todos" ter
-  // marcado os 26 ativos inteiros por engano num teste).
-  // sequencial (nao Promise.all) pra evitar corrida de escritas no mesmo
-  // funcionario e manter dadosMes sempre consistente entre uma pessoa e
-  // outra -- e um botao usado raramente, alguns segundos a mais aqui nao
-  // pesam.
-  for(const f of equipeDaObra(todos)){
-    const diaAtual = diaDoFuncionario(f.id);
-    const m = diaAtual.m || "", t = diaAtual.t || "";
-    const mRealDiferente = m && !ehMarcador(m) && m !== obraSel;
-    const tRealDiferente = t && !ehMarcador(t) && t !== obraSel;
-    if(mRealDiferente || tRealDiferente){
-      conflitos.push(`${f.nome} (${mRealDiferente ? m : t})`);
-      continue;
+    // So marca quem esta na "Equipe da obra" (cadastrado via obraPadrao ou
+    // com lancamento recente ali) -- alguem de outra obra que precise ser
+    // lancado aqui e feito buscando o nome e marcando individualmente, nao
+    // por esse botao (pedido do Rubens, depois de "Marcar todos" ter
+    // marcado os 26 ativos inteiros por engano num teste).
+    // sequencial (nao Promise.all) pra evitar corrida de escritas no mesmo
+    // funcionario e manter dadosMes sempre consistente entre uma pessoa e
+    // outra -- e um botao usado raramente, alguns segundos a mais aqui nao
+    // pesam.
+    for(const f of equipeDaObra(todos)){
+      const diaAtual = diaDoFuncionario(f.id);
+      const m = diaAtual.m || "", t = diaAtual.t || "";
+      const mRealDiferente = m && !ehMarcador(m) && m !== obraSel;
+      const tRealDiferente = t && !ehMarcador(t) && t !== obraSel;
+      if(mRealDiferente || tRealDiferente){
+        conflitos.push(`${f.nome} (${mRealDiferente ? m : t})`);
+        continue;
+      }
+      // Preserva quem já tem algo lançado nesta obra (dia inteiro, meio
+      // período ou falta) -- achado da análise: "Marcar todos" virava
+      // faltas e meios períodos em dia inteiro sem avisar. O botão agora
+      // só preenche quem está "Não lançado" de verdade.
+      if(statusParaExibir(f.id).cls !== "pending") continue;
+      const ref = await garantirDocPontos(f.id, mesCarregado);
+      const info = dadosMes[f.id] || {};
+      await ref.update({
+        ["dias."+dia+".m"]: obraSel,
+        ["dias."+dia+".t"]: obraSel,
+        statusConferencia: invalidarConferenciaPatch(info, dia)
+      });
+      const snap = await ref.get();
+      dadosMes[f.id] = snap.data();
+      atualizarUltimaObra(f.id);
     }
-    const ref = await garantirDocPontos(f.id, mesCarregado);
-    await ref.update({ ["dias."+dia+".m"]: obraSel, ["dias."+dia+".t"]: obraSel });
-    const snap = await ref.get();
-    dadosMes[f.id] = snap.data();
-    atualizarUltimaObra(f.id);
-  }
 
-  if(conflitos.length){
-    alert("Alguns funcionários não foram alterados porque já estão lançados em outra obra:\n\n"+conflitos.join("\n"));
-  }
-  render();
+    if(conflitos.length){
+      alert("Alguns funcionários não foram alterados porque já estão lançados em outra obra:\n\n"+conflitos.join("\n"));
+    }
+  });
 });
 
 document.getElementById("fecharDia").addEventListener("click",async ()=>{
   if(isFechado())return;
   if(!dentroDoHorario())return;
   if(!dataValidaParaLancamento())return;
+  if(salvando)return;
   const pendentes=equipeDaObra(todos).filter(f=>statusParaExibir(f.id).cls==="pending");
   if(pendentes.length){
     alert("Ainda existem funcionários pendentes.");
     return;
   }
   if(!(await confirmarAcaoGeral(`Fechar o dia ${data.value.split("-").reverse().join("/")} da obra ${obra.value}?\n\nDepois disso os lançamentos ficarão bloqueados.`)))return;
-  await db.doc("fechamentosDia/" + chaveFechamento()).set({
-    obra: obra.value,
-    data: data.value,
-    fechado: true,
-    atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
-  }, { merge: true });
-  fechadoAtual = true;
-  render();
+  await executarComSalvamento(async () => {
+    await db.doc("fechamentosDia/" + chaveFechamento()).set({
+      obra: obra.value,
+      data: data.value,
+      fechado: true,
+      atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    fechadoAtual = true;
+  });
 });
 
 document.getElementById("limparDia").addEventListener("click",async ()=>{
   if(isFechado())return;
   if(!dentroDoHorario())return;
+  if(salvando)return;
   if(!(await confirmarAcaoGeral("Apagar os lançamentos desta obra nesta data?")))return;
-  const dia = diaDaData();
-  const obraSel = obra.value;
-  const dataStr = mesCarregado + "-" + String(dia).padStart(2,"0");
-  for(const f of todos){
-    const diaAtual = diaDoFuncionario(f.id);
-    const upd = {};
-    if(diaAtual.m === obraSel) upd["dias."+dia+".m"] = "";
-    if(diaAtual.t === obraSel) upd["dias."+dia+".t"] = "";
-    if(Object.keys(upd).length){
-      const ref = await garantirDocPontos(f.id, mesCarregado);
-      await ref.update(upd);
-      const snap = await ref.get();
-      dadosMes[f.id] = snap.data();
+  await executarComSalvamento(async () => {
+    const dia = diaDaData();
+    const obraSel = obra.value;
+    const dataStr = mesCarregado + "-" + String(dia).padStart(2,"0");
+    for(const f of todos){
+      const diaAtual = diaDoFuncionario(f.id);
+      const upd = {};
+      if(diaAtual.m === obraSel) upd["dias."+dia+".m"] = "";
+      if(diaAtual.t === obraSel) upd["dias."+dia+".t"] = "";
+      if(Object.keys(upd).length){
+        const info = dadosMes[f.id] || {};
+        upd.statusConferencia = invalidarConferenciaPatch(info, dia);
+        const ref = await garantirDocPontos(f.id, mesCarregado);
+        await ref.update(upd);
+        const snap = await ref.get();
+        dadosMes[f.id] = snap.data();
+      }
+      // se o cache de "ultima obra" apontava exatamente pra esse dia+obra que
+      // acabou de ser apagado, ele ficaria orfao (gruda em "Equipe da obra"
+      // pra sempre, mesmo sem lancamento nenhum) -- limpa junto.
+      if(f.ultimaObraNome === obraSel && f.ultimaObraData === dataStr){
+        f.ultimaObraId = "";
+        f.ultimaObraNome = "";
+        f.ultimaObraData = "";
+        db.doc("funcionarios/" + f.id).update({
+          ultimaObraId: firebase.firestore.FieldValue.delete(),
+          ultimaObraNome: firebase.firestore.FieldValue.delete(),
+          ultimaObraData: firebase.firestore.FieldValue.delete()
+        }).catch(()=>{});
+      }
     }
-    // se o cache de "ultima obra" apontava exatamente pra esse dia+obra que
-    // acabou de ser apagado, ele ficaria orfao (gruda em "Equipe da obra"
-    // pra sempre, mesmo sem lancamento nenhum) -- limpa junto.
-    if(f.ultimaObraNome === obraSel && f.ultimaObraData === dataStr){
-      f.ultimaObraId = "";
-      f.ultimaObraNome = "";
-      f.ultimaObraData = "";
-      db.doc("funcionarios/" + f.id).update({
-        ultimaObraId: firebase.firestore.FieldValue.delete(),
-        ultimaObraNome: firebase.firestore.FieldValue.delete(),
-        ultimaObraData: firebase.firestore.FieldValue.delete()
-      }).catch(()=>{});
-    }
-  }
-  render();
+  });
 });
 
 obra.addEventListener("change",async ()=>{
-  await carregarFechado();
+  try {
+    await carregarFechado();
+  } catch(e){ mostrarErroCarregamento(); return; }
   render();
 });
 data.addEventListener("change",async ()=>{
   dataValidaParaLancamento();
   const novoMes = mesDaData();
-  if(novoMes !== mesCarregado){
-    lista.innerHTML = '<div style="padding:16px;color:var(--muted)">Carregando período…</div>';
-    await carregarDadosMes(novoMes);
-  }
-  await carregarFechado();
+  try {
+    if(novoMes !== mesCarregado){
+      lista.innerHTML = '<div style="padding:16px;color:var(--muted)">Carregando período…</div>';
+      await carregarDadosMes(novoMes);
+    }
+    await carregarFechado();
+  } catch(e){ mostrarErroCarregamento(); return; }
   render();
 });
 document.getElementById("buscaFunc").addEventListener("input",render);
+
+document.querySelectorAll(".sum").forEach(b => {
+  b.addEventListener("click", () => {
+    filtroResumo = (filtroResumo === b.dataset.cls) ? null : b.dataset.cls;
+    render();
+  });
+});
 
 iniciarDados();
 
