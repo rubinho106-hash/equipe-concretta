@@ -849,6 +849,37 @@ chamei `aplicar("full")` **direto pelo console, bypassando a UI** com um funcion
 confirmado que retorna antes de chegar em `fecharModal()`/`aplicarLancamento()` (a variável
 `atual` não foi resetada, prova que nem chegou lá). Resetei `fechadoAtual` depois.
 
+## Apontador: relógio no hero + janela de horário 07h-18h (commit `09096f7`, 07/09/2026)
+
+Rubens pediu pra mostrar o horário no app e só liberar lançamento entre 07h e 18h — esclarecido
+via AskUserQuestion (a primeira mensagem dele, "07 as 18 horas mostra horário no app", era
+ambígua entre "mudar a hora que o dia vira" e "mostrar relógio + travar fora desse horário";
+confirmou a segunda). Implementado:
+
+- **Relógio no hero** (`#heroRelogio`, `atualizarRelogio()`), atualizado a cada segundo — usa
+  `new Date().getHours()/getMinutes()` do próprio aparelho de quem está usando (mesma fonte já
+  usada por `dataLocalHoje()`).
+- **`dentroDoHorario()`**: `HORARIO_INICIO=7` (inclusive) até `HORARIO_FIM=18` (exclusivo —
+  bloqueia a partir das 18:00:00 em ponto). Constantes no topo do arquivo, fáceis de ajustar se
+  o horário mudar no futuro.
+- **Fora da janela**: banner `#horarioBanner` (laranja, mesmo estilo do banner de dia fechado)
+  avisa "Fora do horário de lançamento (07h–18h)"; linhas de funcionário, "Marcar equipe",
+  "Limpar lançamentos" e "Fechar dia" ficam desabilitados — mesmo padrão visual já usado pro
+  dia fechado. **Se o dia já estiver fechado, o banner de fechado tem prioridade** (não mostra
+  os dois motivos ao mesmo tempo).
+- **Trava explícita em todo caminho de escrita** (`abrir()`, `aplicar()`, handlers de
+  `todosDia`/`fecharDia`/`limparDia`) — mesmo padrão de defesa em profundidade já usado pra
+  `isFechado()` (ver seção acima), não só o atributo `disabled` do botão.
+- Um `setInterval` de 1s atualiza o relógio e, só quando o estado "dentro/fora do horário"
+  realmente muda, chama `render()` de novo — assim o app reage sozinho ao bater 07h ou 18h,
+  sem precisar de nenhuma ação de quem está usando.
+
+Testado local sem nenhuma escrita real: com a hora real do sistema (22h, fora da janela),
+confirmado que tudo trava e que `aplicar()` retorna antes de gravar mesmo chamado direto pelo
+console (bypass da UI); simulado "dentro do horário" sobrescrevendo `dentroDoHorario()` em
+memória (sem tocar Firestore) pra confirmar que libera normalmente; estado real restaurado no
+final.
+
 ## Apontador — "Modo teste" — HISTÓRICO, revertido no mesmo dia (commit `17d4c97`, 04/09/2026)
 
 Rubens perguntou se dava pra travar o Apontador no mês teste, só com opção de escolher o dia —
