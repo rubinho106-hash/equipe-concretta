@@ -101,7 +101,12 @@ const auth = firebase.auth();
 // panos. A conta criada no Console precisa usar esse mesmo domínio.
 const DOMINIO_TESTE = "concretta-teste.local";
 function emailDoUsuario(usuario){
-  return usuario.trim().toLowerCase().replace(/\s+/g, "") + "@" + DOMINIO_TESTE;
+  const limpo = usuario.trim().toLowerCase();
+  // Aceita tanto um usuário simples (vira usuario@concretta-teste.local)
+  // quanto um e-mail completo já digitado -- útil pra contas criadas no
+  // Console sem seguir o padrão combinado (ex: um Gmail real por engano).
+  if(limpo.includes("@")) return limpo;
+  return limpo.replace(/\s+/g, "") + "@" + DOMINIO_TESTE;
 }
 
 const cardLogin = document.getElementById("cardLogin");
