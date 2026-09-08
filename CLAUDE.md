@@ -913,6 +913,73 @@ fora da janela de horário permitido (07h–18h59), com "Abre às 07:00". Testad
 escrita real: nota aparece com a hora real (23h) e some quando `dentroDoHorario()` é simulado
 como `true` em memória.
 
+## Fase 1 da análise de confiabilidade — apontador.html + index.html (commits `c5425df` e `c7bee40`, 08/09/2026)
+
+Rubens mandou duas mensagens com uma análise técnica de confiabilidade do sistema inteiro
+(feita em cima do código, com testes simulados, sem gravar no banco real) apontando falhas que
+podiam deixar o cartão incorreto ou permitir alteração depois da conferência. Pediu pra aplicar
+as melhorias — como a lista era grande e incluía itens estruturais (Auth, ambiente de teste
+separado, histórico de alterações, redesenho de equipe por obra), dividida em duas fases:
+**Fase 1** (esta) cobre as correções isoladas, sem decisão de arquitetura pendente; **Fase 2**
+(Auth/histórico/equipe explícita/backup/ambiente de teste) fica esperando decisões de design do
+Rubens antes de codar.
+
+**`apontador.html`**:
+- **Bug confirmado**: trocar "Dia inteiro" por "Manhã"/"Tarde" na mesma obra não limpava o
+  período que deixou de ser alvo — ficava contando 1 diária mesmo já tendo escolhido meio
+  período. Corrigido em `aplicarLancamento()`; período de OUTRA obra continua preservado.
+- **Bug confirmado**: "Marcar equipe" sobrescrevia Falta e meio período já lançados sem avisar.
+  Agora só preenche quem está genuinamente "Não lançado" — botão renomeado pra "✓ Preencher
+  não lançados — Dia inteiro".
+- **Bug confirmado**: `atualizarUltimaObra()` deixava uma correção retroativa (editar um dia
+  mais antigo que o cache atual) substituir "última obra" por uma obra velha. Agora só anda pra
+  frente no tempo.
+- **Corrida entre aparelhos**: a checagem de conflito usava o cache local `dadosMes`
+  (desatualizado). `aplicarLancamento()` agora lê o estado FRESCO do servidor antes de decidir,
+  e a escrita final passa por `escreverComProtecao()` — uma transação Firestore que confere se
+  o dia ainda está como estava na leitura fresca, abortando com aviso claro se outro aparelho
+  escreveu nesse meio-tempo (não elimina 100% a corrida, mas reduz bastante a janela).
+- **Fechamento entre obras**: uma obra podia sobrescrever período que já pertencia a um dia
+  fechado por OUTRA obra (o `isFechado()` só olhava a obra selecionada agora). Novo
+  `bloqueadoPorFechamento()` verifica a obra dona do período em conflito antes de deixar
+  substituir — se estiver fechada, bloqueia com aviso, correção só pelo painel principal.
+- **Erro de conexão claro**: falha ao carregar aparecia como cartão vazio. Agora mostra aviso
+  explícito com botão "Tentar novamente" (`mostrarErroCarregamento()`), cobrindo também troca
+  de obra/mês.
+- **Nome sem escape**: `f.nome` entrava direto em `innerHTML` sem escapar — novo `escapeHtml()`.
+- **Novo**: "Limpar lançamento" por pessoa (`status:"clear"` no modal, só aparece quando a
+  pessoa já tem algo lançado nesta obra) — não precisa mais limpar a equipe inteira pra
+  corrigir 1 pessoa.
+- **Novo**: confirmação de salvamento (`executarComSalvamento()` — Salvando.../Salvo/Falha ao
+  salvar) em todos os botões que gravam, com trava contra clique duplicado durante a escrita.
+- **Novo**: os 4 cards do resumo (Inteiros/Meio/Faltas/Pendentes) ficaram clicáveis, mostrando
+  os nomes de cada grupo abaixo.
+- **Novo**: qualquer edição real de dia devolve a quinzena correspondente pra "Pendente" na
+  conferência (`invalidarConferenciaPatch()`), mesma lógica adicionada no index.html.
+
+**`index.html`**:
+- `salvarDia()` ganhou a mesma invalidação de conferência (quinzena volta pra "Pendente" ao
+  editar um dia dela) e a mesma proteção do cache de "última obra" contra correção retroativa.
+- Funcionário Inativo que trabalhou de verdade no mês continua aparecendo na Conferência de
+  Ponto (antes desaparecia por completo) — novo `temLancamentoReal()` decide isso por mês; sem
+  nenhum lançamento real, continua escondido (não reabre pra receber lançamento novo — essa
+  parte do fix de 02/09 continua valendo).
+- `escapeHtml()` adicionado e aplicado nos `innerHTML` com nome de funcionário/obra que ainda
+  não escapavam (chips de filtro por obra, resumo por obra do cartão, dropdowns e
+  resumo/grade da tela de Apontamentos).
+
+**Testado localmente contra o banco real**, com reversão cuidadosa de cada mudança de teste
+(nada ficou alterado, conferido lendo direto do servidor depois de cada reversão): troca de
+período com Esdra de Jesus Tavares (PARQUE IMPERIAL, dia 08/09) confirmou a tarde sendo limpa;
+tentativa de sobrescrever CRECHE fechado com PARQUE IMPERIAL (Alex Pereira Silva) foi bloqueada
+com o aviso certo; `escreverComProtecao()` testada isolada com valores errados propositais
+abortou sem gravar; "Marcar equipe" numa obra com 2 Dia inteiro + 2 Falta já lançados não
+alterou nenhum dos 4; trava de clique duplicado confirmada isolada (chamada dupla só executa
+uma vez); erro de conexão simulado mostrou a tela certa e recuperou depois; invalidação de
+conferência confirmada marcando Conferido, editando o dia, e vendo reverter sozinho pra
+Pendente; proteção do cache de última obra confirmada editando um dia retroativo sem regredir
+o valor.
+
 ## Apontador — "Modo teste" — HISTÓRICO, revertido no mesmo dia (commit `17d4c97`, 04/09/2026)
 
 Rubens perguntou se dava pra travar o Apontador no mês teste, só com opção de escolher o dia —
