@@ -880,6 +880,29 @@ console (bypass da UI); simulado "dentro do horário" sobrescrevendo `dentroDoHo
 memória (sem tocar Firestore) pra confirmar que libera normalmente; estado real restaurado no
 final.
 
+## Apontador: tela travada com relógio grande fora do horário (commit `3f1942c`, 07/09/2026)
+
+Dois ajustes pedidos logo depois do relógio no hero: (1) "até o fim das 18 horas" — o limite
+`HORARIO_FIM` passou de 18 pra 19 (exclusivo), então o dia inteiro até 18:59:59 fica liberado,
+só bloqueia a partir das 19:00; (2) print de referência de uma tela de "relógio travado" —
+fora do horário permitido (com o dia ainda aberto), o card inteiro do formulário some e dá
+lugar a uma **tela travada dedicada** (`#cardTravado`): data por extenso ("Segunda-feira, 07 de
+setembro") + relógio grande com segundos + aviso do horário liberado. Isso substitui a solução
+anterior (banner pequeno + campos desabilitados) só pro caso de fora-do-horário — o dia
+**fechado** continua com o tratamento de sempre (banner dentro do `#cardPrincipal`, que ainda
+aparece normalmente quando é dentro do horário mas o dia já foi fechado).
+
+`render()` ganhou um early return no topo: calcula `foraHorario` primeiro, alterna a
+visibilidade de `#cardTravado`/`#cardPrincipal`, e sai sem montar nada do formulário enquanto a
+tela travada está ativa — zero elementos interativos acessíveis nesse estado. As guardas de
+`isFechado()`/`dentroDoHorario()` dentro de `abrir()`/`aplicar()`/handlers de escrita continuam
+intactas por baixo, independente do que a tela está mostrando.
+
+Testado local sem escrita real: simulei `fechadoAtual=false` em memória (a obra padrão já
+estava fechada de verdade) só pra conseguir ver a tela travada ativa fora do horário real —
+confirmado relógio com segundos rodando, data certa, `read_page` mostrando "(empty page)" pra
+elementos interativos. Restaurado o estado real depois.
+
 ## Apontador — "Modo teste" — HISTÓRICO, revertido no mesmo dia (commit `17d4c97`, 04/09/2026)
 
 Rubens perguntou se dava pra travar o Apontador no mês teste, só com opção de escolher o dia —
