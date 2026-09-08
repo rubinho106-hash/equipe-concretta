@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>Concretta • Teste de Login</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --bg:#f2f4f9;--surface:#ffffff;--surface-2:#f8f9fc;--ink:#151b2c;--muted:#626e88;--line:#e2e6f0;
+  --accent:#2451d6;--accent-ink:#ffffff;
+  --hero-1:#0b1330;--hero-2:#1c3fb8;
+  --danger-ink:#b3261e;--danger-bg:rgba(179,38,30,.1);
+  --good-bg:#dcf3e6;--good-ink:#157a4a;
+  --shadow:0 1px 2px rgba(20,26,50,.04), 0 8px 24px rgba(20,26,50,.06);
+  --radius:14px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"IBM Plex Sans",system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:420px;margin:auto;padding:16px 14px 40px}
+
+.hero{
+  background:linear-gradient(135deg, var(--hero-1) 0%, var(--hero-2) 130%);
+  border-radius:var(--radius);
+  padding:22px 24px;
+  color:#f5f7ff;
+}
+.hero-eyebrow{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#ffd08a;margin-bottom:8px}
+.hero h1{margin:0;font-size:22px;font-weight:800;color:#fff}
+.hero-sub{font-size:13px;color:#cbd5f7;margin-top:6px;line-height:1.5}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-top:14px;box-shadow:var(--shadow)}
+label{display:block;color:var(--muted);font-size:11px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;margin:10px 0 6px}
+label:first-child{margin-top:0}
+input{width:100%;padding:12px 13px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);font:inherit;font-size:15px}
+input:focus{outline:2px solid var(--accent);outline-offset:1px}
+
+button{font:inherit;border:0;border-radius:9px;padding:12px 14px;font-weight:700;font-size:14px;color:#fff;cursor:pointer}
+button:disabled{opacity:.5;cursor:not-allowed}
+.primary{background:var(--accent)}
+.secondary{background:var(--surface-2);color:var(--ink);border:1px solid var(--line)}
+
+.erro{margin-top:12px;padding:10px 12px;border-radius:9px;background:var(--danger-bg);color:var(--danger-ink);font-size:13px;font-weight:600}
+.notice{padding:12px 14px;border-radius:10px;background:var(--good-bg);border:1px solid #b8e2cc;font-size:13px;color:var(--good-ink)}
+.notice b{display:block;margin-bottom:2px}
+.aviso{margin-top:14px;padding:10px 12px;border-radius:9px;background:var(--surface-2);border:1px solid var(--line);font-size:12px;color:var(--muted);line-height:1.5}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <div class="hero-eyebrow">Protótipo · não é o sistema real</div>
+    <h1>Teste de login</h1>
+    <div class="hero-sub">Página isolada só pra experimentar entrar/sair com usuário e senha de verdade, sem mexer no Apontador real nem em nenhum dado de ponto.</div>
+  </div>
+
+  <div class="card" id="cardLogin">
+    <label for="usuario">Usuário</label>
+    <input id="usuario" type="text" placeholder="ex: admin" autocomplete="username">
+    <label for="senha">Senha</label>
+    <input id="senha" type="password" placeholder="Senha" autocomplete="current-password">
+    <div class="erro" id="loginErro" style="display:none"></div>
+    <button class="primary" id="btnEntrar" style="margin-top:14px;width:100%">Entrar</button>
+  </div>
+
+  <div class="card" id="cardLogado" style="display:none">
+    <div class="notice">
+      <b>Login funcionou ✓</b>
+      <span id="emailLogado"></span>
+    </div>
+    <div class="aviso">
+      Aqui, na versão de verdade, entraria a tela normal do Apontador — já travada na obra
+      associada a essa conta. Esse protótipo só confirma que entrar/sair funciona antes de
+      aplicar no sistema real.
+    </div>
+    <button class="secondary" id="btnSair" style="margin-top:14px;width:100%">Sair</button>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script>
+// Mesmo projeto Firebase do resto do site (concretta-equipe) -- login não
+// mexe em nenhum documento do Firestore, só cria/usa contas de
+// autenticação, que são um recurso separado. As regras do Firestore
+// continuam abertas como estão hoje; essa página não altera isso.
+const firebaseConfig = {
+  apiKey: "AIzaSyDk6dqvQZV2kJlkAX7FxpOOQVSDboRb65Q",
+  authDomain: "concretta-equipe.firebaseapp.com",
+  projectId: "concretta-equipe",
+  storageBucket: "concretta-equipe.firebasestorage.app",
+  messagingSenderId: "523832637233",
+  appId: "1:523832637233:web:9e381b6a53cd2f746ca210"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+
+// Firebase Auth (provedor Email/Senha) exige um e-mail de verdade como
+// identificador -- pra Rubens poder usar só "usuário" (sem digitar
+// e-mail), mapeamos usuário -> usuario@concretta-teste.local por baixo dos
+// panos. A conta criada no Console precisa usar esse mesmo domínio.
+const DOMINIO_TESTE = "concretta-teste.local";
+function emailDoUsuario(usuario){
+  return usuario.trim().toLowerCase().replace(/\s+/g, "") + "@" + DOMINIO_TESTE;
+}
+
+const cardLogin = document.getElementById("cardLogin");
+const cardLogado = document.getElementById("cardLogado");
+const loginErro = document.getElementById("loginErro");
+const campoUsuario = document.getElementById("usuario");
+const campoSenha = document.getElementById("senha");
+const btnEntrar = document.getElementById("btnEntrar");
+
+function mostrarErro(msg){
+  loginErro.textContent = msg;
+  loginErro.style.display = "block";
+}
+function limparErro(){
+  loginErro.style.display = "none";
+}
+
+const MENSAGENS_ERRO = {
+  "auth/invalid-credential": "Usuário ou senha incorretos.",
+  "auth/user-not-found": "Usuário não encontrado.",
+  "auth/wrong-password": "Senha incorreta.",
+  "auth/too-many-requests": "Muitas tentativas — espera um pouco e tenta de novo.",
+  "auth/invalid-email": "Usuário inválido.",
+  "auth/network-request-failed": "Sem conexão — verifica a internet e tenta de novo.",
+  "auth/configuration-not-found": "O login por e-mail/senha ainda não foi ativado nesse projeto Firebase (Authentication → Sign-in method → Email/Password)."
+};
+
+async function tentarEntrar(){
+  limparErro();
+  const usuario = campoUsuario.value.trim();
+  const senha = campoSenha.value;
+  if(!usuario || !senha){
+    mostrarErro("Preencha usuário e senha.");
+    return;
+  }
+  btnEntrar.disabled = true;
+  btnEntrar.textContent = "Entrando…";
+  try {
+    await auth.signInWithEmailAndPassword(emailDoUsuario(usuario), senha);
+  } catch(e){
+    mostrarErro(MENSAGENS_ERRO[e.code] || "Não deu pra entrar — tenta de novo.");
+  } finally {
+    btnEntrar.disabled = false;
+    btnEntrar.textContent = "Entrar";
+  }
+}
+
+btnEntrar.addEventListener("click", tentarEntrar);
+campoSenha.addEventListener("keydown", (e) => { if(e.key === "Enter") tentarEntrar(); });
+campoUsuario.addEventListener("keydown", (e) => { if(e.key === "Enter") campoSenha.focus(); });
+
+document.getElementById("btnSair").addEventListener("click", () => auth.signOut());
+
+auth.onAuthStateChanged((user) => {
+  if(user){
+    cardLogin.style.display = "none";
+    cardLogado.style.display = "block";
+    document.getElementById("emailLogado").textContent = user.email;
+  } else {
+    cardLogin.style.display = "block";
+    cardLogado.style.display = "none";
+    campoSenha.value = "";
+  }
+});
+</script>
+</body>
+</html>
