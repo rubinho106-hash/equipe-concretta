@@ -980,6 +980,34 @@ conferência confirmada marcando Conferido, editando o dia, e vendo reverter soz
 Pendente; proteção do cache de última obra confirmada editando um dia retroativo sem regredir
 o valor.
 
+## Protótipo isolado de login — Fase 2, Auth (commit `ecf419e`, 08/09/2026)
+
+Rubens pediu pra testar o login (usuário/senha) antes de aplicar no sistema real. Novo arquivo
+**`apontador-teste-login.html`** — isolado, sem nenhum link de/pro `apontador.html` real, sem
+mexer em nenhum dado de ponto. Usa o **mesmo projeto Firebase** (`concretta-equipe`): login é um
+recurso separado do Firestore, então ativar Auth e criar contas de teste não muda nada nas
+regras/dados que o resto do site usa hoje (ainda abertas). Campo "usuário" (sem precisar digitar
+e-mail) é mapeado internamente pra `usuario@concretta-teste.local`, já que o provedor
+Email/Senha do Firebase Auth exige um identificador em formato de e-mail — a conta criada no
+Console precisa usar esse mesmo domínio (ex: `admin@concretta-teste.local`).
+
+**Passo que ficou pendente do lado do Rubens**: ativar Authentication → Sign-in method →
+Email/Password no console.firebase.google.com (projeto concretta-equipe) e criar 1 usuário de
+teste em Authentication → Users. Enquanto isso não acontece, a página mostra
+"O login por e-mail/senha ainda não foi ativado nesse projeto Firebase" (testado local — o erro
+real do Firebase é `auth/configuration-not-found`, mapeado pra essa mensagem específica).
+
+**Decisões da Fase 2 do Auth já confirmadas com o Rubens** (AskUserQuestion, 08/09/2026): login
+por usuário/senha (não Google); 3 perfis (Administrador, Apontador, Funcionário); Apontador tem
+**uma conta por obra** (5 contas hoje, uma por obra ativa) em vez de uma conta geral;
+Funcionário **fica de fora por enquanto** — `cartoes.html` continua aberto sem login, não vale a
+pena criar ~30 contas individuais agora. Isso deixa só 2 páginas precisando de login de verdade
+quando a Fase 2 completa for implementada: `index.html` (1 conta admin) e `apontador.html` (5
+contas, uma por obra, cada uma travada só naquela obra).
+
+Link ao vivo (não linkado de lugar nenhum, só quem tiver a URL acessa, igual o `cartoes.html`
+foi no início): `https://rubinho106-hash.github.io/equipe-concretta/apontador-teste-login.html`
+
 ## Apontador — "Modo teste" — HISTÓRICO, revertido no mesmo dia (commit `17d4c97`, 04/09/2026)
 
 Rubens perguntou se dava pra travar o Apontador no mês teste, só com opção de escolher o dia —
