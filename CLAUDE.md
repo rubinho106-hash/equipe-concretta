@@ -813,6 +813,26 @@ equipe" continuando travado. Resetei `fechadoAtual = false` depois. Zero writes 
 nesse teste — evita o problema de não ter mais como desfazer um "Fechar dia" de teste agora
 que a UI de reabertura não existe.
 
+## Apontador: "Fechar dia"/"Limpar lançamentos" ganham modal próprio (commit `d0b5e8f`, 07/09/2026)
+
+Rubens mandou print do `confirm()` nativo do navegador aparecendo em cima de "Limpar
+lançamentos" (caixa marcada no print) — mesmo problema já resolvido antes no `index.html`
+(`confirmarAcao()`) e no próprio fluxo de confirmação por status do Apontador: `confirm()`
+nativo trava silenciosamente em navegadores embutidos tipo WhatsApp/Instagram, e o clique
+parece "não fazer nada".
+
+Adicionado um segundo modal genérico no `apontador.html` (`#confirmGeralBackdrop`,
+reaproveitando o mesmo CSS `.modal`/`.choices`/`.choice` já usado no modal de status) e uma
+função `confirmarAcaoGeral(mensagem)` (`Promise<boolean>`, mesmo padrão do `confirmarAcao()`
+do `index.html`). Os dois `confirm()` nativos que restavam no arquivo — "Fechar dia" e "Limpar
+lançamentos" — passaram a usar esse modal (os dois de *conflito de obra* dentro de
+`aplicarLancamento()` não foram tocados, mesma decisão de escopo já registrada antes).
+
+Testado local: cliquei "Limpar lançamentos" de verdade, confirmei que aparece o modal próprio
+(não o `confirm()` do navegador) e cliquei "Cancelar" — nada foi apagado. Não forcei o teste
+de "Fechar dia" (estava desabilitado pelo gate normal da equipe incompleta) por prudência —
+mesma função já validada no outro botão cobre a lógica.
+
 ## Apontador — "Modo teste" — HISTÓRICO, revertido no mesmo dia (commit `17d4c97`, 04/09/2026)
 
 Rubens perguntou se dava pra travar o Apontador no mês teste, só com opção de escolher o dia —
