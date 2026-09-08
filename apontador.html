@@ -33,6 +33,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"IBM Plex Sans",
 .hero-eyebrow{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#a9bdfb;margin-bottom:8px}
 .hero h1{margin:0;font-size:24px;font-weight:800;color:#fff}
 .hero-sub{font-size:13px;color:#cbd5f7;margin-top:6px}
+.hero-clock{font-size:13px;color:#cbd5f7;margin-top:6px;font-variant-numeric:tabular-nums}
 .install-row{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;min-height:20px}
 .install-btn{background:#fff;color:var(--hero-2);border:0;border-radius:9px;padding:9px 14px;font-weight:700;font-size:12.5px;cursor:pointer}
 .install-status{font-size:11.5px;color:#cbd5f7}
@@ -98,6 +99,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
     <div class="hero-eyebrow">GESTÃO DE PONTO · CONCRETTA</div>
     <h1>Apontador</h1>
     <div class="hero-sub">Lançamento rápido por obra e exceções</div>
+    <div class="hero-clock" id="heroRelogio">🕒 --:--</div>
     <div class="install-row">
       <button class="install-btn" id="btnInstalar" style="display:none">⬇ Instalar app</button>
       <span class="install-status" id="statusInstalar"></span>
@@ -122,6 +124,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
     </div>
 
     <div id="fechadoBanner" class="closed-banner" style="display:none">Dia fechado. Os lançamentos ficam bloqueados por aqui — qualquer correção precisa ser feita no painel principal.</div>
+    <div id="horarioBanner" class="closed-banner" style="display:none">Fora do horário de lançamento (07h–18h). Os lançamentos ficam bloqueados até o próximo horário permitido.</div>
 
     <div style="margin-top:12px">
       <input id="buscaFunc" type="text" placeholder="🔍 Buscar funcionário...">
@@ -308,6 +311,32 @@ function dataLocalHoje(){
 data.value = dataLocalHoje();
 data.max = dataLocalHoje();
 
+// Janela de horário permitido pra lançamento -- pedido do Rubens: fora
+// desse intervalo (hora do proprio aparelho de quem esta usando, igual
+// dataLocalHoje()), o app fica so-leitura, mesmo com o dia ainda aberto.
+const HORARIO_INICIO = 7;  // inclusive
+const HORARIO_FIM = 18;    // exclusivo -- as 18:00 em ponto ja bloqueia
+function dentroDoHorario(){
+  const h = new Date().getHours();
+  return h >= HORARIO_INICIO && h < HORARIO_FIM;
+}
+function atualizarRelogio(){
+  const agora = new Date();
+  const hh = String(agora.getHours()).padStart(2, "0");
+  const mm = String(agora.getMinutes()).padStart(2, "0");
+  document.getElementById("heroRelogio").textContent = "🕒 " + hh + ":" + mm;
+}
+atualizarRelogio();
+let horarioAnterior = dentroDoHorario();
+setInterval(() => {
+  atualizarRelogio();
+  const agora = dentroDoHorario();
+  if(agora !== horarioAnterior){
+    horarioAnterior = agora;
+    render();
+  }
+}, 1000);
+
 // PASSO 7 do roadmap (04/09/2026): "Fechar dia" deixa de ser por mes (o
 // antigo fechamentos/{AAAA-MM}, ja removido do sistema) e tambem deixa de
 // ser so localStorage (como era ate aqui) -- agora e por Data+Obra,
@@ -359,7 +388,7 @@ function dataValidaParaLancamento(){
 function montaLinhaFuncionario(f){
   const st=statusParaExibir(f.id);
   const b=document.createElement("button");
-  b.className="emp";b.type="button";b.disabled=isFechado();
+  b.className="emp";b.type="button";b.disabled=isFechado()||!dentroDoHorario();
   b.innerHTML=`<span class="emp-avatar" style="background:${corAvatar(f.nome)}">${iniciais(f.nome)}</span>`
     +`<span class="emp-name">${f.nome}</span><span class="status ${st.cls}">${st.txt}</span>`;
   b.addEventListener("click",()=>abrir(f));
@@ -472,16 +501,20 @@ function render(){
   document.getElementById("totalDiarias").textContent=total.toLocaleString("pt-BR");
 
   const fechado=isFechado();
+  const foraHorario=!fechado && !dentroDoHorario();
+  const bloqueado=fechado||foraHorario;
   document.getElementById("fechadoBanner").style.display=fechado?"block":"none";
-  document.getElementById("todosDia").disabled=fechado||!equipe.length;
-  document.getElementById("limparDia").disabled=fechado;
+  document.getElementById("horarioBanner").style.display=foraHorario?"block":"none";
+  document.getElementById("todosDia").disabled=bloqueado||!equipe.length;
+  document.getElementById("limparDia").disabled=bloqueado;
   document.getElementById("fecharDia").style.display=fechado?"none":"inline-block";
-  document.getElementById("fecharDia").disabled=pending>0||!equipe.length;
+  document.getElementById("fecharDia").disabled=foraHorario||pending>0||!equipe.length;
 }
 
 function abrir(f){
   if(!dataValidaParaLancamento())return;
   if(isFechado())return;
+  if(!dentroDoHorario())return;
   atual=f;modalNome.textContent=f.nome;
   mostrarEscolhas();
   backdrop.style.display="flex";
@@ -603,6 +636,7 @@ async function aplicarLancamento(func, status){
 async function aplicar(status){
   if(!atual)return;
   if(isFechado())return;
+  if(!dentroDoHorario())return;
   const func = atual;
   fecharModal();
   const ok = await aplicarLancamento(func, status);
@@ -626,6 +660,7 @@ backdrop.addEventListener("click",e=>{if(e.target===backdrop)fecharModal()});
 document.getElementById("todosDia").addEventListener("click",async ()=>{
   if(!dataValidaParaLancamento())return;
   if(isFechado())return;
+  if(!dentroDoHorario())return;
   const dia = diaDaData();
   const obraSel = obra.value;
   const conflitos=[];
@@ -663,6 +698,7 @@ document.getElementById("todosDia").addEventListener("click",async ()=>{
 
 document.getElementById("fecharDia").addEventListener("click",async ()=>{
   if(isFechado())return;
+  if(!dentroDoHorario())return;
   if(!dataValidaParaLancamento())return;
   const pendentes=equipeDaObra(todos).filter(f=>statusParaExibir(f.id).cls==="pending");
   if(pendentes.length){
@@ -682,6 +718,7 @@ document.getElementById("fecharDia").addEventListener("click",async ()=>{
 
 document.getElementById("limparDia").addEventListener("click",async ()=>{
   if(isFechado())return;
+  if(!dentroDoHorario())return;
   if(!(await confirmarAcaoGeral("Apagar os lançamentos desta obra nesta data?")))return;
   const dia = diaDaData();
   const obraSel = obra.value;
