@@ -903,6 +903,16 @@ estava fechada de verdade) só pra conseguir ver a tela travada ativa fora do ho
 confirmado relógio com segundos rodando, data certa, `read_page` mostrando "(empty page)" pra
 elementos interativos. Restaurado o estado real depois.
 
+## Apontador: relógio do hero fica grande + aviso de horário de abertura (commit `4a5866b`, 07/09/2026)
+
+Rubens mandou print do relógio pequeno no hero (visível mesmo quando o dia está fechado, já
+que fica fora do `#cardPrincipal`/`#cardTravado`) pedindo "relógio grande horário que vai
+abrir". `.hero-clock` foi de 13px pra 32px negrito branco — vira elemento de destaque no hero,
+não mais texto secundário discreto. Nova linha `#heroRelogioNota` logo abaixo, só visível
+fora da janela de horário permitido (07h–18h59), com "Abre às 07:00". Testado local sem
+escrita real: nota aparece com a hora real (23h) e some quando `dentroDoHorario()` é simulado
+como `true` em memória.
+
 ## Apontador — "Modo teste" — HISTÓRICO, revertido no mesmo dia (commit `17d4c97`, 04/09/2026)
 
 Rubens perguntou se dava pra travar o Apontador no mês teste, só com opção de escolher o dia —
