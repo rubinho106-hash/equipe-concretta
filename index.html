@@ -946,6 +946,16 @@ function iniciais(nome){
   return (a + b).toUpperCase();
 }
 
+// O banco não tem regras/validação (qualquer um com o link escreve) --
+// nome de funcionário/obra entra direto em innerHTML em alguns lugares,
+// então precisa ser escapado antes, ou um nome com "<"/">" vira HTML de
+// verdade pra quem estiver olhando a lista.
+function escapeHtml(s){
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[c]));
+}
+
 let toastTimer = null;
 function toast(msg){
   const el = document.getElementById("toast");
@@ -1067,7 +1077,7 @@ function renderObraFiltro(){
     const chip = document.createElement("div");
     chip.className = "obra-filtro-chip" + (filtroObraSel === nome ? " active" : "");
     chip.style.cssText = `background:${cor}1a;border-color:${cor}55;color:${cor}`;
-    chip.innerHTML = `${nome} <span class="qtd">${contagem[nome]}</span>`;
+    chip.innerHTML = `${escapeHtml(nome)} <span class="qtd">${contagem[nome]}</span>`;
     chip.onclick = () => { filtroObraSel = filtroObraSel === nome ? "todas" : nome; render(); };
     row.appendChild(chip);
   });
@@ -1587,12 +1597,12 @@ function popularFiltrosApontamentos(){
   selFunc.innerHTML = '<option value="">Selecione…</option>'
     + todos.filter(f => f.status !== "Inativo")
       .sort((a, b) => (a.nome||"").localeCompare(b.nome||"", "pt-BR"))
-      .map(f => `<option value="${f.id}">${f.nome}</option>`).join("");
+      .map(f => `<option value="${f.id}">${escapeHtml(f.nome)}</option>`).join("");
   if(funcAtual) selFunc.value = funcAtual;
 
   const obraAtual = selObra.value;
   selObra.innerHTML = '<option value="">Todas</option>'
-    + OBRAS.map(o => `<option value="${o}">${o}</option>`).join("");
+    + OBRAS.map(o => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join("");
   if(obraAtual) selObra.value = obraAtual;
 
   const periodoAtual = selPeriodo.value;
@@ -1690,10 +1700,10 @@ function renderApontResultado(f, mes, info, obraFiltro){
   const statusClasse = f.status === "Inativo" ? "status-inativo" : "status-ativo";
   const resumoHtml = `
     <div class="apont-resumo-func">
-      <div class="avatar" style="background:${corAvatar(f.nome||"?")}">${iniciais(f.nome||"?")}</div>
+      <div class="avatar" style="background:${corAvatar(f.nome||"?")}">${escapeHtml(iniciais(f.nome||"?"))}</div>
       <div class="apont-resumo-info">
-        <div class="apont-resumo-nome">${f.nome}</div>
-        <div class="apont-resumo-sub">Função: ${f.funcao || "—"} &nbsp;|&nbsp; Situação: <span class="${statusClasse}">${f.status || "Ativo"}</span></div>
+        <div class="apont-resumo-nome">${escapeHtml(f.nome)}</div>
+        <div class="apont-resumo-sub">Função: ${escapeHtml(f.funcao || "—")} &nbsp;|&nbsp; Situação: <span class="${statusClasse}">${escapeHtml(f.status || "Ativo")}</span></div>
       </div>
       <div class="apont-mini-stats">
         <div class="apont-mini-stat">
@@ -1720,7 +1730,7 @@ function renderApontResultado(f, mes, info, obraFiltro){
 
   const celDia = dias.map(d => `<div>${String(d.dia).padStart(2,"0")}</div>`).join("");
   const celSemana = dias.map(d => `<div>${d.semana}</div>`).join("");
-  const celObra = dias.map(d => `<div>${d.tipo === "vazio" ? "–" : d.obraLabel}</div>`).join("");
+  const celObra = dias.map(d => `<div>${d.tipo === "vazio" ? "–" : escapeHtml(d.obraLabel)}</div>`).join("");
   const rotuloPeriodo = { d: "D", m: "M", t: "T", f: "F", vazio: "–" };
   const celPeriodo = dias.map(d => `<div class="cel-periodo tipo-${d.tipo}">${rotuloPeriodo[d.tipo]}</div>`).join("");
 
@@ -1745,7 +1755,7 @@ function renderApontResultado(f, mes, info, obraFiltro){
     const dataStr = String(d.dia).padStart(2,"0") + "/" + String(mesNum).padStart(2,"0") + "/" + anoNum;
     return `<div class="apont-detalhe-row">
       <div>${dataStr}</div>
-      <div>${d.obraLabel}</div>
+      <div>${escapeHtml(d.obraLabel)}</div>
       <div><span class="apont-periodo-tag tipo-${d.tipo}">${rotuloPeriodoLongo[d.tipo]}</span></div>
       <div class="valor">${d.valor.toFixed(1)}</div>
     </div>`;
@@ -1754,7 +1764,7 @@ function renderApontResultado(f, mes, info, obraFiltro){
   const obrasOrdenadas = Object.keys(porObra).sort((a,b) => a.localeCompare(b, "pt-BR"));
   const linhasObra = obrasOrdenadas.map(o => {
     const totalObra = porObra[o];
-    return `<div class="apont-obra-row"><div>${o}</div><div>${totalObra.toFixed(1)}</div></div>`;
+    return `<div class="apont-obra-row"><div>${escapeHtml(o)}</div><div>${totalObra.toFixed(1)}</div></div>`;
   }).join("") || '<div class="empty-state" style="padding:20px 0;">Sem lançamentos.</div>';
   const totalObraRow = obrasOrdenadas.length
     ? `<div class="apont-obra-row total"><div>Total</div><div>${totalDiarias.toFixed(1)}</div></div>`
@@ -1800,9 +1810,33 @@ function statusQuinzena(info, quinzena){
   if(sc && typeof sc === "object") return sc["q" + quinzena] === "Conferido" ? "Conferido" : "Pendente";
   return sc === "Conferido" ? "Conferido" : "Pendente";
 }
+function quinzenaDoDia(dia){ return dia <= 15 ? 1 : 2; }
+// Achado da análise de confiabilidade: "Conferido" era um selo manual sem
+// nenhum vínculo com os dados -- editar um dia depois de conferir a
+// quinzena deixava o cartão "aprovado" com dado desatualizado. Qualquer
+// edição real de dia devolve a quinzena correspondente pra Pendente. Grava
+// sempre o objeto {q1,q2} inteiro (nunca um dot-path em cima de
+// statusConferencia), mesmo motivo de alternarConferencia() abaixo.
+function invalidarConferenciaPatch(info, dia){
+  const q = quinzenaDoDia(dia);
+  return {
+    q1: q === 1 ? "Pendente" : statusQuinzena(info, 1),
+    q2: q === 2 ? "Pendente" : statusQuinzena(info, 2),
+  };
+}
 // "Conferido" no resumo do mes (lista/stats) exige as duas quinzenas conferidas
 function statusMesConferido(info){
   return statusQuinzena(info, 1) === "Conferido" && statusQuinzena(info, 2) === "Conferido";
+}
+// Usado pra decidir se um funcionario Inativo ainda deve aparecer na
+// conferencia de um mes especifico -- true so quando existe pelo menos um
+// periodo com obra de verdade lancada (nao marcador, nao vazio).
+function temLancamentoReal(info){
+  const dias = (info || {}).dias || {};
+  return Object.values(dias).some(d => {
+    const m = d && d.m, t = d && d.t;
+    return (m && !ehMarcador(m)) || (t && !ehMarcador(t));
+  });
 }
 
 function renderConfLista(){
@@ -1810,9 +1844,14 @@ function renderConfLista(){
   const empty = document.getElementById("conf-empty-state");
   cont.innerHTML = "";
 
-  // funcionario Inativo nao aparece pra conferencia de ponto -- quem saiu
-  // da equipe nao deve receber lancamento de dia
-  const ativosFuncs = todos.filter(f => f.status !== "Inativo");
+  // funcionario Inativo sem lancamento real nesse mes nao aparece pra
+  // conferencia -- quem saiu da equipe nao deve virar "pendente" do nada
+  // nem ficar disponivel pra receber lancamento novo. Mas achado da
+  // analise: quem TRABALHOU de verdade no mes e depois saiu continuava
+  // desaparecendo mesmo tendo dias reais pra conferir -- agora esses
+  // continuam aparecendo (so leitura/conferencia, o Apontador jah nao
+  // lista Inativo pra lancar de novo).
+  const ativosFuncs = todos.filter(f => f.status !== "Inativo" || temLancamentoReal(dadosMes[f.id]));
 
   let conferidos = 0;
   ativosFuncs.forEach(f => { if(statusMesConferido(dadosMes[f.id] || {})) conferidos++; });
@@ -2066,7 +2105,7 @@ function renderResumoFicha(porObra){
     const cor = corAvatar(nome);
     const qtd = porObra[nome] || 0;
     return `<div class="ficha-resumo-chip" style="background:${cor}1a;border-color:${cor}55;color:${cor}">`
-      + `<span>${nome}</span><span class="qtd">${qtd > 0 ? qtd.toFixed(1) : "–"}</span></div>`;
+      + `<span>${escapeHtml(nome)}</span><span class="qtd">${qtd > 0 ? qtd.toFixed(1) : "–"}</span></div>`;
   }).join("");
   const total = Object.values(porObra).reduce((soma, v) => soma + v, 0);
   document.getElementById("ficha-resumo-total").textContent = total.toFixed(1);
@@ -2097,6 +2136,7 @@ async function salvarDia(dia, campo, valor){
     }
 
     const ref = await garantirDocPontos(fichaFunc.id, mesConferencia);
+    const infoAntes = dadosMes[fichaFunc.id] || {};
     let atualizacao;
     if(valor === "FALTA"){
       atualizacao = { ["dias." + dia + ".m"]: "FALTA", ["dias." + dia + ".t"]: "FALTA" };
@@ -2106,6 +2146,7 @@ async function salvarDia(dia, campo, valor){
     } else {
       atualizacao = { ["dias." + dia + "." + campo]: valor };
     }
+    atualizacao.statusConferencia = invalidarConferenciaPatch(infoAntes, dia);
 
     await ref.update(atualizacao);
     const snap = await ref.get();
@@ -2118,13 +2159,21 @@ async function salvarDia(dia, campo, valor){
     // obra real (nao marcador, nao FALTA, nao vazio). Nunca e lido como
     // fonte de verdade em lugar nenhum, so ordena/agrupa visualmente; se
     // falhar, nao deve travar o salvamento do dia (por isso o catch mudo).
+    // Achado da análise: corrigir um dia retroativo reescrevia esse cache
+    // com a data sendo editada, empurrando "última obra" pra trás no tempo
+    // -- só anda pra frente (ou grava quando ainda não existe cache).
     if(valor && !ehMarcador(valor)){
       const dataLancamento = mesConferencia + "-" + String(dia).padStart(2, "0");
-      db.doc("funcionarios/" + fichaFunc.id).update({
-        ultimaObraId: valor,
-        ultimaObraNome: valor,
-        ultimaObraData: dataLancamento
-      }).catch(() => {});
+      if(!fichaFunc.ultimaObraData || dataLancamento >= fichaFunc.ultimaObraData){
+        fichaFunc.ultimaObraId = valor;
+        fichaFunc.ultimaObraNome = valor;
+        fichaFunc.ultimaObraData = dataLancamento;
+        db.doc("funcionarios/" + fichaFunc.id).update({
+          ultimaObraId: valor,
+          ultimaObraNome: valor,
+          ultimaObraData: dataLancamento
+        }).catch(() => {});
+      }
     }
   } catch(e){
     toast("Não deu pra salvar esse dia — tenta de novo.");
