@@ -2251,41 +2251,18 @@ function renderResumoFicha(porObra){
   document.getElementById("ficha-resumo-total").textContent = total.toFixed(1);
 }
 
-// FALTA e sempre dia inteiro (Modelo A, decidido com o Rubens em
-// 04/09/2026) -- nunca fica so num periodo. Duas regras:
-// 1. Marcar Falta em QUALQUER periodo grava m E t como "FALTA" juntos.
-// 2. Escolher uma obra real num periodo enquanto o outro ainda e "FALTA"
-//    limpa os dois primeiro (o dia deixa de ser falta integral) e so
-//    depois grava a obra no periodo mexido, deixando o outro vazio.
+// FALTA virou independente por período (pedido do Rubens, 08/09/2026,
+// revendo a decisão de "Modelo A" de 04/09) -- pode faltar só de manhã ou
+// só de tarde, com o outro período podendo ter uma obra real lançada no
+// mesmo dia. Mesmo tratamento que os outros marcadores (SÁBADO/DOMINGO/
+// FERIADO), que já eram gravados por período independente -- por isso a
+// escrita agora é só um campo por vez, sem forçar o outro período.
 async function salvarDia(dia, campo, valor){
   if(!fichaFunc) return;
   try {
-    const diaAtual = ((dadosMes[fichaFunc.id] || {}).dias || {})[dia] || {};
-    const outroCampo = campo === "m" ? "t" : "m";
-    const outroValor = diaAtual[outroCampo] || "";
-    const outroTrabalhado = !!outroValor && !ehMarcador(outroValor);
-
-    // Marcar Falta enquanto o outro periodo tem uma obra real lancada
-    // apagaria esse lancamento silenciosamente -- confirma antes.
-    if(valor === "FALTA" && outroTrabalhado){
-      const ok = await confirmarAcao(
-        `O outro período desse dia já tem "${outroValor}" lançado. Marcar Falta apaga esse lançamento e deixa o dia inteiro como falta. Confirma?`,
-        "Marcar falta", "danger"
-      );
-      if(!ok){ renderFichaConteudo(); return; }
-    }
-
     const ref = await garantirDocPontos(fichaFunc.id, mesConferencia);
     const infoAntes = dadosMes[fichaFunc.id] || {};
-    let atualizacao;
-    if(valor === "FALTA"){
-      atualizacao = { ["dias." + dia + ".m"]: "FALTA", ["dias." + dia + ".t"]: "FALTA" };
-    } else if(valor && !ehMarcador(valor) && outroValor === "FALTA"){
-      atualizacao = { ["dias." + dia + ".m"]: "", ["dias." + dia + ".t"]: "" };
-      atualizacao["dias." + dia + "." + campo] = valor;
-    } else {
-      atualizacao = { ["dias." + dia + "." + campo]: valor };
-    }
+    const atualizacao = { ["dias." + dia + "." + campo]: valor };
     atualizacao.statusConferencia = invalidarConferenciaPatch(infoAntes, dia);
 
     await ref.update(atualizacao);
