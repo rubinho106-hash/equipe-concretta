@@ -1089,6 +1089,31 @@ completo sign-in/sign-out real foi bloqueado pelo classificador de permissões d
 sem precisar de senha real; o teste de login de verdade ponta a ponta fica por conta do Rubens
 usando as contas reais.
 
+## Apontador: admin nunca trava por horário, apontador sempre trava (commit `9478a4c`, 08/09/2026)
+
+Rubens testou as contas reais e mandou prints comparando Esdra (apontador) x Weslen (apontador)
+x Rubens (admin), todos fora do horário (20h+): a tela travada só aparecia quando a obra
+selecionada por padrão também estava com o dia fechado — já que a regra antiga era "só trava se
+NÃO estiver fechado" (fechado tinha prioridade sobre a tela travada). Isso fazia o comportamento
+variar por conta/obra de um jeito que parecia bug. Pedido final, depois de eu tentar uma
+correção intermediária que ele mandou reverter ("deixar como estava") e ele testar mais um
+pouco: **admin nunca trava por horário em obra nenhuma** (só "dia fechado" continua valendo pra
+ele, igual sempre foi); **apontador trava sempre fora do horário**, mesmo que o dia já esteja
+aberto.
+
+Nova `foraDoHorarioAgora()` substitui a checagem direta de `dentroDoHorario()` em `render()`, em
+todos os guards de escrita (`abrir()`/`aplicar()`/handlers de `todosDia`/`fecharDia`/
+`limparDia`) e na nota "Abre às 07:00" do relógio do hero — `perfilAtual.role === "admin"` força
+`false` incondicional; qualquer outro perfil usa `!dentroDoHorario()` puro, sem exceção pro "já
+fechado".
+
+Testado local sem escrita real: admin em COLÉGIO MILITAR (fechado) e PARQUE IMPERIAL (aberto) —
+destravado nos dois, banner "Dia fechado" continua aparecendo quando cabe; Weslen em CRAS
+(fechado) continua travado; `aplicar()` chamado direto pelo console confirmou bloqueio real pro
+apontador; `foraDoHorarioAgora()` conferida isoladamente como `false` pro admin, sem risco de
+gravar nada (evitei chamar `aplicar()` de verdade como admin com um id de funcionário falso, já
+que isso criaria um documento indevido em produção).
+
 ## Apontador — "Modo teste" — HISTÓRICO, revertido no mesmo dia (commit `17d4c97`, 04/09/2026)
 
 Rubens perguntou se dava pra travar o Apontador no mês teste, só com opção de escolher o dia —
