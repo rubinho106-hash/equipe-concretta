@@ -45,6 +45,10 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"IBM Plex Sans",
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-top:14px;box-shadow:var(--shadow)}
 label{display:block;color:var(--muted);font-size:11px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;margin:8px 0 6px}
 select,input{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);font:inherit;font-size:15px}
+/* Data sempre automática (hoje), sem calendário pra escolher outro dia --
+   pedido do Rubens: "excluir calendario, deixar data automatica". */
+#data{background:var(--surface-2);color:var(--muted);cursor:default}
+#data::-webkit-calendar-picker-indicator{display:none}
 select:focus,input:focus{outline:2px solid var(--accent);outline-offset:1px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
@@ -146,7 +150,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
       </div>
       <div>
         <label>Data</label>
-        <input id="data" type="date">
+        <input id="data" type="date" readonly>
       </div>
     </div>
 
@@ -515,6 +519,15 @@ setInterval(() => {
   if(agora !== horarioAnterior){
     horarioAnterior = agora;
     render();
+  }
+  // Data é sempre automática (hoje), sem calendário pra escolher outro dia
+  // -- se o app ficar aberto passando da meia-noite, avança sozinho pro
+  // dia seguinte, sem precisar recarregar a página.
+  const hojeReal = dataLocalHoje();
+  if(data.value !== hojeReal){
+    data.value = hojeReal;
+    data.max = hojeReal;
+    atualizarParaNovaData();
   }
 }, 1000);
 
@@ -1135,7 +1148,11 @@ obra.addEventListener("change",async ()=>{
   } catch(e){ mostrarErroCarregamento(); return; }
   render();
 });
-data.addEventListener("change",async ()=>{
+// Extraída pra ser chamada tanto pelo "change" (defesa em profundidade --
+// não deve mais disparar por interação real, já que o campo virou
+// readonly) quanto pela virada automática de dia à meia-noite, no
+// setInterval lá em cima.
+async function atualizarParaNovaData(){
   dataValidaParaLancamento();
   const novoMes = mesDaData();
   try {
@@ -1146,7 +1163,8 @@ data.addEventListener("change",async ()=>{
     await carregarFechado();
   } catch(e){ mostrarErroCarregamento(); return; }
   render();
-});
+}
+data.addEventListener("change", atualizarParaNovaData);
 document.getElementById("buscaFunc").addEventListener("input",render);
 
 document.querySelectorAll(".sum").forEach(b => {
