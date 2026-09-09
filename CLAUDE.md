@@ -1157,6 +1157,29 @@ diferente, e "Falta • 0" só quando os dois períodos eram falta. **Não teste
 "Marcar equipe" (arriscaria escrita real em várias pessoas de uma vez) — a checagem nova é uma
 linha simples e isolada, confiei na revisão direta do código.
 
+## Apontador: campo Data vira automático, sem calendário (commit `63589d2`, 08/09/2026)
+
+Rubens mandou print marcando o ícone de calendário no campo Data, pedindo "excluir calendario,
+deixar data automatica" — o campo deixa de ser editável, sempre mostra o dia real de hoje.
+
+`<input id="data">` ganhou `readonly` (bloqueia digitar e abrir o seletor nativo) + CSS
+escondendo o ícone (`::-webkit-calendar-picker-indicator{display:none}`) e um visual mais
+discreto (fundo/texto acinzentados, mesma paleta `--surface-2`/`--muted` já usada em outros
+elementos informativos) pra deixar claro que não é editável. A lógica que já existia no
+`data.addEventListener("change", ...)` (recarregar o mês se mudou, `carregarFechado()`,
+`render()`) foi extraída pra `atualizarParaNovaData()`, ainda ligada ao "change" por defesa em
+profundidade (não deve mais disparar por interação real, já que o campo é readonly agora).
+
+**Novo**: o mesmo `setInterval` que já cuidava do relógio/janela de horário passou também a
+conferir se `data.value` ainda é o dia real — se o app ficar aberto passando da meia-noite,
+avança sozinho pro dia seguinte (chamando `atualizarParaNovaData()`, que recarrega o mês
+também se for virada de mês), sem precisar recarregar a página.
+
+Testado local sem escrita real: confirmado que digitar no campo (via `execCommand` e via tecla
+de verdade, `key: "1 5"`) não muda mais `data.value`; simulei o campo desatualizado (dia de
+ontem) e confirmei que o `setInterval` corrige sozinho pro dia real em ~1s, sem nenhuma ação do
+usuário.
+
 ## Apontador — "Modo teste" — HISTÓRICO, revertido no mesmo dia (commit `17d4c97`, 04/09/2026)
 
 Rubens perguntou se dava pra travar o Apontador no mês teste, só com opção de escolher o dia —
