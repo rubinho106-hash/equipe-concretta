@@ -566,12 +566,18 @@ function invalidarConferenciaPatch(info, dia){
 // obra está selecionada, já que não é uma obra.
 function statusParaExibir(funcId){
   const { m="", t="" } = diaDoFuncionario(funcId);
-  if(m === "FALTA" || t === "FALTA") return {txt:"Falta • 0",cls:"absent"};
   const mAqui = m === obra.value;
   const tAqui = t === obra.value;
   if(mAqui && tAqui) return {txt:"Dia inteiro • 1",cls:"full"};
   if(mAqui) return {txt:"Manhã • 0,5",cls:"half"};
   if(tAqui) return {txt:"Tarde • 0,5",cls:"half"};
+  // Falta agora pode ser só de um período (pedido do Rubens, 08/09/2026,
+  // revendo o "Modelo A" de 04/09) -- só conta como "Falta • 0" quando os
+  // DOIS períodos são falta. Falta em só um período, com o outro period
+  // sem nada a ver com esta obra (vazio ou outra obra), aparece "Não
+  // lançado" pra esta obra -- mesmo princípio já usado pra obra diferente
+  // (o que não é desta obra não é problema desta obra resolver).
+  if(m === "FALTA" && t === "FALTA") return {txt:"Falta • 0",cls:"absent"};
   return {txt:"Não lançado",cls:"pending"};
 }
 function valorNestaObra(funcId){
@@ -964,13 +970,14 @@ async function aplicarLancamento(func, status){
     const upd = {};
     if(alvoM) upd["dias."+dia+".m"] = obraSel;
     if(alvoT) upd["dias."+dia+".t"] = obraSel;
-    // limpa um período que NÃO está sendo gravado agora se ele for uma
-    // Falta órfã OU a MESMA obra que acabou de deixar de ser o alvo
-    // (achado da análise: trocar "Dia inteiro" por "Manhã" deixava a tarde
-    // grudada na mesma obra, ainda contando 1 diária inteira) -- período
-    // de OUTRA obra real continua preservado, sem mexer.
-    if(!alvoT && (t==="FALTA" || t===obraSel)) upd["dias."+dia+".t"] = "";
-    if(!alvoM && (m==="FALTA" || m===obraSel)) upd["dias."+dia+".m"] = "";
+    // limpa um período que NÃO está sendo gravado agora se ele ainda for a
+    // MESMA obra que acabou de deixar de ser o alvo (achado da análise:
+    // trocar "Dia inteiro" por "Manhã" deixava a tarde grudada na mesma
+    // obra, ainda contando 1 diária inteira) -- período de OUTRA obra real
+    // OU uma Falta legítima do outro período (agora que Falta pode ser só
+    // de manhã ou só de tarde, 08/09/2026) continuam preservados, sem mexer.
+    if(!alvoT && t===obraSel) upd["dias."+dia+".t"] = "";
+    if(!alvoM && m===obraSel) upd["dias."+dia+".m"] = "";
     upd.statusConferencia = invalidarConferenciaPatch(infoFresca, dia);
 
     const snap = await escreverComProtecao(ref, upd, dia, m, t);
@@ -1031,6 +1038,13 @@ document.getElementById("todosDia").addEventListener("click",async ()=>{
         conflitos.push(`${f.nome} (${mRealDiferente ? m : t})`);
         continue;
       }
+      // Falta agora pode ser só de um período (08/09/2026) -- preserva
+      // quem já tem falta em qualquer um dos períodos, mesmo que
+      // statusParaExibir() mostre "pending" pra esta obra especificamente
+      // (a falta pode não ter nada a ver com esta obra). Sem essa checagem
+      // "Marcar equipe" sobrescreveria uma falta legítima de meio período
+      // com dia inteiro desta obra.
+      if(m === "FALTA" || t === "FALTA") continue;
       // Preserva quem já tem algo lançado nesta obra (dia inteiro, meio
       // período ou falta) -- achado da análise: "Marcar todos" virava
       // faltas e meios períodos em dia inteiro sem avisar. O botão agora
