@@ -1114,6 +1114,49 @@ apontador; `foraDoHorarioAgora()` conferida isoladamente como `false` pro admin,
 gravar nada (evitei chamar `aplicar()` de verdade como admin com um id de funcionário falso, já
 que isso criaria um documento indevido em produção).
 
+## Falta vira independente por período — revê "Modelo A" de 04/09 (commits `058e0fc` e `12ac1d0`, 08/09/2026)
+
+Rubens mandou print do dia 07 do Alex Pereira Silva (Falta dia inteiro, m e t juntos) tentando
+mudar só a manhã ou só a tarde pelo painel principal: "OPCAO DE MANHA OU TARDE NAO TEM".
+Confirmado via AskUserQuestion: sim, ele quer Falta só num período, com o outro período podendo
+ter uma obra real lançada no mesmo dia — isso **reverte** a decisão de "Modelo A" (Falta é
+sempre dia inteiro, nunca fica só num período) tomada com ele em 04/09/2026 (ver histórico
+acima, "Bug real: 'Falta' apagava lançamento real de outra obra").
+
+**`index.html`**: `salvarDia()` simplificada — removida toda a lógica que forçava m e t juntos
+como "FALTA" (e o `confirmarAcao()` que avisava antes disso), e a que limpava os dois campos
+quando um virava obra real enquanto o outro ainda era "FALTA". Agora cada período grava
+independente, exatamente como os outros marcadores (SÁBADO/DOMINGO/FERIADO) já faziam desde
+sempre. A exibição (tabela de dias, resumo por obra em `renderFichaConteudo()`/
+`renderResumoFicha()`, e a consulta de Apontamentos) **já lidava corretamente** com dia misto —
+só a escrita forçava sincronia, não precisou mudar nada do lado de exibição.
+
+**`apontador.html`**: não ganhou uma forma de gravar Falta parcial pela própria UI (o botão
+"Falta" do modal continua marcando dia inteiro, sem mudança — é um fluxo diferente, uma ação
+explícita de pessoa por pessoa, não teve pedido pra virar meio período). Mas precisou ser
+ajustado pra **exibir e não sobrescrever** um dia misto gravado pelo painel principal:
+- `statusParaExibir()`: só mostra "Falta • 0" quando os DOIS períodos são falta; falta em só um
+  período, sem relação com a obra selecionada no momento, mostra "Não lançado" — mesmo princípio
+  já usado pra "pessoa trabalhando em obra diferente" (o que não é desta obra não é problema
+  desta obra resolver).
+- `aplicarLancamento()`: removida a limpeza automática do período não-alvo quando ele era
+  "FALTA" (a "falta órfã" que esse código tratava não existe mais — falta parcial agora é dado
+  legítimo, não sobra de bug). Só limpa se o período não-alvo ainda for a MESMA obra que deixou
+  de ser o alvo (esse caso continua existindo, do fix de período de 08/09 mais acima).
+- **"Marcar equipe"**: nova checagem explícita pra pular quem tem falta em QUALQUER período,
+  mesmo quando `statusParaExibir()` mostra "pending" pra esta obra especificamente — sem isso,
+  "Preencher não lançados — Dia inteiro" sobrescreveria uma falta parcial legítima com a obra
+  errada.
+
+Testado local contra produção: dia 07 real do Alex (m=FALTA,t=FALTA) — mudei a manhã pra CRECHE
+mantendo a tarde como FALTA via `salvarDia()`, confirmado que só o campo mexido mudou (lendo
+direto do servidor); revertido pro valor original (m=t=FALTA) logo em seguida, conferido no
+servidor de novo. `statusParaExibir()` testada isolada em memória (sem gravar nada) com um dia
+misto simulado (m=FALTA,t=CRECHE): mostrou "Tarde • 0,5" na obra certa, "Não lançado" numa obra
+diferente, e "Falta • 0" só quando os dois períodos eram falta. **Não testei** o clique real de
+"Marcar equipe" (arriscaria escrita real em várias pessoas de uma vez) — a checagem nova é uma
+linha simples e isolada, confiei na revisão direta do código.
+
 ## Apontador — "Modo teste" — HISTÓRICO, revertido no mesmo dia (commit `17d4c97`, 04/09/2026)
 
 Rubens perguntou se dava pra travar o Apontador no mês teste, só com opção de escolher o dia —
