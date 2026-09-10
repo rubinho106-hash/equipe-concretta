@@ -1330,6 +1330,21 @@ document.getElementById("form-func").addEventListener("submit", async (e) => {
   };
   if(!dados.nome || !dados.funcao){ toast("Preencha nome e função."); return; }
 
+  // Trava contra duplicidade de cadastro (pedido do Rubens 10/09/2026,
+  // depois de "Leonardo Guimarães Vidal" ter sido cadastrado 2x). Compara
+  // o nome normalizado (sem espaços nas pontas, sem diferença de
+  // maiúscula) contra os outros funcionários -- não é bloqueio total (dois
+  // homônimos de verdade podem existir), só pede confirmação explícita.
+  const nomeNorm = dados.nome.trim().toLowerCase();
+  const jaExiste = todos.some(f => f.id !== editandoId && (f.nome || "").trim().toLowerCase() === nomeNorm);
+  if(jaExiste){
+    const ok = await confirmarAcao(
+      `Já existe um funcionário chamado "${dados.nome}" no cadastro. Cadastrar mesmo assim?`,
+      "Cadastrar mesmo assim", "primary"
+    );
+    if(!ok) return;
+  }
+
   const btn = document.getElementById("btn-salvar");
   btn.disabled = true;
   try {
