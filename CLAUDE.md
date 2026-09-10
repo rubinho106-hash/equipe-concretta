@@ -1180,6 +1180,28 @@ de verdade, `key: "1 5"`) não muda mais `data.value`; simulei o campo desatuali
 ontem) e confirmei que o `setInterval` corrige sozinho pro dia real em ~1s, sem nenhuma ação do
 usuário.
 
+## Duplicata no cadastro + trava anti-duplicidade (commit `fd4326e`, 10/09/2026)
+
+Rubens mandou print de "Leonardo Guimarães Vidal" cadastrado 2x (dois docs idênticos —
+`UMtCsT8lOmjCRTzr0ARC` e `wLVVpVZslI2eTeHxklUq` — mesma função AJUDANTE, mesma obraPadrão EQUIPE
+MARQUES, PIX vazio, nenhum ponto lançado em nenhum dos dois), pedindo pra apagar um e "colocar
+trava pra evitar esse tipo de duplicidade".
+
+- Apagado `UMtCsT8lOmjCRTzr0ARC` direto no Firestore (o outro, `wLVVpVZslI2eTeHxklUq`, ficou).
+  Varredura no cadastro inteiro (era 42, ficou 41): essa era a única duplicata.
+- Trava no submit do form "+ Novo funcionário" (`#form-func`): compara o nome normalizado (`trim`
+  + `toLowerCase`) contra os outros funcionários carregados. **Não é bloqueio total** (dois
+  homônimos de verdade podem existir) — pede confirmação via `confirmarAcao()` ("Já existe um
+  funcionário chamado X. Cadastrar mesmo assim?", botão "Cadastrar mesmo assim", estilo
+  `primary`). Na edição, exclui o próprio doc da comparação (`f.id !== editandoId`), então manter
+  o próprio nome não dispara, mas renomear pra colidir com OUTRO funcionário dispara.
+- **Pegadinha durante o teste**: o primeiro teste de submit rodou no código ANTIGO (página ainda
+  não recarregada depois do edit) e criou um doc de teste real ("leonardo GUIMARÃES vidal",
+  `kSdiMS83wUWuCMR0hEly`) — apagado na hora. Depois recarreguei com `?v=` e o teste passou certo.
+  Também gravei "AJUDANTE TESTE" na função do Leonardo real testando o caso de edição —
+  revertido pra "AJUDANTE". Estado final conferido no servidor: 41 funcionários, zero duplicatas,
+  Leonardo com os campos originais.
+
 ## Apontador — "Modo teste" — HISTÓRICO, revertido no mesmo dia (commit `17d4c97`, 04/09/2026)
 
 Rubens perguntou se dava pra travar o Apontador no mês teste, só com opção de escolher o dia —
