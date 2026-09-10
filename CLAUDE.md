@@ -1202,6 +1202,25 @@ trava pra evitar esse tipo de duplicidade".
   revertido pra "AJUDANTE". Estado final conferido no servidor: 41 funcionários, zero duplicatas,
   Leonardo com os campos originais.
 
+## Conferência de Ponto: filtro por obra (commit `7cceade`, 10/09/2026)
+
+Rubens pediu "FILTRO POR OBRA EM CONFERENCIA DE PONTO". Confirmado via AskUserQuestion:
+filtrar pela **obra padrão do cadastro** (mesmo critério dos chips da Lista de Funcionários),
+não pela obra onde a pessoa trabalhou no mês.
+
+Nova fileira `#conf-obra-filtro-row` abaixo da busca, `filtroObraConf` como estado,
+`renderConfObraFiltro(elegiveis)` espelhando `renderObraFiltro()` da Lista (mesma classe
+`.obra-filtro-chip`, mesmas cores por `corAvatar`). O filtro afeta a lista **e** os 3 cards de
+resumo (Total/Conferidos/Pendentes) — útil pra ver "quantos de CRECHE ainda faltam"; a busca
+por texto (`filtroConf`) continua aplicada só na lista, por cima do filtro de obra. Os chips
+são alimentados pelo conjunto elegível da conferência (ativos + inativos com lançamento real no
+mês, o mesmo `ativosFuncs` que a lista já usava).
+
+**Pegadinha de teste reforçada de novo**: o `python -m http.server` local + o navegador
+cacheiam o arquivo — a primeira leitura pós-edit veio com o código ANTIGO (`renderConfObraFiltro`
+`undefined`). Recarregar com `?nocache=` resolveu. Sempre cache-buster no teste local depois de
+editar.
+
 ## Apontador — "Modo teste" — HISTÓRICO, revertido no mesmo dia (commit `17d4c97`, 04/09/2026)
 
 Rubens perguntou se dava pra travar o Apontador no mês teste, só com opção de escolher o dia —
