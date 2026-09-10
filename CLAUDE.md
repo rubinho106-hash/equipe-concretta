@@ -1221,6 +1221,11 @@ cacheiam o arquivo — a primeira leitura pós-edit veio com o código ANTIGO (`
 `undefined`). Recarregar com `?nocache=` resolveu. Sempre cache-buster no teste local depois de
 editar.
 
+**Ajuste logo depois (commit `5db730b`, 10/09/2026)**: Rubens pediu pra o chip de obra **não
+desmarcar** ao clicar de novo no mesmo — "trocar somente ao clicar em outra obra". Removido o
+toggle-off dos dois filtros (Lista de Funcionários e Conferência): clicar num chip agora só
+seleciona; pra ver todos de novo, clica em "Todas as obras". Vale pro chip "Sem obra" também.
+
 ## Apontador — "Modo teste" — HISTÓRICO, revertido no mesmo dia (commit `17d4c97`, 04/09/2026)
 
 Rubens perguntou se dava pra travar o Apontador no mês teste, só com opção de escolher o dia —
