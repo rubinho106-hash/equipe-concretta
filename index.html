@@ -759,6 +759,8 @@
       </div>
     </div>
 
+    <div class="obra-filtro-row" id="conf-obra-filtro-row"></div>
+
     <div class="list-wrap">
       <div class="loading-state" id="conf-loading-state">Carregando período…</div>
       <div class="empty-state" id="conf-empty-state" hidden>Nenhum funcionário encontrado.</div>
@@ -1470,6 +1472,7 @@ let mesConferencia = null;
 let listaMeses = [];
 let dadosMes = {}; // { funcId: { dias: {...}, statusConferencia: {q1,q2} } }
 let filtroConf = "";
+let filtroObraConf = "todas"; // "todas" | "" (sem obra) | nome da obra -- chips da Conferência de Ponto
 
 document.getElementById("seg-equipe").onclick = () => mostrarSegmento("equipe");
 document.getElementById("seg-conferencia").onclick = () => mostrarSegmento("conferencia");
@@ -1994,6 +1997,49 @@ function temLancamentoReal(info){
   });
 }
 
+// Chips de filtro por obra da Conferência de Ponto -- mesma aparência e
+// mesmo critério (obra padrão do cadastro) dos chips da Lista de
+// Funcionários. `elegiveis` é o conjunto que a conferência considera
+// (ativos + inativos com lançamento real no mês).
+function renderConfObraFiltro(elegiveis){
+  const row = document.getElementById("conf-obra-filtro-row");
+  if(!row) return;
+  const contagem = {};
+  let semObra = 0;
+  elegiveis.forEach(f => {
+    if(f.obraPadrao){ contagem[f.obraPadrao] = (contagem[f.obraPadrao] || 0) + 1; }
+    else { semObra++; }
+  });
+  const nomesObra = OBRAS.filter(o => contagem[o]);
+  row.innerHTML = "";
+
+  const chipTodas = document.createElement("div");
+  chipTodas.className = "obra-filtro-chip" + (filtroObraConf === "todas" ? " active" : "");
+  chipTodas.style.cssText = "background:var(--surface-2);color:var(--ink);border-color:var(--line)";
+  chipTodas.innerHTML = `Todas as obras <span class="qtd">${elegiveis.length}</span>`;
+  chipTodas.onclick = () => { filtroObraConf = "todas"; renderConfLista(); };
+  row.appendChild(chipTodas);
+
+  nomesObra.forEach(nome => {
+    const cor = corAvatar(nome);
+    const chip = document.createElement("div");
+    chip.className = "obra-filtro-chip" + (filtroObraConf === nome ? " active" : "");
+    chip.style.cssText = `background:${cor}1a;border-color:${cor}55;color:${cor}`;
+    chip.innerHTML = `${escapeHtml(nome)} <span class="qtd">${contagem[nome]}</span>`;
+    chip.onclick = () => { filtroObraConf = filtroObraConf === nome ? "todas" : nome; renderConfLista(); };
+    row.appendChild(chip);
+  });
+
+  if(semObra){
+    const chipSem = document.createElement("div");
+    chipSem.className = "obra-filtro-chip" + (filtroObraConf === "" ? " active" : "");
+    chipSem.style.cssText = "background:var(--surface-2);color:var(--muted);border-color:var(--line)";
+    chipSem.innerHTML = `Sem obra <span class="qtd">${semObra}</span>`;
+    chipSem.onclick = () => { filtroObraConf = filtroObraConf === "" ? "todas" : ""; renderConfLista(); };
+    row.appendChild(chipSem);
+  }
+}
+
 function renderConfLista(){
   const cont = document.getElementById("conf-lista");
   const empty = document.getElementById("conf-empty-state");
@@ -2008,14 +2054,24 @@ function renderConfLista(){
   // lista Inativo pra lancar de novo).
   const ativosFuncs = todos.filter(f => f.status !== "Inativo" || temLancamentoReal(dadosMes[f.id]));
 
+  renderConfObraFiltro(ativosFuncs);
+
+  // Filtro por obra (chips) -- por obra padrão do cadastro, mesmo critério
+  // da Lista de Funcionários. Afeta a lista E os cards de resumo (útil pra
+  // conferir "quantos de CRECHE ainda faltam"). A busca por texto é
+  // aplicada só na lista, por cima disso.
+  const naObra = filtroObraConf === "todas"
+    ? ativosFuncs
+    : ativosFuncs.filter(f => filtroObraConf === "" ? !f.obraPadrao : (f.obraPadrao || "") === filtroObraConf);
+
   let conferidos = 0;
-  ativosFuncs.forEach(f => { if(statusMesConferido(dadosMes[f.id] || {})) conferidos++; });
-  document.getElementById("conf-stat-total").textContent = ativosFuncs.length;
+  naObra.forEach(f => { if(statusMesConferido(dadosMes[f.id] || {})) conferidos++; });
+  document.getElementById("conf-stat-total").textContent = naObra.length;
   document.getElementById("conf-stat-conferidos").textContent = conferidos;
-  document.getElementById("conf-stat-pendentes").textContent = ativosFuncs.length - conferidos;
+  document.getElementById("conf-stat-pendentes").textContent = naObra.length - conferidos;
 
   const termo = filtroConf.trim().toLowerCase();
-  const visiveis = ativosFuncs.filter(f => !termo || (f.nome||"").toLowerCase().includes(termo) || (f.funcao||"").toLowerCase().includes(termo));
+  const visiveis = naObra.filter(f => !termo || (f.nome||"").toLowerCase().includes(termo) || (f.funcao||"").toLowerCase().includes(termo));
   empty.hidden = visiveis.length > 0;
 
   visiveis.forEach(f => {
