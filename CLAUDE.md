@@ -1246,6 +1246,21 @@ Testado local contra produção: coluna renderiza vazia por padrão; gravei 2h n
 Pereira Silva, confirmado no servidor e no resumo ("2"); revertido (`FieldValue.delete()`),
 conferido que o dia voltou ao estado original sem o campo.
 
+## Apontador: lançar horas extras por pessoa (commit `374f9d8`, 11/09/2026)
+
+Rubens pediu a mesma coisa no Apontador. Adicionado dentro do modal de cada funcionário — nova
+seção "Horas extras (opcional)" (`<input type="number">` + botão "Salvar horas"), independente
+do status do dia (dá pra ter Dia inteiro/Manhã/Tarde/Falta E horas extras juntos). `abrir()`
+pré-preenche com o valor já gravado, se tiver. Grava direto em `dias.{dia}.horasExtras` (mesmo
+campo do `index.html`, mesmo doc), invalida a conferência da quinzena, e passa pelas mesmas
+travas de sempre: `isFechado()`, `foraDoHorarioAgora()` (admin não trava por horário, apontador
+trava), `salvando` (clique duplo) e `executarComSalvamento()` (feedback Salvando/Salvo).
+
+Testado local contra produção (PARQUE IMPERIAL, sem fechamento): gravei 1,5h pro Esdra de Jesus
+Tavares, confirmado no servidor (m/t preservados) e feedback "Salvo ✓"; revertido, conferido no
+servidor. Testado também que dia fechado bloqueia o salvamento mesmo chamando o botão direto
+(defesa em profundidade), sem gravar nada.
+
 ## Apontador — "Modo teste" — HISTÓRICO, revertido no mesmo dia (commit `17d4c97`, 04/09/2026)
 
 Rubens perguntou se dava pra travar o Apontador no mês teste, só com opção de escolher o dia —
