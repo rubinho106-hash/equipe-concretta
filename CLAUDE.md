@@ -1226,6 +1226,26 @@ desmarcar** ao clicar de novo no mesmo — "trocar somente ao clicar em outra ob
 toggle-off dos dois filtros (Lista de Funcionários e Conferência): clicar num chip agora só
 seleciona; pra ver todos de novo, clica em "Todas as obras". Vale pro chip "Sem obra" também.
 
+## Cartão do admin: campo de horas extras por dia (commit `17a17c5`, 11/09/2026)
+
+Rubens pediu campo de horas extras no cartão. Confirmado via AskUserQuestion: por dia na
+tabela (não um campo único do mês), digitado à mão — o sistema não tem horário de entrada/saída,
+só manhã/tarde, então não tem como calcular sozinho.
+
+Nova coluna "H. Extras" na tabela de dias (`<input type="number" step="0.5">` por linha),
+gravado em `dias.{dia}.horasExtras` — `salvarDia()` já é genérico o bastante (`dias.{dia}.{campo}`
+qualquer), não precisou mudar. Novo "Total de horas extras" no resumo, somando os dias da
+quinzena aberta (mesmo escopo do "Total de dias"). Editar horas extras também invalida a
+conferência da quinzena, mesmo comportamento já existente pra m/t.
+
+**Escopo, por enquanto**: só no cartão do admin (`index.html`) — não pedido pro `apontador.html`
+nem pro `cartoes.html` (público). Se algum dia pedirem exibir (read-only) no `cartoes.html`, é
+só ler `dias.{dia}.horasExtras` no mesmo doc, já compartilhado.
+
+Testado local contra produção: coluna renderiza vazia por padrão; gravei 2h no dia 01 do Alex
+Pereira Silva, confirmado no servidor e no resumo ("2"); revertido (`FieldValue.delete()`),
+conferido que o dia voltou ao estado original sem o campo.
+
 ## Apontador — "Modo teste" — HISTÓRICO, revertido no mesmo dia (commit `17d4c97`, 04/09/2026)
 
 Rubens perguntou se dava pra travar o Apontador no mês teste, só com opção de escolher o dia —
