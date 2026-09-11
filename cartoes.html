@@ -324,12 +324,16 @@
           <div class="lbl" id="resumo-q2-lbl">2ª quinzena (16–30)</div>
           <div class="val" id="resumo-q2">0.0</div>
         </div>
+        <div class="quinzena">
+          <div class="lbl">Horas extras</div>
+          <div class="val" id="resumo-horas">0</div>
+        </div>
       </div>
     </div>
 
     <table class="dias">
       <thead>
-        <tr><th>Dia</th><th>Manhã</th><th>Tarde</th></tr>
+        <tr><th>Dia</th><th>Manhã</th><th>Tarde</th><th>H. Extras</th></tr>
       </thead>
       <tbody id="dias-body"></tbody>
     </table>
@@ -366,6 +370,13 @@ function iniciais(nome){
   const a = partes[0] ? partes[0][0] : "";
   const b = partes.length > 1 ? partes[partes.length - 1][0] : "";
   return (a + b).toUpperCase();
+}
+// O banco não tem regras/validação -- nome de obra entra direto em
+// innerHTML no resumo por obra, então precisa ser escapado antes.
+function escapeHtml(s){
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[c]));
 }
 
 const NOMES_MESES = ["JANEIRO","FEVEREIRO","MARÇO","ABRIL","MAIO","JUNHO","JULHO","AGOSTO","SETEMBRO","OUTUBRO","NOVEMBRO","DEZEMBRO"];
@@ -559,6 +570,7 @@ async function carregarMes(mes){
   tbody.innerHTML = "";
   const porObra = {};
   let totalQuinzena = 0;
+  let totalHorasExtras = 0;
 
   for(let dia = diaInicio; dia <= diaFim; dia++){
     let diaObj = (info.dias || {})[dia];
@@ -587,9 +599,17 @@ async function carregarMes(mes){
     if(diaObj.m && !ehMarcador(diaObj.m)){ porObra[diaObj.m] = (porObra[diaObj.m]||0) + 0.5; totalQuinzena += 0.5; }
     if(diaObj.t && !ehMarcador(diaObj.t)){ porObra[diaObj.t] = (porObra[diaObj.t]||0) + 0.5; totalQuinzena += 0.5; }
 
+    // Horas extras -- só leitura aqui (quem lança é o admin/apontador),
+    // mesmo campo dias.{dia}.horasExtras do doc compartilhado.
+    const tdHoras = document.createElement("td");
+    tdHoras.className = diaObj.horasExtras ? "" : "vazio";
+    tdHoras.textContent = diaObj.horasExtras ? String(diaObj.horasExtras).replace(".", ",") : "—";
+    totalHorasExtras += Number(diaObj.horasExtras) || 0;
+
     tr.appendChild(tdDia);
     tr.appendChild(tdM);
     tr.appendChild(tdT);
+    tr.appendChild(tdHoras);
     tbody.appendChild(tr);
   }
 
@@ -598,7 +618,7 @@ async function carregarMes(mes){
   chips.innerHTML = nomesObra.length ? nomesObra.map(nome => {
     const cor = corAvatar(nome);
     return `<div class="ficha-resumo-chip" style="background:${cor}1a;border-color:${cor}55;color:${cor}">`
-      + `<span>${nome}</span><span class="qtd">${porObra[nome].toFixed(1)}</span></div>`;
+      + `<span>${escapeHtml(nome)}</span><span class="qtd">${porObra[nome].toFixed(1)}</span></div>`;
   }).join("") : `<span style="color:var(--muted);font-size:12px">Nenhum dia lançado nessa quinzena.</span>`;
 
   // Mostra so o bloco de total da quinzena aberta -- o outro fica oculto
@@ -608,6 +628,7 @@ async function carregarMes(mes){
   document.getElementById("resumo-q2-bloco").style.display = fichaQuinzena === 2 ? "" : "none";
   document.getElementById("resumo-q" + fichaQuinzena).textContent = totalQuinzena.toFixed(1);
   document.getElementById("resumo-q2-lbl").textContent = "2ª quinzena (16–" + String(diasNoMes).padStart(2,"0") + ")";
+  document.getElementById("resumo-horas").textContent = totalHorasExtras.toString().replace(".", ",");
 }
 
 function fecharFicha(){
