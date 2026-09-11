@@ -583,6 +583,22 @@ function invalidarConferenciaPatch(info, dia){
   patch["q" + quinzenaDoDia(dia)] = "Pendente";
   return patch;
 }
+// Conferência pelo funcionário (11/09/2026) -- mesmo mecanismo, só que quem
+// marca é o próprio funcionário (via cartoes.html), independente da
+// conferência administrativa acima. Mesma invalidação: editar qualquer dia
+// da quinzena devolve a concordância pra "Pendente" também.
+function concordanciaAtual(info){
+  const cc = (info || {}).concordanciaFuncionario;
+  if(cc && typeof cc === "object"){
+    return { q1: cc.q1 === "Concordou" ? "Concordou" : "Pendente", q2: cc.q2 === "Concordou" ? "Concordou" : "Pendente" };
+  }
+  return { q1: "Pendente", q2: "Pendente" };
+}
+function invalidarConcordanciaPatch(info, dia){
+  const patch = concordanciaAtual(info);
+  patch["q" + quinzenaDoDia(dia)] = "Pendente";
+  return patch;
+}
 // Status exibido é sempre relativo à obra selecionada no momento (mesmo
 // comportamento já testado nos passos anteriores) -- se a pessoa tiver um
 // lançamento real em OUTRA obra nesse dia, aqui aparece "Não lançado" (a
@@ -961,6 +977,7 @@ async function aplicarLancamento(func, status){
       if(t === obraSel) upd["dias."+dia+".t"] = "";
       if(!Object.keys(upd).length) return true;
       upd.statusConferencia = invalidarConferenciaPatch(infoFresca, dia);
+      upd.concordanciaFuncionario = invalidarConcordanciaPatch(infoFresca, dia);
       const snap = await escreverComProtecao(ref, upd, dia, m, t);
       dadosMes[func.id] = snap.data();
       return true;
@@ -978,7 +995,11 @@ async function aplicarLancamento(func, status){
         const ok = await confirmarAcaoGeral(`${func.nome} já tem "${obraExistente}" lançado nesse dia.\n\nMarcar Falta apaga esse lançamento e deixa o dia inteiro como falta. Confirma?`);
         if(!ok) return false;
       }
-      const upd = { ["dias."+dia+".m"]:"FALTA", ["dias."+dia+".t"]:"FALTA", statusConferencia: invalidarConferenciaPatch(infoFresca, dia) };
+      const upd = {
+        ["dias."+dia+".m"]:"FALTA", ["dias."+dia+".t"]:"FALTA",
+        statusConferencia: invalidarConferenciaPatch(infoFresca, dia),
+        concordanciaFuncionario: invalidarConcordanciaPatch(infoFresca, dia)
+      };
       const snap = await escreverComProtecao(ref, upd, dia, m, t);
       dadosMes[func.id] = snap.data();
       return true;
@@ -1010,6 +1031,7 @@ async function aplicarLancamento(func, status){
     if(!alvoT && t===obraSel) upd["dias."+dia+".t"] = "";
     if(!alvoM && m===obraSel) upd["dias."+dia+".m"] = "";
     upd.statusConferencia = invalidarConferenciaPatch(infoFresca, dia);
+    upd.concordanciaFuncionario = invalidarConcordanciaPatch(infoFresca, dia);
 
     const snap = await escreverComProtecao(ref, upd, dia, m, t);
     dadosMes[func.id] = snap.data();
@@ -1055,7 +1077,8 @@ document.getElementById("btnSalvarHoras").addEventListener("click", async () => 
     const info = dadosMes[func.id] || {};
     await ref.update({
       ["dias."+dia+".horasExtras"]: valor,
-      statusConferencia: invalidarConferenciaPatch(info, dia)
+      statusConferencia: invalidarConferenciaPatch(info, dia),
+      concordanciaFuncionario: invalidarConcordanciaPatch(info, dia)
     });
     const snap = await ref.get();
     dadosMes[func.id] = snap.data();
@@ -1107,7 +1130,8 @@ document.getElementById("todosDia").addEventListener("click",async ()=>{
       await ref.update({
         ["dias."+dia+".m"]: obraSel,
         ["dias."+dia+".t"]: obraSel,
-        statusConferencia: invalidarConferenciaPatch(info, dia)
+        statusConferencia: invalidarConferenciaPatch(info, dia),
+        concordanciaFuncionario: invalidarConcordanciaPatch(info, dia)
       });
       const snap = await ref.get();
       dadosMes[f.id] = snap.data();
@@ -1159,6 +1183,7 @@ document.getElementById("limparDia").addEventListener("click",async ()=>{
       if(Object.keys(upd).length){
         const info = dadosMes[f.id] || {};
         upd.statusConferencia = invalidarConferenciaPatch(info, dia);
+        upd.concordanciaFuncionario = invalidarConcordanciaPatch(info, dia);
         const ref = await garantirDocPontos(f.id, mesCarregado);
         await ref.update(upd);
         const snap = await ref.get();

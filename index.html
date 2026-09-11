@@ -311,7 +311,7 @@
   .modal .modal-sub{ font-size: 12.5px; color: var(--muted); margin-bottom: 18px; }
   .field{ margin-bottom: 14px; }
   .field label{ display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: var(--muted); }
-  .field input, .field select{
+  .field input, .field select, .field textarea{
     width: 100%;
     padding: 9px 11px;
     border: 1px solid var(--line);
@@ -320,8 +320,9 @@
     color: var(--ink);
     font: inherit;
     font-size: 13.5px;
+    resize: vertical;
   }
-  .field input:focus, .field select:focus{ outline: 2px solid var(--accent); outline-offset: 1px; }
+  .field input:focus, .field select:focus, .field textarea:focus{ outline: 2px solid var(--accent); outline-offset: 1px; }
   .modal-actions{ display: flex; justify-content: space-between; align-items: center; margin-top: 20px; gap: 10px; }
   .modal-actions-right{ display: flex; gap: 8px; }
   .link-danger{ background: none; border: none; color: var(--danger-ink); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; padding: 6px 4px; }
@@ -518,6 +519,26 @@
   }
   .conf-quinzena-col .q-lbl{ font-size: 9px; font-weight: 800; opacity: .7; }
   .conf-quinzena-col .btn{ font-size: 11.5px; padding: 6px 10px; justify-content: center; }
+
+  /* Divergencia informada pelo funcionario (11/09/2026) -- badge na lista
+     da Conferencia de Ponto e secao de resposta dentro do cartao. Badge so
+     aparece quando divergenciasAbertasPorFunc[f.id] existir (best-effort,
+     depende de um indice de collection group no Firestore -- ver
+     carregarContagemDivergencias()). */
+  .divergencia-badge{
+    display: inline-flex; align-items: center; gap: 4px;
+    background: color-mix(in srgb, var(--danger-ink) 16%, transparent);
+    color: var(--danger-ink);
+    font-size: 10.5px; font-weight: 700;
+    border-radius: 999px; padding: 2px 8px; margin-top: 3px; width: fit-content;
+  }
+  .ficha-divergencias{ margin: 4px 0 14px; }
+  .ficha-divergencias-titulo{ font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 8px; }
+  .divergencia-item{ border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; font-size: 13px; }
+  .divergencia-item .cabecalho{ display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .divergencia-item .resposta{ margin-top: 8px; padding: 8px 10px; background: var(--surface-2); border-radius: 8px; font-size: 12.5px; }
+  .divergencia-item .resposta-form{ margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); }
+  .divergencia-item .div-corrigir-label{ display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 500; margin-bottom: 8px; cursor: pointer; }
 
   .ficha-modal{
     position: fixed;
@@ -915,6 +936,10 @@
         </thead>
         <tbody id="ficha-body"></tbody>
       </table>
+    </div>
+    <div class="ficha-divergencias" id="ficha-divergencias-wrap" hidden>
+      <div class="ficha-divergencias-titulo">Divergências informadas pelo funcionário</div>
+      <div id="ficha-divergencias-lista"></div>
     </div>
     <div class="modal-actions">
       <div></div>
@@ -1748,6 +1773,31 @@ async function selecionarMes(mes){
     return;
   }
   loading.hidden = true;
+  carregarContagemDivergencias();
+  renderConfLista();
+}
+
+// Contagem de divergencias abertas por funcionario, pro badge na lista da
+// Conferencia de Ponto (11/09/2026). Best-effort: uma query collection
+// group precisa de um indice que nao existe por padrao no Firestore -- se
+// a query falhar (indice ainda nao criado no console), so nao mostra o
+// badge, sem quebrar o resto da tela. Nao bloqueia renderConfLista() (roda
+// em paralelo, re-renderiza sozinha quando termina).
+let divergenciasAbertasPorFunc = {};
+async function carregarContagemDivergencias(){
+  try {
+    const snap = await db.collectionGroup("divergencias").where("status", "==", "Aberta").get();
+    const contagem = {};
+    snap.docs.forEach(d => {
+      const data = d.data();
+      if(data.mes !== mesConferencia) return;
+      const funcId = d.ref.parent.parent.id;
+      contagem[funcId] = (contagem[funcId] || 0) + 1;
+    });
+    divergenciasAbertasPorFunc = contagem;
+  } catch(e){
+    divergenciasAbertasPorFunc = {};
+  }
   renderConfLista();
 }
 
@@ -2002,6 +2052,24 @@ function invalidarConferenciaPatch(info, dia){
 function statusMesConferido(info){
   return statusQuinzena(info, 1) === "Conferido" && statusQuinzena(info, 2) === "Conferido";
 }
+
+// Conferência pelo funcionário (11/09/2026, a partir de um protótipo que o
+// Rubens mandou pra análise) -- mesmo mecanismo de statusConferencia, mas
+// é o PRÓPRIO funcionário quem marca (via cartoes.html), independente da
+// conferência administrativa. Mesmo shape {q1,q2}, mesma invalidação: editar
+// qualquer dia da quinzena devolve a concordância pra "Pendente" também,
+// exatamente como já acontece com statusConferencia.
+function concordanciaQuinzena(info, quinzena){
+  const cc = (info || {}).concordanciaFuncionario;
+  return cc && cc["q" + quinzena] === "Concordou" ? "Concordou" : "Pendente";
+}
+function invalidarConcordanciaPatch(info, dia){
+  const q = quinzenaDoDia(dia);
+  return {
+    q1: q === 1 ? "Pendente" : concordanciaQuinzena(info, 1),
+    q2: q === 2 ? "Pendente" : concordanciaQuinzena(info, 2),
+  };
+}
 // Usado pra decidir se um funcionario Inativo ainda deve aparecer na
 // conferencia de um mes especifico -- true so quando existe pelo menos um
 // periodo com obra de verdade lancada (nao marcador, nao vazio).
@@ -2109,6 +2177,14 @@ function renderConfLista(){
     funcao.textContent = f.funcao || "—";
     bloco.appendChild(nome);
     bloco.appendChild(funcao);
+
+    const qtdDivergencias = divergenciasAbertasPorFunc[f.id] || 0;
+    if(qtdDivergencias > 0){
+      const badge = document.createElement("div");
+      badge.className = "divergencia-badge";
+      badge.textContent = "⚠ " + qtdDivergencias + (qtdDivergencias === 1 ? " divergência" : " divergências");
+      bloco.appendChild(badge);
+    }
 
     row.appendChild(avatar);
     row.appendChild(bloco);
@@ -2343,6 +2419,100 @@ function renderFichaConteudo(){
     tbody.appendChild(tr);
   }
   renderResumoFicha(porObra, totalHorasExtras);
+  carregarDivergenciasFicha();
+}
+
+// Divergencias informadas pelo funcionario (via cartoes.html) pra esse
+// funcionario/mes -- mostra TODAS (das duas quinzenas juntas, pra nao
+// sumir uma divergencia da 1a quinzena quando o admin ta olhando a 2a).
+// Cada uma aberta ganha um formulario de resposta + opcao de corrigir o
+// dia/periodo direto, reusando salvarDia() (mesma trava e invalidacao de
+// conferencia/concordancia que qualquer outra edicao de dia).
+async function carregarDivergenciasFicha(){
+  const wrap = document.getElementById("ficha-divergencias-wrap");
+  const lista = document.getElementById("ficha-divergencias-lista");
+  if(!fichaFunc) { wrap.hidden = true; return; }
+  let itens = [];
+  try {
+    const snap = await db.collection("funcionarios/" + fichaFunc.id + "/divergencias")
+      .where("mes", "==", mesConferencia).get();
+    itens = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.dia || 0) - (a.dia || 0));
+  } catch(e){
+    itens = [];
+  }
+  wrap.hidden = itens.length === 0;
+  if(itens.length === 0) return;
+
+  const mesLabel = mesConferencia.split("-")[1];
+  lista.innerHTML = itens.map(t => {
+    const aberta = t.status === "Aberta";
+    return `
+      <div class="divergencia-item" data-div-id="${t.id}">
+        <div class="cabecalho">
+          <b>Dia ${String(t.dia).padStart(2, "0")}/${mesLabel} · ${t.periodo === "m" ? "Manhã" : "Tarde"}</b>
+          <span class="pill ${aberta ? "pill-pendente" : "pill-conferido"}" style="margin:0">${escapeHtml(t.status)}</span>
+        </div>
+        <div><b>${escapeHtml(t.tipo)}</b>${t.obraInformada ? " · " + escapeHtml(t.obraInformada) : ""}</div>
+        <div style="margin-top:4px">${escapeHtml(t.texto)}</div>
+        ${t.resposta ? `<div class="resposta"><b>Sua resposta</b><br>${escapeHtml(t.resposta)}</div>` : ""}
+        ${aberta ? `
+          <div class="resposta-form">
+            <div class="field" style="margin-bottom:8px">
+              <textarea class="div-resposta" rows="2" placeholder="Resposta pro funcionário (opcional)"></textarea>
+            </div>
+            <label class="div-corrigir-label">
+              <input type="checkbox" class="div-corrigir-check"> Corrigir o lançamento desse dia/período
+            </label>
+            <div class="field div-corrigir-select-field" style="margin-bottom:8px" hidden>
+              <select class="div-corrigir-select"></select>
+            </div>
+            <button type="button" class="btn btn-primary div-btn-resolver">Marcar como resolvida</button>
+          </div>
+        ` : ""}
+      </div>
+    `;
+  }).join("");
+
+  itens.filter(t => t.status === "Aberta").forEach(t => {
+    const item = lista.querySelector(`[data-div-id="${t.id}"]`);
+    if(!item) return;
+    const check = item.querySelector(".div-corrigir-check");
+    const selectField = item.querySelector(".div-corrigir-select-field");
+    const select = item.querySelector(".div-corrigir-select");
+    const diaObj = ((dadosMes[fichaFunc.id] || {}).dias || {})[t.dia] || {};
+    select.innerHTML = opcoesObra(diaObj[t.periodo] || "");
+    check.onchange = () => { selectField.hidden = !check.checked; };
+    item.querySelector(".div-btn-resolver").onclick = () => {
+      resolverDivergencia(t, item.querySelector(".div-resposta").value, check.checked ? select.value : null);
+    };
+  });
+}
+
+// corrigido: null = so responde/resolve sem mexer no lancamento; qualquer
+// outro valor (incluindo "") = tambem grava esse valor em dias.{dia}.{periodo}
+// via salvarDia(), o mesmo caminho usado pelos selects da tabela (mesma
+// trava de conferencia/concordancia).
+async function resolverDivergencia(div, resposta, corrigido){
+  const msg = corrigido !== null
+    ? `Marcar como resolvida e corrigir o dia ${String(div.dia).padStart(2, "0")} (${div.periodo === "m" ? "manhã" : "tarde"}) para "${corrigido || "vazio"}"?`
+    : "Marcar essa divergência como resolvida?";
+  const ok = await confirmarAcao(msg, "Confirmar", "primary");
+  if(!ok) return;
+  try {
+    if(corrigido !== null){
+      await salvarDia(div.dia, div.periodo, corrigido);
+    }
+    await db.doc("funcionarios/" + fichaFunc.id + "/divergencias/" + div.id).update({
+      status: "Resolvida",
+      resposta: resposta || "",
+      resolvidoEm: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+    toast("Divergência marcada como resolvida.");
+    carregarContagemDivergencias();
+    carregarDivergenciasFicha();
+  } catch(e){
+    toast("Não deu pra salvar agora — tenta de novo.");
+  }
 }
 
 function renderResumoFicha(porObra, totalHorasExtras){
@@ -2372,6 +2542,7 @@ async function salvarDia(dia, campo, valor){
     const infoAntes = dadosMes[fichaFunc.id] || {};
     const atualizacao = { ["dias." + dia + "." + campo]: valor };
     atualizacao.statusConferencia = invalidarConferenciaPatch(infoAntes, dia);
+    atualizacao.concordanciaFuncionario = invalidarConcordanciaPatch(infoAntes, dia);
 
     await ref.update(atualizacao);
     const snap = await ref.get();

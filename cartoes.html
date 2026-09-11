@@ -276,6 +276,39 @@
 
   .modal-actions{ display: flex; justify-content: flex-end; margin-top: 18px; }
 
+  .btn-primary{ background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn-primary:disabled{ opacity: .5; cursor: default; }
+
+  .secao-concordancia{ margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+  .concordancia-linha{ display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+
+  #ficha-overlay label{
+    display: block; font-size: 11px; font-weight: 600; letter-spacing: .03em;
+    text-transform: uppercase; color: var(--muted); margin: 14px 0 6px;
+  }
+  #ficha-overlay select, #ficha-overlay textarea{
+    width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 9px;
+    background: var(--surface); color: var(--ink); font: inherit; font-size: 14px;
+  }
+  #ficha-overlay textarea{ min-height: 80px; resize: vertical; }
+  #ficha-overlay select:focus, #ficha-overlay textarea:focus{ outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  .divergencia-item{
+    margin-top: 12px; padding: 12px 14px; border: 1px solid var(--line);
+    border-radius: 10px; background: var(--surface-2); font-size: 13px;
+  }
+  .divergencia-item .cabecalho{ display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .divergencia-item .resposta{ margin-top: 8px; padding: 8px 10px; background: var(--surface); border-radius: 8px; font-size: 12.5px; }
+  .pill-resolvida{ background: var(--good-bg); color: var(--good-ink); }
+
+  #toast{
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--ink); color: var(--bg); padding: 10px 18px; border-radius: 9px;
+    font-size: 13px; font-weight: 500; opacity: 0; pointer-events: none; transition: opacity .2s ease;
+    max-width: 90vw; text-align: center;
+  }
+  #toast.show{ opacity: 1; }
+
   [hidden]{ display: none !important; }
 </style>
 </head>
@@ -338,11 +371,59 @@
       <tbody id="dias-body"></tbody>
     </table>
 
+    <div class="secao-concordancia">
+      <div class="concordancia-linha">
+        <span id="concordancia-pill"></span>
+        <button type="button" class="btn btn-primary" id="btn-concordar">✓ Concordo com meu cartão</button>
+      </div>
+      <button type="button" class="btn" id="btn-abrir-divergencia" style="width:100%;margin-top:8px">⚠ Informar divergência nesta quinzena</button>
+    </div>
+
+    <form id="form-divergencia" hidden>
+      <label>Dia</label>
+      <select id="div-dia"></select>
+      <label>Período</label>
+      <select id="div-periodo">
+        <option value="m">Manhã</option>
+        <option value="t">Tarde</option>
+      </select>
+      <label>O que precisa ser verificado?</label>
+      <select id="div-tipo">
+        <option>Período não registrado</option>
+        <option>Obra incorreta</option>
+        <option>Falta indevida</option>
+        <option>Outro motivo</option>
+      </select>
+      <label>Obra informada (se for o caso)</label>
+      <select id="div-obra"></select>
+      <label>Explique o que aconteceu</label>
+      <textarea id="div-texto" maxlength="1000" required placeholder="Ex.: trabalhei à tarde e o período está vazio."></textarea>
+      <div class="modal-actions" style="justify-content:space-between">
+        <button type="button" class="btn" id="btn-cancelar-divergencia">Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="btn-enviar-divergencia">Enviar</button>
+      </div>
+    </form>
+
+    <div id="lista-divergencias"></div>
+
     <div class="modal-actions">
       <button type="button" class="btn" id="btn-fechar-ficha">Fechar</button>
     </div>
   </div>
 </div>
+
+<div class="overlay" id="confirm-overlay" hidden>
+  <div class="modal" style="max-width:380px">
+    <h2 id="confirm-titulo">Confirmar</h2>
+    <div class="modal-sub" id="confirm-texto" style="white-space:pre-line">Tem certeza?</div>
+    <div class="modal-actions" style="justify-content:space-between">
+      <button type="button" class="btn" id="confirm-cancelar">Cancelar</button>
+      <button type="button" class="btn btn-primary" id="confirm-ok">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -403,6 +484,14 @@ function statusQuinzena(info, quinzena){
   if(sc && typeof sc === "object") return sc["q" + quinzena] === "Conferido" ? "Conferido" : "Pendente";
   return sc === "Conferido" ? "Conferido" : "Pendente";
 }
+// Conferência pelo funcionário (11/09/2026) -- mesmo shape {q1,q2} do
+// statusConferencia acima, mas quem marca é o próprio funcionário. Fica em
+// concordanciaFuncionario no mesmo doc; index.html/apontador.html já
+// devolvem isso pra "Pendente" sempre que qualquer dia da quinzena muda.
+function concordanciaQuinzena(info, quinzena){
+  const cc = (info || {}).concordanciaFuncionario;
+  return cc && cc["q" + quinzena] === "Concordou" ? "Concordou" : "Pendente";
+}
 
 function mesAtualReal(){
   const d = new Date();
@@ -434,12 +523,18 @@ async function carregarDadosMesAtual(){
   resultados.forEach(r => { dadosMesAtual[r.id] = r.data; });
 }
 
+let OBRAS = [];
+
 async function iniciar(){
   try {
-    const snap = await db.collection("funcionarios").orderBy("nome").get();
+    const [snap, obrasSnap] = await Promise.all([
+      db.collection("funcionarios").orderBy("nome").get(),
+      db.collection("obras").orderBy("nome").get()
+    ]);
     todos = snap.docs
       .map(d => ({ id: d.id, ...d.data() }))
       .filter(f => f.status !== "Inativo");
+    OBRAS = obrasSnap.docs.map(d => d.data().nome);
     await carregarDadosMesAtual();
   } catch(e){
     document.getElementById("estado-carregando").textContent = "Não deu pra carregar a equipe agora.";
@@ -521,6 +616,39 @@ let fichaFunc = null;
 // da lista foi clicado (1ªQ ou 2ªQ), igual o index.html faz na Conferencia
 // de Ponto. Sem toggle dentro do cartao (mesma decisao de la).
 let fichaQuinzena = 1;
+// Guardados por carregarMes() pra uso nos handlers de concordância/
+// divergência, que rodam fora da função (cliques de botão).
+let infoFichaAtual = null;
+let mesFichaAtual = null;
+
+// Modal de confirmacao proprio (mesmo motivo do index.html/apontador.html
+// -- confirm() nativo trava silenciosamente em navegadores embutidos tipo
+// WhatsApp/Instagram, muito comum pra quem abre esse link pelo celular).
+let confirmResolver = null;
+function confirmarAcao(mensagem, textoBotao){
+  document.getElementById("confirm-texto").textContent = mensagem;
+  document.getElementById("confirm-ok").textContent = textoBotao || "Confirmar";
+  document.getElementById("confirm-overlay").hidden = false;
+  return new Promise((resolve) => { confirmResolver = resolve; });
+}
+function fecharConfirmacao(resultado){
+  document.getElementById("confirm-overlay").hidden = true;
+  if(confirmResolver){ confirmResolver(resultado); confirmResolver = null; }
+}
+document.getElementById("confirm-ok").onclick = () => fecharConfirmacao(true);
+document.getElementById("confirm-cancelar").onclick = () => fecharConfirmacao(false);
+document.getElementById("confirm-overlay").addEventListener("click", (e) => {
+  if(e.target.id === "confirm-overlay") fecharConfirmacao(false);
+});
+
+let toastTimer = null;
+function toast(msg){
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 3200);
+}
 
 // Mes sempre fixo no mes atual real -- pedido do Rubens, cartao publico do
 // funcionario nao deve deixar trocar de mes (evita confusao/duvida sobre
@@ -629,7 +757,119 @@ async function carregarMes(mes){
   document.getElementById("resumo-q" + fichaQuinzena).textContent = totalQuinzena.toFixed(1);
   document.getElementById("resumo-q2-lbl").textContent = "2ª quinzena (16–" + String(diasNoMes).padStart(2,"0") + ")";
   document.getElementById("resumo-horas").textContent = totalHorasExtras.toString().replace(".", ",");
+
+  // Conferência pelo funcionário (11/09/2026) -- guarda o info/mes atual
+  // pra usar depois nos handlers de "Concordo"/"Informar divergência".
+  infoFichaAtual = info;
+  mesFichaAtual = mes;
+
+  const concordanciaAtual = concordanciaQuinzena(info, fichaQuinzena);
+  document.getElementById("concordancia-pill").innerHTML =
+    `<span class="status-pill ${concordanciaAtual === "Concordou" ? "pill-conferido" : "pill-pendente"}">Você: ${concordanciaAtual}</span>`;
+  document.getElementById("btn-concordar").disabled = concordanciaAtual === "Concordou";
+
+  document.getElementById("form-divergencia").hidden = true;
+  document.getElementById("form-divergencia").reset();
+  const selDia = document.getElementById("div-dia");
+  selDia.innerHTML = "";
+  for(let d = diaInicio; d <= diaFim; d++){
+    const op = document.createElement("option");
+    op.value = d;
+    op.textContent = String(d).padStart(2, "0") + "/" + String(mesNum).padStart(2, "0");
+    selDia.appendChild(op);
+  }
+  document.getElementById("div-obra").innerHTML = OBRAS.map(o => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join("");
+
+  await carregarDivergencias();
 }
+
+async function carregarDivergencias(){
+  const wrap = document.getElementById("lista-divergencias");
+  if(!fichaFunc){ wrap.innerHTML = ""; return; }
+  try {
+    const snap = await db.collection("funcionarios/" + fichaFunc.id + "/divergencias")
+      .where("mes", "==", mesFichaAtual).get();
+    const itens = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (b.dia || 0) - (a.dia || 0));
+    wrap.innerHTML = itens.length ? itens.map(t => `
+      <div class="divergencia-item">
+        <div class="cabecalho">
+          <b>Dia ${String(t.dia).padStart(2,"0")}/${mesFichaAtual.split("-")[1]} · ${t.periodo === "m" ? "Manhã" : "Tarde"}</b>
+          <span class="status-pill ${t.status === "Aberta" ? "pill-pendente" : "pill-resolvida"}" style="margin:0">${escapeHtml(t.status)}</span>
+        </div>
+        <div><b>${escapeHtml(t.tipo)}</b>${t.obraInformada ? " · " + escapeHtml(t.obraInformada) : ""}</div>
+        <div style="margin-top:4px">${escapeHtml(t.texto)}</div>
+        ${t.resposta ? `<div class="resposta"><b>Resposta do responsável</b><br>${escapeHtml(t.resposta)}</div>` : ""}
+      </div>
+    `).join("") : "";
+  } catch(e){
+    wrap.innerHTML = "";
+  }
+}
+
+document.getElementById("btn-concordar").addEventListener("click", async () => {
+  if(!fichaFunc) return;
+  const ok = await confirmarAcao("Confirmo que conferi os dias e períodos apresentados nesta quinzena.", "Concordo");
+  if(!ok) return;
+  try {
+    const patchAtual = {
+      q1: concordanciaQuinzena(infoFichaAtual, 1),
+      q2: concordanciaQuinzena(infoFichaAtual, 2),
+    };
+    patchAtual["q" + fichaQuinzena] = "Concordou";
+    // set(..., {merge:true}) em vez de update() -- o doc do mes pode ainda
+    // nao existir se ninguem nunca lancou nada nesse funcionario/mes.
+    await db.doc("funcionarios/" + fichaFunc.id + "/pontos/" + mesFichaAtual)
+      .set({ concordanciaFuncionario: patchAtual }, { merge: true });
+    infoFichaAtual.concordanciaFuncionario = patchAtual;
+    document.getElementById("concordancia-pill").innerHTML =
+      `<span class="status-pill pill-conferido">Você: Concordou</span>`;
+    document.getElementById("btn-concordar").disabled = true;
+    toast("Concordância registrada.");
+  } catch(e){
+    toast("Não deu pra registrar agora — tenta de novo.");
+  }
+});
+
+document.getElementById("btn-abrir-divergencia").addEventListener("click", () => {
+  document.getElementById("form-divergencia").hidden = false;
+  document.getElementById("form-divergencia").scrollIntoView({ behavior: "smooth", block: "nearest" });
+});
+document.getElementById("btn-cancelar-divergencia").addEventListener("click", () => {
+  document.getElementById("form-divergencia").hidden = true;
+  document.getElementById("form-divergencia").reset();
+});
+
+document.getElementById("form-divergencia").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if(!fichaFunc) return;
+  const texto = document.getElementById("div-texto").value.trim();
+  if(!texto){ toast("Escreva uma explicação."); return; }
+  const dados = {
+    mes: mesFichaAtual,
+    dia: Number(document.getElementById("div-dia").value),
+    periodo: document.getElementById("div-periodo").value,
+    tipo: document.getElementById("div-tipo").value,
+    obraInformada: document.getElementById("div-obra").value,
+    texto,
+    status: "Aberta",
+    resposta: "",
+    criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  const btn = document.getElementById("btn-enviar-divergencia");
+  btn.disabled = true;
+  try {
+    await db.collection("funcionarios/" + fichaFunc.id + "/divergencias").add(dados);
+    document.getElementById("form-divergencia").hidden = true;
+    document.getElementById("form-divergencia").reset();
+    toast("Divergência enviada. O responsável vai analisar.");
+    await carregarDivergencias();
+  } catch(e){
+    toast("Não deu pra enviar agora — tenta de novo.");
+  } finally {
+    btn.disabled = false;
+  }
+});
 
 function fecharFicha(){
   document.getElementById("ficha-overlay").hidden = true;
