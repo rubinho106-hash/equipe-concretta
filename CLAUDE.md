@@ -1261,6 +1261,22 @@ Tavares, confirmado no servidor (m/t preservados) e feedback "Salvo ✓"; revert
 servidor. Testado também que dia fechado bloqueia o salvamento mesmo chamando o botão direto
 (defesa em profundidade), sem gravar nada.
 
+## Cartões (público): mostra horas extras, só leitura (commit `215e372`, 11/09/2026)
+
+Rubens pediu horas extras também no `cartoes.html` — a página pública, 100% só leitura, que a
+equipe usa pra conferir o próprio ponto. Nova coluna "H. Extras" (texto puro) na tabela de dias
++ um bloco "Horas extras" ao lado das quinzenas no resumo (soma da quinzena aberta), lendo
+`dias.{dia}.horasExtras` do mesmo doc compartilhado — quem lança continua sendo só o admin
+(`index.html`) ou o apontador (`apontador.html`).
+
+**Bônus enquanto mexia no arquivo**: nome de obra no chip do resumo entrava sem escape em
+`innerHTML` — adicionado `escapeHtml()` (mesmo padrão já aplicado antes em `index.html` e
+`apontador.html`, esse arquivo tinha ficado de fora).
+
+Testado local: coluna vazia por padrão; testei um valor real temporário (1,5h no dia 14, vazio,
+do Alex Pereira Silva) pra confirmar a exibição (coluna "1,5" e total "1,5"), revertido em
+seguida (`FieldValue.delete()`), conferido no servidor.
+
 ## Apontador — "Modo teste" — HISTÓRICO, revertido no mesmo dia (commit `17d4c97`, 04/09/2026)
 
 Rubens perguntou se dava pra travar o Apontador no mês teste, só com opção de escolher o dia —
