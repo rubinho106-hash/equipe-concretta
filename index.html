@@ -631,6 +631,18 @@
   }
   table.dias td.dia-col{ font-weight: 700; color: var(--muted); width: 34px; }
   table.dias td.qtd-col{ font-weight: 700; width: 46px; }
+  table.dias td.horas-col{ width: 52px; }
+  .horas-input{
+    width: 100%;
+    padding: 3px 4px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
+    font-size: 11.5px;
+    text-align: center;
+  }
   .dias-scroll{ flex: 1; min-height: 0; overflow-y: auto; }
   .ficha-modal .modal-actions{ flex-shrink: 0; }
   .obra-select{
@@ -891,11 +903,15 @@
         <span class="lbl">Total de dias</span>
         <span class="val" id="ficha-resumo-total">0.0</span>
       </div>
+      <div class="ficha-resumo-total">
+        <span class="lbl">Total de horas extras</span>
+        <span class="val" id="ficha-resumo-horas">0</span>
+      </div>
     </div>
     <div class="dias-scroll">
       <table class="dias">
         <thead>
-          <tr><th>Dia</th><th>Manhã</th><th>Tarde</th><th>Qtd.</th></tr>
+          <tr><th>Dia</th><th>Manhã</th><th>Tarde</th><th>Qtd.</th><th>H. Extras</th></tr>
         </thead>
         <tbody id="ficha-body"></tbody>
       </table>
@@ -2260,6 +2276,7 @@ function renderFichaConteudo(){
   const tbody = document.getElementById("ficha-body");
   tbody.innerHTML = "";
   const porObra = {};
+  let totalHorasExtras = 0;
   for(let dia = diaInicio; dia <= diaFim; dia++){
     let diaObj = (info.dias || {})[dia];
     if(!diaObj){
@@ -2300,16 +2317,35 @@ function renderFichaConteudo(){
     if(diaObj.m && !ehMarcador(diaObj.m)) porObra[diaObj.m] = (porObra[diaObj.m] || 0) + 0.5;
     if(diaObj.t && !ehMarcador(diaObj.t)) porObra[diaObj.t] = (porObra[diaObj.t] || 0) + 0.5;
 
+    // Horas extras -- digitadas à mão (pedido do Rubens, 11/09/2026); o
+    // sistema não tem horário de entrada/saída, só manhã/tarde, então não
+    // tem como calcular sozinho. Guardado em dias.{dia}.horasExtras, junto
+    // com m/t no mesmo doc -- salvarDia() já é genérico o bastante (não
+    // precisou mudar).
+    const tdHoras = document.createElement("td");
+    tdHoras.className = "horas-col";
+    const inputHoras = document.createElement("input");
+    inputHoras.type = "number";
+    inputHoras.min = "0";
+    inputHoras.step = "0.5";
+    inputHoras.className = "horas-input";
+    inputHoras.value = diaObj.horasExtras ? diaObj.horasExtras : "";
+    inputHoras.placeholder = "–";
+    inputHoras.onchange = () => salvarDia(dia, "horasExtras", Number(inputHoras.value) || 0);
+    tdHoras.appendChild(inputHoras);
+    totalHorasExtras += Number(diaObj.horasExtras) || 0;
+
     tr.appendChild(tdDia);
     tr.appendChild(tdM);
     tr.appendChild(tdT);
     tr.appendChild(tdQtd);
+    tr.appendChild(tdHoras);
     tbody.appendChild(tr);
   }
-  renderResumoFicha(porObra);
+  renderResumoFicha(porObra, totalHorasExtras);
 }
 
-function renderResumoFicha(porObra){
+function renderResumoFicha(porObra, totalHorasExtras){
   const nomes = Array.from(new Set([...OBRAS, ...Object.keys(porObra)]));
   const chips = document.getElementById("ficha-resumo-chips");
   chips.innerHTML = nomes.map(nome => {
@@ -2320,6 +2356,7 @@ function renderResumoFicha(porObra){
   }).join("");
   const total = Object.values(porObra).reduce((soma, v) => soma + v, 0);
   document.getElementById("ficha-resumo-total").textContent = total.toFixed(1);
+  document.getElementById("ficha-resumo-horas").textContent = (totalHorasExtras || 0).toString().replace(".", ",");
 }
 
 // FALTA virou independente por período (pedido do Rubens, 08/09/2026,
