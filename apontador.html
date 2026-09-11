@@ -98,6 +98,12 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .absentbtn{background:var(--danger-ink)}
 .cancelbtn{background:var(--surface-2);color:var(--ink);border:1px solid var(--line)}
 .clearbtn{background:var(--surface);color:var(--danger-ink);border:1px solid var(--danger-ink)}
+.horas-extras-row{margin-top:2px;padding-top:12px;border-top:1px solid var(--line)}
+.horas-extras-row label{display:block;color:var(--muted);font-size:11px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;margin-bottom:6px}
+.horas-extras-linha{display:flex;gap:8px}
+.horas-extras-linha input{flex:1;padding:11px 12px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);font:inherit;font-size:15px}
+.horas-extras-linha input:focus{outline:2px solid var(--accent);outline-offset:1px}
+.horasbtn{background:var(--accent);flex-shrink:0;padding:0 16px;font-size:13px}
 
 .closed-banner{margin-top:12px;padding:12px 14px;border-radius:10px;background:var(--warn-bg);border:1px solid #f0c49a;color:var(--warn-ink);font-size:13px;font-weight:600}
 
@@ -200,6 +206,13 @@ button:disabled{opacity:.45;cursor:not-allowed}
       <button class="choice halfbtn" data-status="afternoon">Tarde • 0,5 diária</button>
       <button class="choice absentbtn" data-status="absent">Falta • 0</button>
       <button class="choice clearbtn" data-status="clear" id="opcaoLimpar" style="display:none">🗑 Limpar lançamento</button>
+      <div class="horas-extras-row">
+        <label for="inputHorasExtras">Horas extras (opcional)</label>
+        <div class="horas-extras-linha">
+          <input type="number" id="inputHorasExtras" min="0" step="0.5" placeholder="0">
+          <button type="button" class="choice horasbtn" id="btnSalvarHoras">Salvar horas</button>
+        </div>
+      </div>
       <button class="choice cancelbtn" id="cancelar">Cancelar</button>
     </div>
     <div class="choices" id="confirmarView" style="display:none">
@@ -781,6 +794,11 @@ function abrir(f){
   // não pertence a obra nenhuma, então não tem o que limpar por aqui.
   const st = statusParaExibir(f.id);
   document.getElementById("opcaoLimpar").style.display = (st.cls==="full"||st.cls==="half") ? "block" : "none";
+  // Horas extras -- digitado à mão, independente do status do dia (a
+  // pessoa pode ter Dia inteiro/Manhã/Tarde/Falta E horas extras juntos).
+  // Pré-preenche com o valor já gravado pra esse dia, se tiver.
+  const horasAtual = diaDoFuncionario(f.id).horasExtras;
+  document.getElementById("inputHorasExtras").value = horasAtual ? horasAtual : "";
   backdrop.style.display="flex";
 }
 function fecharModal(){atual=null;backdrop.style.display="none";mostrarEscolhas()}
@@ -1022,6 +1040,27 @@ document.getElementById("btnConfirmar").addEventListener("click",()=>{
   aplicar(statusPendente); // aplicar() ja chama fecharModal(), que reseta a tela de escolhas
 });
 backdrop.addEventListener("click",e=>{if(e.target===backdrop)fecharModal()});
+
+document.getElementById("btnSalvarHoras").addEventListener("click", async () => {
+  if(!atual)return;
+  if(isFechado())return;
+  if(foraDoHorarioAgora())return;
+  if(salvando)return;
+  const func = atual;
+  const valor = Number(document.getElementById("inputHorasExtras").value) || 0;
+  fecharModal();
+  await executarComSalvamento(async () => {
+    const dia = diaDaData();
+    const ref = await garantirDocPontos(func.id, mesCarregado);
+    const info = dadosMes[func.id] || {};
+    await ref.update({
+      ["dias."+dia+".horasExtras"]: valor,
+      statusConferencia: invalidarConferenciaPatch(info, dia)
+    });
+    const snap = await ref.get();
+    dadosMes[func.id] = snap.data();
+  });
+});
 
 document.getElementById("todosDia").addEventListener("click",async ()=>{
   if(!dataValidaParaLancamento())return;
