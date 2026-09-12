@@ -532,62 +532,39 @@
     font-size: 10.5px; font-weight: 700;
     border-radius: 999px; padding: 2px 8px; margin-top: 3px; width: fit-content;
   }
-  .ficha-divergencias{ margin: 4px 0 14px; }
-  .ficha-divergencias-titulo{ font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 8px; }
   .divergencia-item{ border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; font-size: 13px; }
   .divergencia-item .cabecalho{ display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; }
   .divergencia-item .resposta{ margin-top: 8px; padding: 8px 10px; background: var(--surface-2); border-radius: 8px; font-size: 12.5px; }
   .divergencia-item .resposta-form{ margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); }
   .divergencia-item .div-corrigir-label{ display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 500; margin-bottom: 8px; cursor: pointer; }
+  .ficha-divergencias .btn{ width: 100%; justify-content: center; }
 
-  .ficha-modal{
-    position: fixed;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    width: 640px;
-    max-width: 96vw;
-    height: 640px;
-    max-height: 92vh;
-    min-width: 360px;
-    min-height: 320px;
-    padding: 18px 24px;
-    overflow: hidden;
+  /* Página cheia do cartão do funcionário (11/09/2026) -- pedido do Rubens:
+     antes era um modal flutuante arrastável/redimensionável; virou página
+     cheia (com "Voltar à equipe"), cartão + painel lateral de divergências,
+     igual o layout do protótipo que ele mandou pra análise -- sem popup.
+     Perdeu de propósito o arrastar/redimensionar da versão anterior. */
+  #pagina-ficha{ max-width: 1100px; margin: 0 auto; }
+  .pagina-ficha-grid{ display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
+  .ficha-pagina-card{
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 22px 26px;
+    box-shadow: var(--shadow);
   }
+  .ficha-principal{ flex: 2 1 480px; }
+  .ficha-pagina-lateral{ flex: 1 1 280px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
   .ficha-head{
-    display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 0;
-    flex-shrink: 0;
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
     user-select: text;
   }
   .ficha-head h2{ font-size: 21px; }
   .ficha-head .modal-sub{ margin-bottom: 0; font-size: 14px; }
-  .ficha-modal .modal-actions{ margin-top: 10px; }
   .ficha-pix{ font-size: 13px; color: var(--muted); margin-top: 2px; font-variant-numeric: tabular-nums; user-select: text; }
-  .ficha-periodo{ font-size: 13px; color: var(--muted); flex-shrink: 0; }
-  .ficha-dica{ font-size: 10.5px; color: var(--muted); margin-top: 1px; flex-shrink: 0; }
-  /* So esse icone e a area de arrastar pra mover o cartao -- antes o
-     cabecalho inteiro (nome/funcao/PIX) era arrastavel, o que impedia
-     selecionar/copiar esse texto (qualquer clique ali comecava um drag em
-     vez de selecionar). Fica no vao vazio entre o nome e a pastilha de
-     status, onde o Rubens marcou que fazia mais sentido ficar. */
-  .ficha-drag-handle{
-    cursor: move;
-    user-select: none;
-    flex-shrink: 0;
-    align-self: center;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 30px;
-    height: 30px;
-    font-size: 16px;
-    color: var(--muted);
-    border-radius: 50%;
-  }
-  .ficha-drag-handle:hover{ background: var(--surface-2); color: var(--ink); }
+  .ficha-periodo{ font-size: 13px; color: var(--muted); margin-top: 2px; }
   .ficha-resumo{
-    flex-shrink: 0;
-    margin-top: 8px;
+    margin-top: 12px;
     padding: 7px 10px;
     border: 1px solid var(--line);
     border-radius: 10px;
@@ -616,18 +593,7 @@
   }
   .ficha-resumo-total .lbl{ font-size: 10px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
   .ficha-resumo-total .val{ font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
-  .resize-handle{ position: absolute; z-index: 5; }
-  .resize-handle.rh-n, .resize-handle.rh-s{ left: 12px; right: 12px; height: 10px; cursor: ns-resize; }
-  .resize-handle.rh-e, .resize-handle.rh-w{ top: 12px; bottom: 12px; width: 10px; cursor: ew-resize; }
-  .resize-handle.rh-n{ top: -5px; }
-  .resize-handle.rh-s{ bottom: -5px; }
-  .resize-handle.rh-e{ right: -5px; }
-  .resize-handle.rh-w{ left: -5px; }
-  .resize-handle.rh-ne, .resize-handle.rh-nw, .resize-handle.rh-se, .resize-handle.rh-sw{ width: 16px; height: 16px; }
-  .resize-handle.rh-ne{ top: -5px; right: -5px; cursor: nesw-resize; }
-  .resize-handle.rh-nw{ top: -5px; left: -5px; cursor: nwse-resize; }
-  .resize-handle.rh-se{ bottom: -5px; right: -5px; cursor: nwse-resize; }
-  .resize-handle.rh-sw{ bottom: -5px; left: -5px; cursor: nesw-resize; }
+  .dias-scroll{ margin-top: 14px; }
   table.dias{
     width: 100%;
     border-collapse: collapse;
@@ -664,8 +630,6 @@
     font-size: 11.5px;
     text-align: center;
   }
-  .dias-scroll{ flex: 1; min-height: 0; overflow-y: auto; }
-  .ficha-modal .modal-actions{ flex-shrink: 0; }
   .obra-select{
     width: 100%;
     padding: 3px 4px;
@@ -896,55 +860,44 @@
   </div>
 </div>
 
-<div class="overlay" id="ficha-overlay" hidden>
-  <div class="modal ficha-modal">
-    <div class="resize-handle rh-n" data-dir="n"></div>
-    <div class="resize-handle rh-s" data-dir="s"></div>
-    <div class="resize-handle rh-e" data-dir="e"></div>
-    <div class="resize-handle rh-w" data-dir="w"></div>
-    <div class="resize-handle rh-ne" data-dir="ne"></div>
-    <div class="resize-handle rh-nw" data-dir="nw"></div>
-    <div class="resize-handle rh-se" data-dir="se"></div>
-    <div class="resize-handle rh-sw" data-dir="sw"></div>
-    <div class="ficha-head">
-      <div>
-        <h2 id="ficha-nome">—</h2>
-        <div class="modal-sub" id="ficha-funcao">—</div>
-        <div class="ficha-pix" id="ficha-pix">—</div>
+<div id="pagina-ficha" hidden>
+  <button type="button" class="btn btn-ghost" id="btn-fechar-ficha" style="margin-bottom:16px">← Voltar à equipe</button>
+  <div class="pagina-ficha-grid">
+    <div class="ficha-pagina-card ficha-principal">
+      <div class="ficha-head">
+        <div>
+          <h2 id="ficha-nome">—</h2>
+          <div class="modal-sub" id="ficha-funcao">—</div>
+          <div class="ficha-pix" id="ficha-pix">—</div>
+        </div>
+        <button type="button" class="pill" id="ficha-status">—</button>
       </div>
-      <span class="ficha-drag-handle" id="ficha-drag-handle" title="Arraste pra mover o cartão">✥</span>
-      <button type="button" class="pill" id="ficha-status">—</button>
-    </div>
-    <div class="ficha-periodo" id="ficha-periodo">—</div>
-    <div class="ficha-dica">⤡ arraste qualquer borda ou canto pra redimensionar</div>
-    <div class="ficha-resumo">
-      <div class="ficha-resumo-titulo">Resumo de dias por obra</div>
-      <div class="ficha-resumo-chips" id="ficha-resumo-chips"></div>
-      <div class="ficha-resumo-total">
-        <span class="lbl">Total de dias</span>
-        <span class="val" id="ficha-resumo-total">0.0</span>
+      <div class="ficha-periodo" id="ficha-periodo">—</div>
+      <div class="ficha-resumo">
+        <div class="ficha-resumo-titulo">Resumo de dias por obra</div>
+        <div class="ficha-resumo-chips" id="ficha-resumo-chips"></div>
+        <div class="ficha-resumo-total">
+          <span class="lbl">Total de dias</span>
+          <span class="val" id="ficha-resumo-total">0.0</span>
+        </div>
+        <div class="ficha-resumo-total">
+          <span class="lbl">Total de horas extras</span>
+          <span class="val" id="ficha-resumo-horas">0</span>
+        </div>
       </div>
-      <div class="ficha-resumo-total">
-        <span class="lbl">Total de horas extras</span>
-        <span class="val" id="ficha-resumo-horas">0</span>
+      <div class="dias-scroll">
+        <table class="dias">
+          <thead>
+            <tr><th>Dia</th><th>Manhã</th><th>Tarde</th><th>Qtd.</th><th>H. Extras</th></tr>
+          </thead>
+          <tbody id="ficha-body"></tbody>
+        </table>
       </div>
     </div>
-    <div class="dias-scroll">
-      <table class="dias">
-        <thead>
-          <tr><th>Dia</th><th>Manhã</th><th>Tarde</th><th>Qtd.</th><th>H. Extras</th></tr>
-        </thead>
-        <tbody id="ficha-body"></tbody>
-      </table>
-    </div>
-    <div class="ficha-divergencias" id="ficha-divergencias-wrap" hidden>
-      <div class="ficha-divergencias-titulo">Divergências informadas pelo funcionário</div>
-      <div id="ficha-divergencias-lista"></div>
-    </div>
-    <div class="modal-actions">
-      <div></div>
-      <div class="modal-actions-right">
-        <button type="button" class="btn btn-ghost" id="btn-fechar-ficha">Fechar</button>
+    <div class="ficha-pagina-lateral">
+      <div class="ficha-pagina-card ficha-divergencias" id="ficha-divergencias-wrap" hidden>
+        <div class="ficha-divergencias-titulo">Divergências informadas pelo funcionário</div>
+        <div id="ficha-divergencias-lista"></div>
       </div>
     </div>
   </div>
@@ -2303,7 +2256,7 @@ let fichaQuinzena = 1;
 // mantém o comportamento padrão (sempre 1ª quinzena numa abertura nova, ou
 // a quinzena que já estava selecionada se o cartão já estava aberto).
 async function abrirFicha(f, quinzenaAlvo){
-  const jaAberta = !document.getElementById("ficha-overlay").hidden;
+  const jaAberta = !document.getElementById("pagina-ficha").hidden;
   fichaFunc = f;
   if(quinzenaAlvo === 1 || quinzenaAlvo === 2) fichaQuinzena = quinzenaAlvo;
   else if(!jaAberta) fichaQuinzena = 1; // toda abertura nova comeca na 1a quinzena
@@ -2315,16 +2268,11 @@ async function abrirFicha(f, quinzenaAlvo){
   document.getElementById("ficha-pix").textContent = "PIX: " + (f.pix || "—");
   document.getElementById("ficha-periodo").textContent = label + " · " + periodo;
 
-  document.querySelector("#ficha-overlay .ficha-dica").textContent =
-    "⤡ arraste qualquer borda ou canto pra redimensionar";
-
   renderFichaConteudo();
 
-  document.getElementById("ficha-overlay").hidden = false;
-  if(!jaAberta) posicionarFichaCentro();
-  // cartao ja estava aberto (de outra pessoa, ou dessa mesma numa quinzena
-  // diferente) -- a contagem de linhas pode ter mudado, tenta caber sem rolar
-  else ajustarAlturaFichaParaConteudo();
+  document.getElementById("appConteudo").style.display = "none";
+  document.getElementById("pagina-ficha").hidden = false;
+  window.scrollTo(0, 0);
 }
 
 // Redesenha so a tabela + resumo, sem buscar dado de novo -- usado na
@@ -2576,159 +2524,14 @@ async function salvarDia(dia, campo, valor){
   }
 }
 
+// Volta pra lista (Conferência de Ponto) -- pagina cheia, nao modal, entao
+// so precisa esconder #pagina-ficha e mostrar #appConteudo de novo.
 function fecharFicha(){
-  salvarTamanhoFicha();
-  document.getElementById("ficha-overlay").hidden = true;
+  document.getElementById("pagina-ficha").hidden = true;
+  document.getElementById("appConteudo").style.display = "block";
   fichaFunc = null;
 }
 document.getElementById("btn-fechar-ficha").onclick = fecharFicha;
-// o cartao so fecha pelo botao "Fechar" — clicar fora nao fecha mais,
-// pra nao perder o preenchimento por engano
-
-// ---------------- Mover e redimensionar o cartao (ficha) ----------------
-// O cartao usa position:fixed com left/top/width/height controlados aqui,
-// assim da pra arrastar qualquer borda ou canto (nao so o canto inferior
-// direito) e mover pelo cabecalho, tudo com a mesma logica de geometria.
-
-const FICHA_MIN_W = 360, FICHA_MIN_H = 320;
-let fichaX = 0, fichaY = 0, fichaW = 640, fichaH = 640;
-let fichaAcao = null; // "mover" ou uma direcao: "n","s","e","w","ne","nw","se","sw"
-let fichaOrigemX = 0, fichaOrigemY = 0;
-let fichaInicioX = 0, fichaInicioY = 0, fichaInicioW = 0, fichaInicioH = 0;
-
-function aplicarGeometriaFicha(){
-  const modal = document.querySelector("#ficha-overlay .ficha-modal");
-  if(!modal) return;
-  modal.style.left = fichaX + "px";
-  modal.style.top = fichaY + "px";
-  modal.style.width = fichaW + "px";
-  modal.style.height = fichaH + "px";
-}
-
-const FICHA_TAMANHO_KEY = "concretta_ficha_tamanho";
-
-function carregarTamanhoFicha(){
-  try {
-    const salvo = JSON.parse(localStorage.getItem(FICHA_TAMANHO_KEY));
-    if(salvo && typeof salvo.w === "number" && typeof salvo.h === "number") return salvo;
-  } catch(e) { /* localStorage indisponivel ou dado corrompido — ignora */ }
-  return null;
-}
-
-function salvarTamanhoFicha(){
-  try {
-    localStorage.setItem(FICHA_TAMANHO_KEY, JSON.stringify({ w: fichaW, h: fichaH }));
-  } catch(e) { /* localStorage indisponivel — sem problema, so nao lembra da proxima vez */ }
-}
-
-function posicionarFichaCentro(){
-  const salvo = carregarTamanhoFicha();
-  const larguraBase = salvo ? salvo.w : 640;
-  const alturaBase = salvo ? salvo.h : 640;
-  fichaW = Math.min(Math.max(larguraBase, FICHA_MIN_W), window.innerWidth * 0.96);
-  fichaH = Math.min(Math.max(alturaBase, FICHA_MIN_H), window.innerHeight * 0.92);
-  fichaX = (window.innerWidth - fichaW) / 2;
-  fichaY = (window.innerHeight - fichaH) / 2;
-  aplicarGeometriaFicha();
-  // cresce a altura (se precisar e couber na tela) pra abrir ja mostrando o
-  // maximo possivel da lista de dias sem precisar rolar
-  ajustarAlturaFichaParaConteudo();
-  fichaY = (window.innerHeight - fichaH) / 2;
-  aplicarGeometriaFicha();
-}
-
-// Mede o conteudo real da lista de dias (independente da altura atual do
-// cartao, ja que .dias-scroll tem overflow-y:auto) e aumenta fichaH se
-// precisar (ate o teto de 92vh) pra caber mais dias sem rolagem interna --
-// nunca diminui um tamanho que o usuario ja tenha deixado maior.
-function ajustarAlturaFichaParaConteudo(){
-  const modal = document.querySelector("#ficha-overlay .ficha-modal");
-  const scrollEl = document.querySelector("#ficha-overlay .dias-scroll");
-  if(!modal || !scrollEl) return;
-  const alturaFixa = modal.offsetHeight - scrollEl.offsetHeight; // cabecalho + resumo + rodape + padding
-  const alturaNecessaria = alturaFixa + scrollEl.scrollHeight + 4;
-  const novaAltura = Math.min(Math.max(fichaH, alturaNecessaria, FICHA_MIN_H), window.innerHeight * 0.92);
-  if(novaAltura !== fichaH){
-    fichaH = novaAltura;
-    fichaY = Math.min(Math.max(fichaY, 8), window.innerHeight - fichaH - 8);
-    aplicarGeometriaFicha();
-  }
-}
-
-function iniciarAcaoFicha(acao, x, y){
-  fichaAcao = acao;
-  fichaOrigemX = x;
-  fichaOrigemY = y;
-  fichaInicioX = fichaX;
-  fichaInicioY = fichaY;
-  fichaInicioW = fichaW;
-  fichaInicioH = fichaH;
-}
-
-function moverAcaoFicha(x, y){
-  if(!fichaAcao) return;
-  const dx = x - fichaOrigemX;
-  const dy = y - fichaOrigemY;
-
-  if(fichaAcao === "mover"){
-    fichaX = fichaInicioX + dx;
-    fichaY = fichaInicioY + dy;
-  } else {
-    if(fichaAcao.includes("e")) fichaW = Math.max(FICHA_MIN_W, fichaInicioW + dx);
-    if(fichaAcao.includes("w")){
-      const novaW = Math.max(FICHA_MIN_W, fichaInicioW - dx);
-      fichaX = fichaInicioX + (fichaInicioW - novaW);
-      fichaW = novaW;
-    }
-    if(fichaAcao.includes("s")) fichaH = Math.max(FICHA_MIN_H, fichaInicioH + dy);
-    if(fichaAcao.includes("n")){
-      const novaH = Math.max(FICHA_MIN_H, fichaInicioH - dy);
-      fichaY = fichaInicioY + (fichaInicioH - novaH);
-      fichaH = novaH;
-    }
-  }
-  aplicarGeometriaFicha();
-}
-
-function pararAcaoFicha(){ fichaAcao = null; }
-
-// Delegado no modal (nao direto no handle) porque o handle e recriado via
-// innerHTML toda vez que o cartao abre (ver abrirFicha()) -- um listener
-// direto se perderia depois da primeira abertura.
-const fichaModalEl = document.querySelector(".ficha-modal");
-fichaModalEl.addEventListener("mousedown", (e) => {
-  if(!e.target.closest("#ficha-drag-handle")) return;
-  iniciarAcaoFicha("mover", e.clientX, e.clientY);
-  e.preventDefault();
-});
-fichaModalEl.addEventListener("touchstart", (e) => {
-  if(!e.target.closest("#ficha-drag-handle")) return;
-  const t = e.touches[0];
-  iniciarAcaoFicha("mover", t.clientX, t.clientY);
-}, { passive: true });
-
-document.querySelectorAll("#ficha-overlay .resize-handle").forEach((handle) => {
-  const dir = handle.dataset.dir;
-  handle.addEventListener("mousedown", (e) => {
-    iniciarAcaoFicha(dir, e.clientX, e.clientY);
-    e.preventDefault();
-    e.stopPropagation();
-  });
-  handle.addEventListener("touchstart", (e) => {
-    const t = e.touches[0];
-    iniciarAcaoFicha(dir, t.clientX, t.clientY);
-    e.stopPropagation();
-  }, { passive: true });
-});
-
-document.addEventListener("mousemove", (e) => moverAcaoFicha(e.clientX, e.clientY));
-document.addEventListener("mouseup", pararAcaoFicha);
-document.addEventListener("touchmove", (e) => {
-  if(!fichaAcao) return;
-  const t = e.touches[0];
-  moverAcaoFicha(t.clientX, t.clientY);
-}, { passive: true });
-document.addEventListener("touchend", pararAcaoFicha);
 
 // iniciar() agora é chamada pelo onAuthStateChanged() lá em cima, só
 // depois de confirmar login com role "admin" (não mais direto aqui).
