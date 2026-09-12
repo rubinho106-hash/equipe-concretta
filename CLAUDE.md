@@ -1277,6 +1277,62 @@ Testado local: coluna vazia por padrão; testei um valor real temporário (1,5h 
 do Alex Pereira Silva) pra confirmar a exibição (coluna "1,5" e total "1,5"), revertido em
 seguida (`FieldValue.delete()`), conferido no servidor.
 
+## Conferência pelo funcionário: concordância + divergências (commit `48eda7e`, 11/09/2026)
+
+Rubens mandou um protótipo (`Concretta_Conferencia_Demo.html`, localStorage-only, análise sem
+alterar nada até "PODE COMEÇAR") propondo o funcionário conferir e concordar com o próprio cartão,
+ou avisar de uma divergência — separado da conferência administrativa (`statusConferencia`) que já
+existia. Construída a versão real, adaptando o protótipo em dois pontos deliberados: (1) mantém
+q1/q2 **independentes** (o protótipo colapsava tudo numa única "version" por pessoa/mês); (2)
+**sem login pro funcionário** — continua consistente com `cartoes.html` já ser público/sem
+autenticação (decisão de não criar ~30 contas de funcionário, já tomada antes nesse projeto).
+
+**Dado novo**: `funcionarios/{id}/pontos/{mes}.concordanciaFuncionario` = `{q1, q2}` (valores
+"Pendente"/"Concordou"), mesmo shape e mesma invalidação de `statusConferencia` — editar qualquer
+dia da quinzena devolve as duas (`statusConferencia` E `concordanciaFuncionario`) pra "Pendente"
+juntas (`salvarDia()` em `index.html`, `aplicarLancamento()`/todos os pontos de escrita em
+`apontador.html`). Nova subcoleção `funcionarios/{id}/divergencias/{autoId}` = `{mes, dia,
+periodo: "m"|"t", obraInformada, tipo, texto, status: "Aberta"|"Resolvida", resposta, criadoEm,
+resolvidoEm?}`.
+
+**`cartoes.html`** (funcionário-facing, sem login, mesmo modelo de acesso de sempre): dentro do
+cartão já existente, uma pill "Você: Pendente/Concordou" + botão "✓ Concordo com meu cartão" (grava
+`concordanciaFuncionario` via `.set(..., {merge:true})`, já que o doc do mês pode não existir ainda)
+e um botão "⚠ Informar divergência" que abre um formulário (dia da quinzena aberta / manhã ou tarde
+/ tipo / obra informada / texto livre) e grava um novo doc em `divergencias`. Esse arquivo não tinha
+NENHUMA infraestrutura de modal de confirmação/toast antes — adicionada do zero (`confirmarAcao()`/
+`fecharConfirmacao()`/`toast()`, mesmo padrão de `index.html`/`apontador.html`, pelo mesmo motivo já
+documentado várias vezes nesse projeto: `confirm()`/`alert()` nativos quebram silenciosamente em
+navegadores embutidos como WhatsApp/Instagram).
+
+**`index.html`** (admin-facing): dentro do cartão do funcionário, uma seção nova "Divergências
+informadas pelo funcionário" lista cada divergência daquele mês (as duas quinzenas juntas, pra não
+sumir uma da 1ª quinzena enquanto o admin olha a 2ª) com pill de status; uma aberta ganha um
+formulário de resposta + checkbox opcional "Corrigir o lançamento desse dia/período" (um `<select>`
+de obra pré-preenchido com o valor atual daquele dia/período) + botão "Marcar como resolvida" —
+`resolverDivergencia()` chama `salvarDia()` (o mesmo caminho de escrita e mesma invalidação de
+conferência/concordância que qualquer edição manual) quando há correção, sempre grava
+`status: "Resolvida"` + `resposta` + `resolvidoEm` no doc de divergência. Também um badge
+"⚠ N divergência(s)" na lista da Conferência de Ponto — **best-effort**: usa uma query
+`collectionGroup("divergencias")`, que precisa de um índice do Firestore que ainda não existe
+(testado ao vivo: `failed-precondition`, com link pra criar o índice no console); envolvido em
+try/catch, então sem o índice o badge simplesmente não aparece, sem quebrar o resto da tela. Se
+Rubens quiser o badge funcionando, é só abrir o link de criação de índice que aparece no erro (ou
+pedir pra eu recriar a busca) — não é urgente, o cartão de cada pessoa já mostra as divergências
+dela normalmente, com ou sem esse índice.
+
+**Testado ponta a ponta contra o Firestore real** (Alex Pereira Silva, sempre revertendo e
+conferindo no servidor depois): concordar (grava `q1:"Concordou"`, revertido pra "Pendente");
+divergência sem correção (form completo → doc criado em `divergencias` → aparece na lista →
+excluído); do lado do admin, como não dava pra fazer login real (login usa Firebase Auth de
+verdade, e nunca devo digitar senha em nenhum campo, nem a pedido do Rubens — regra de segurança
+da sessão), testei chamando `iniciar()`/`selecionarMes()`/`abrirFicha()` direto pelo console (mesmo
+truque já documentado nesse arquivo antes) — resolver divergência SEM correção (só grava resposta +
+"Resolvida") e resolver COM correção (corrigiu dia 04 manhã de FALTA pra CRECHE, conferido
+`statusConferencia`/`concordanciaFuncionario` voltando pra Pendente/Pendente igual qualquer outra
+edição de dia) — os dois cenários revertidos e os docs de divergência de teste excluídos depois.
+Zero erro de console em toda a sessão de teste, local e no site publicado.
+
 ## Apontador — "Modo teste" — HISTÓRICO, revertido no mesmo dia (commit `17d4c97`, 04/09/2026)
 
 Rubens perguntou se dava pra travar o Apontador no mês teste, só com opção de escolher o dia —
