@@ -1333,6 +1333,39 @@ truque já documentado nesse arquivo antes) — resolver divergência SEM corre�
 edição de dia) — os dois cenários revertidos e os docs de divergência de teste excluídos depois.
 Zero erro de console em toda a sessão de teste, local e no site publicado.
 
+## Cartão do admin: modal flutuante vira página cheia (commit `63eee28`, 11/09/2026)
+
+Rubens viu o resultado da feature acima (divergências dentro do modal do cartão) e apontou dois
+problemas por print: o painel de divergências empurrava/espremia a tabela de dias dentro do modal
+arrastável/redimensionável de sempre, e — comparando com o layout do próprio protótipo que ele
+tinha mandado (`Concretta_Conferencia_Demo.html`) — pediu explicitamente **pra não ser popup**:
+página cheia, com botão "Voltar à equipe", igual o design do protótipo. Perguntei via
+AskUserQuestion se era só a visão de divergências que devia virar página separada ou o cartão
+inteiro — Rubens confirmou "cartão inteiro vira página cheia".
+
+Reescrito: `#ficha-overlay` (modal `position:fixed` com 8 `.resize-handle`s + `.ficha-drag-handle`,
+arrastável e redimensionável, tamanho lembrado via `localStorage` — feature construída em
+04/09/2026) virou `#pagina-ficha`, uma seção normal da página que só esconde `#appConteudo`
+enquanto está aberta. Removida por completo a lógica de geometria (`fichaX/Y/W/H`,
+`aplicarGeometriaFicha`, `carregarTamanhoFicha`/`salvarTamanhoFicha`, `posicionarFichaCentro`,
+`ajustarAlturaFichaParaConteudo`, `iniciarAcaoFicha`/`moverAcaoFicha`/`pararAcaoFicha`) e os
+listeners de mouse/touch — não fazia mais sentido numa página que rola com o resto do conteúdo.
+Layout novo: `.pagina-ficha-grid` com dois cards lado a lado (`.ficha-pagina-card`) — o cartão
+principal (cabeçalho/PIX/resumo/tabela de dias) e, só quando existem divergências pra aquele mês,
+o card lateral de divergências — cada um com altura natural própria, sem disputar espaço vertical
+como antes.
+
+**Nota importante**: isso remove a feature de arrastar/redimensionar o cartão que o próprio Rubens
+tinha pedido em 04/09/2026 (`AUMETAR TAMANHO DO CARTAO E MOVER PELA TELA` /
+`REDIMENCIONAR LIVRE`). Foi uma troca deliberada dessa vez — se algum dia isso incomodar, é bom
+lembrar que já existiu e foi removido de propósito pra caber esse layout de página cheia.
+
+Testado contra o Firestore real (Alex Pereira Silva com divergência aberta, Carlos André sem
+nenhuma) antes de publicar: layout com e sem o painel lateral, resolver divergência ponta a ponta
+depois da reescrita, botão "Voltar à equipe" voltando pra lista corretamente. De quebra, notei e
+apaguei 3 documentos de teste (`divergencias`) que tinham ficado da sessão de testes anterior sem
+limpar completamente. Zero erro de console, local e no site publicado.
+
 ## Apontador — "Modo teste" — HISTÓRICO, revertido no mesmo dia (commit `17d4c97`, 04/09/2026)
 
 Rubens perguntou se dava pra travar o Apontador no mês teste, só com opção de escolher o dia —
