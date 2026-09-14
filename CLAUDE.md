@@ -1366,6 +1366,27 @@ depois da reescrita, botão "Voltar à equipe" voltando pra lista corretamente. 
 apaguei 3 documentos de teste (`divergencias`) que tinham ficado da sessão de testes anterior sem
 limpar completamente. Zero erro de console, local e no site publicado.
 
+## Apontamentos: consultar por obra sem escolher funcionário (commit `90a2ad0`, 14/09/2026)
+
+Rubens mandou print da aba Banco de Dados (Apontamentos): escolheu só a Obra (CRECHE) e clicou
+Consultar sem escolher um Funcionário — a tela mandava "Selecione um funcionário pra consultar".
+Confirmado via AskUserQuestion: o filtro de Obra deveria também poder listar todo mundo daquela
+obra de uma vez, não só estreitar o dropdown de Funcionário.
+
+`consultarApontamentos()`: quando não há `funcId` mas há `obraFiltro`, chama a nova
+`renderApontResultadoPorObra(obraFiltro, mes)` em vez de mostrar o aviso de "selecione um
+funcionário" (esse aviso virou "Selecione um funcionário ou uma obra pra consultar." — só aparece
+quando os dois estão vazios). A função nova busca `pontos/{mes}` de todo mundo Ativo em paralelo
+(mesmo padrão de `selecionarMes()` da Conferência) e soma 0,5 por período (manhã/tarde) que bate
+**exatamente** com a obra escolhida — usa o lançamento real do mês, não `obraPadrao` do cadastro
+(que é só um default e pode estar desatualizado). Lista quem trabalhou lá, maior pro menor, com
+"Pessoas" e "Total de dias" no topo; cada linha é clicável e abre o detalhe individual de sempre
+(seleciona o funcionário no dropdown e roda `consultarApontamentos()` de novo).
+
+Testado contra o Firestore real (local e no site publicado): CRECHE em setembro/2026 (15 pessoas,
+98,5 dias na primeira checagem), clique numa linha abrindo o detalhe certo, mensagem de "nada
+selecionado" atualizada. Zero erro de console — feature é só leitura, nenhuma escrita envolvida.
+
 ## Apontador — "Modo teste" — HISTÓRICO, revertido no mesmo dia (commit `17d4c97`, 04/09/2026)
 
 Rubens perguntou se dava pra travar o Apontador no mês teste, só com opção de escolher o dia —
