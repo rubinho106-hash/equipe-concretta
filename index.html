@@ -498,6 +498,27 @@
   .apont-obra-row.total{ font-weight: 700; border-top: 2px solid var(--line); border-bottom: none; padding-top: 9px; margin-top: 2px; }
   .apont-obra-row div:nth-child(2){ text-align: right; font-variant-numeric: tabular-nums; }
 
+  /* Consulta por obra (14/09/2026) -- Apontamentos ganhou a opcao de
+     consultar so pela Obra, sem escolher Funcionario: lista todo mundo que
+     lancou pelo menos um periodo naquela obra no mes, com o total de dias.
+     Cada linha e clicavel e leva pro detalhe daquela pessoa (mesma tela de
+     sempre, com o filtro de obra ja aplicado). */
+  .apont-pessoa-row{
+    display: grid; grid-template-columns: 1fr 90px;
+    gap: 10px; align-items: center;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .apont-pessoa-row:last-child{ border-bottom: none; }
+  .apont-pessoa-row:hover{ background: var(--surface-2); }
+  .apont-pessoa-row .nome{ font-weight: 600; }
+  .apont-pessoa-row .funcao{ font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+  .apont-pessoa-row .dias{ text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .apont-pessoa-row.cabecalho{ cursor: default; font-weight: 700; color: var(--muted); font-size: 11px; text-transform: uppercase; padding-bottom: 7px; }
+  .apont-pessoa-row.cabecalho:hover{ background: none; }
+
   .apont-obs{ font-size: 12px; color: var(--muted); line-height: 1.65; margin: 0; padding-left: 16px; }
   .apont-obs li{ margin-bottom: 4px; }
 
@@ -1799,7 +1820,11 @@ async function consultarApontamentos(){
   const cont = document.getElementById("apont-resultado");
 
   if(!funcId){
-    cont.innerHTML = '<div class="empty-state">Selecione um funcionário pra consultar.</div>';
+    if(obraFiltro){
+      await renderApontResultadoPorObra(obraFiltro, mes);
+    } else {
+      cont.innerHTML = '<div class="empty-state">Selecione um funcionário ou uma obra pra consultar.</div>';
+    }
     return;
   }
   const f = todos.find(x => x.id === funcId);
@@ -1975,6 +2000,86 @@ function renderApontResultado(f, mes, info, obraFiltro){
     </div>`;
 
   cont.innerHTML = resumoHtml + gradeHtml + baixoHtml;
+}
+
+// Consulta agregada por obra (14/09/2026), sem escolher um funcionario --
+// pedido do Rubens depois de ver que o filtro de Obra so estreitava o
+// dropdown de Funcionario em vez de listar todo mundo daquela obra de uma
+// vez. Busca pontos/{mes} de todo mundo (Ativo) em paralelo -- mesmo padrao
+// ja usado em selecionarMes() da Conferencia de Ponto -- e soma 0,5 por
+// periodo (manha ou tarde) que bate exatamente com a obra escolhida (nao
+// usa obraPadrao do cadastro, que e so um default e pode estar desatualizado
+// -- conta o que foi realmente lancado no mes).
+async function renderApontResultadoPorObra(obraFiltro, mes){
+  const cont = document.getElementById("apont-resultado");
+  cont.innerHTML = '<div class="loading-state">Consultando…</div>';
+  const { label } = infoMes(mes);
+
+  const candidatos = todos.filter(f => f.status !== "Inativo");
+  let linhas;
+  try {
+    const resultados = await Promise.all(candidatos.map(async f => {
+      const snap = await db.doc("funcionarios/" + f.id + "/pontos/" + mes).get();
+      const dias = snap.exists ? (snap.data().dias || {}) : {};
+      let total = 0;
+      Object.values(dias).forEach(d => {
+        if(!d) return;
+        if(d.m === obraFiltro) total += 0.5;
+        if(d.t === obraFiltro) total += 0.5;
+      });
+      return { f, total };
+    }));
+    linhas = resultados.filter(r => r.total > 0).sort((a, b) => b.total - a.total);
+  } catch(e){
+    cont.innerHTML = '<div class="empty-state">Não deu pra consultar agora — tenta de novo.</div>';
+    return;
+  }
+
+  const totalGeral = linhas.reduce((soma, r) => soma + r.total, 0);
+  const cor = corAvatar(obraFiltro);
+
+  const resumoHtml = `
+    <div class="apont-resumo-func">
+      <div class="apont-resumo-info">
+        <div class="apont-resumo-nome" style="color:${cor}">${escapeHtml(obraFiltro)}</div>
+        <div class="apont-resumo-sub">${label}</div>
+      </div>
+      <div class="apont-mini-stats">
+        <div class="apont-mini-stat">
+          <div class="num">${linhas.length}</div>
+          <div class="lbl">Pessoas</div>
+        </div>
+        <div class="apont-mini-stat total">
+          <div class="num">${totalGeral.toFixed(1)}</div>
+          <div class="lbl">Total de dias</div>
+        </div>
+      </div>
+    </div>`;
+
+  const linhasHtml = linhas.length
+    ? linhas.map(({ f, total }) => `
+      <div class="apont-pessoa-row" data-func-id="${f.id}">
+        <div>
+          <div class="nome">${escapeHtml(f.nome)}</div>
+          <div class="funcao">${escapeHtml(f.funcao || "—")}</div>
+        </div>
+        <div class="dias">${total.toFixed(1)}</div>
+      </div>`).join("")
+    : '<div class="empty-state" style="padding:20px 0;">Ninguém trabalhou nessa obra nesse período.</div>';
+
+  cont.innerHTML = resumoHtml + `
+    <div class="apont-card" style="margin-top:20px;">
+      <h3>Funcionários em ${escapeHtml(obraFiltro)} — ${label}</h3>
+      <div class="apont-pessoa-row cabecalho"><div>Funcionário</div><div>Dias</div></div>
+      ${linhasHtml}
+    </div>`;
+
+  cont.querySelectorAll(".apont-pessoa-row[data-func-id]").forEach(row => {
+    row.onclick = () => {
+      document.getElementById("apont-funcionario").value = row.dataset.funcId;
+      consultarApontamentos();
+    };
+  });
 }
 
 // Status de conferencia agora e guardado por quinzena: statusConferencia
