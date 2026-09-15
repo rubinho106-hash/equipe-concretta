@@ -1387,6 +1387,32 @@ Testado contra o Firestore real (local e no site publicado): CRECHE em setembro/
 98,5 dias na primeira checagem), clique numa linha abrindo o detalhe certo, mensagem de "nada
 selecionado" atualizada. Zero erro de console — feature é só leitura, nenhuma escrita envolvida.
 
+## Apontamentos: consultar por dia (commit `9c054ca`, 15/09/2026)
+
+Rubens perguntou "PRECISO SABER QUEM TRABALHOU DIA 11 . ONDE ENCONTRA ?" — não havia tela pra
+isso (só por pessoa, ou por obra no mês inteiro desde o dia anterior). Respondi puxando os dados
+direto do Firestore no chat pra resolver na hora, e ele pediu "CRIAR OPCAO NO BANCO DE DADOS".
+
+Novo filtro **Dia** ao lado de Funcionário/Obra/Período em Apontamentos — as opções (01 até o
+último dia do mês) dependem do Período escolhido, repopuladas via `popularDiasApontamentos()`
+(chamada em `popularFiltrosApontamentos()` e no `change` do select de Período, já que o mês tem
+28 a 31 dias).
+
+`consultarApontamentos()`: sem funcionário mas com dia escolhido, chama a nova
+`renderApontResultadoPorDia(dia, mes, obraFiltro)` em vez do fluxo por obra. Busca `pontos/{mes}`
+de todo mundo Ativo em paralelo (mesmo padrão de `renderApontResultadoPorObra`), agrupa por obra
+quem trabalhou naquele dia específico — uma pessoa pode aparecer em duas obras se manhã e tarde
+forem diferentes (tag M/T por período, D quando é a mesma obra o dia inteiro) — lista faltas à
+parte (dia inteiro ou só um período) e conta quem não tem lançamento nesse dia; essas duas últimas
+somem quando também filtra por obra, já que não fazem sentido combinadas com uma obra específica.
+Cada linha continua clicável, abrindo o detalhe individual de sempre (mesmo padrão de
+`renderApontResultadoPorObra`).
+
+Testado contra o Firestore real (dia 11/09/2026, local e no site publicado): 36 trabalharam, 6
+faltas (4 dia inteiro + 2 meio período), agrupamento por obra batendo exatamente com a contagem
+manual que eu tinha feito no chat antes de construir a feature; combinação Dia + Obra (CRECHE)
+reduzindo corretamente pra 14 pessoas numa lista só. Zero erro de console — recurso é só leitura.
+
 ## Apontador — "Modo teste" — HISTÓRICO, revertido no mesmo dia (commit `17d4c97`, 04/09/2026)
 
 Rubens perguntou se dava pra travar o Apontador no mês teste, só com opção de escolher o dia —
