@@ -809,6 +809,10 @@
         <label for="apont-periodo">Período</label>
         <select id="apont-periodo"></select>
       </div>
+      <div class="field">
+        <label for="apont-dia">Dia</label>
+        <select id="apont-dia"><option value="">Todos os dias</option></select>
+      </div>
       <button class="btn btn-primary" id="btn-apont-consultar">Consultar</button>
     </div>
 
@@ -1809,7 +1813,24 @@ function popularFiltrosApontamentos(){
     return `<option value="${mes}">${label}</option>`;
   }).join("");
   selPeriodo.value = periodoAtual && listaMeses.includes(periodoAtual) ? periodoAtual : mesAtualReal();
+
+  popularDiasApontamentos();
 }
+
+// Dia depende do periodo escolhido (mes tem 28 a 31 dias) -- repopula toda
+// vez que o periodo muda, mantendo o dia selecionado se ainda for valido.
+function popularDiasApontamentos(){
+  const selPeriodo = document.getElementById("apont-periodo");
+  const selDia = document.getElementById("apont-dia");
+  if(!selPeriodo || !selDia || !selPeriodo.value) return;
+  const diaAtual = selDia.value;
+  const { diasNoMes } = infoMes(selPeriodo.value);
+  selDia.innerHTML = '<option value="">Todos os dias</option>'
+    + Array.from({ length: diasNoMes }, (_, i) => i + 1)
+      .map(d => `<option value="${d}">${String(d).padStart(2, "0")}</option>`).join("");
+  if(diaAtual && Number(diaAtual) <= diasNoMes) selDia.value = diaAtual;
+}
+document.getElementById("apont-periodo").addEventListener("change", popularDiasApontamentos);
 
 document.getElementById("btn-apont-consultar").onclick = consultarApontamentos;
 
@@ -1817,13 +1838,16 @@ async function consultarApontamentos(){
   const funcId = document.getElementById("apont-funcionario").value;
   const obraFiltro = document.getElementById("apont-obra").value;
   const mes = document.getElementById("apont-periodo").value;
+  const diaFiltro = document.getElementById("apont-dia").value;
   const cont = document.getElementById("apont-resultado");
 
   if(!funcId){
-    if(obraFiltro){
+    if(diaFiltro){
+      await renderApontResultadoPorDia(diaFiltro, mes, obraFiltro);
+    } else if(obraFiltro){
       await renderApontResultadoPorObra(obraFiltro, mes);
     } else {
-      cont.innerHTML = '<div class="empty-state">Selecione um funcionário ou uma obra pra consultar.</div>';
+      cont.innerHTML = '<div class="empty-state">Selecione um funcionário, uma obra ou um dia pra consultar.</div>';
     }
     return;
   }
@@ -2073,6 +2097,119 @@ async function renderApontResultadoPorObra(obraFiltro, mes){
       <div class="apont-pessoa-row cabecalho"><div>Funcionário</div><div>Dias</div></div>
       ${linhasHtml}
     </div>`;
+
+  cont.querySelectorAll(".apont-pessoa-row[data-func-id]").forEach(row => {
+    row.onclick = () => {
+      document.getElementById("apont-funcionario").value = row.dataset.funcId;
+      consultarApontamentos();
+    };
+  });
+}
+
+// Consulta agregada por DIA (14/09/2026) -- pedido do Rubens ("PRECISO SABER
+// QUEM TRABALHOU DIA 11"): mesmo padrao de renderApontResultadoPorObra, mas
+// olhando so um dia especifico de todo mundo em vez do mes inteiro de uma
+// obra. Agrupa por obra (uma pessoa pode aparecer em duas obras diferentes
+// no mesmo dia, se manha e tarde forem obras distintas) + uma lista separada
+// de faltas + contagem de quem nao tem lancamento nesse dia. Se `obraFiltro`
+// tambem estiver marcado, filtra pra só essa obra (esconde faltas/sem
+// lançamento, que não fazem sentido combinados com obra).
+async function renderApontResultadoPorDia(dia, mes, obraFiltro){
+  const cont = document.getElementById("apont-resultado");
+  cont.innerHTML = '<div class="loading-state">Consultando…</div>';
+  const { label } = infoMes(mes);
+  const [anoNum, mesNum] = mes.split("-").map(Number);
+  const NOMES_DIAS_SEMANA = ["Domingo","Segunda-feira","Terça-feira","Quarta-feira","Quinta-feira","Sexta-feira","Sábado"];
+  const wd = new Date(anoNum, mesNum - 1, Number(dia)).getDay();
+  const dataLabel = String(dia).padStart(2, "0") + "/" + String(mesNum).padStart(2, "0") + "/" + anoNum;
+
+  const candidatos = todos.filter(f => f.status !== "Inativo");
+  const porObra = {};
+  const faltas = [];
+  const workedIds = new Set();
+  let semLancamento = 0;
+
+  try {
+    await Promise.all(candidatos.map(async f => {
+      const snap = await db.doc("funcionarios/" + f.id + "/pontos/" + mes).get();
+      const diaObj = snap.exists ? (snap.data().dias || {})[dia] : null;
+      const m = diaObj ? diaObj.m || "" : "";
+      const t = diaObj ? diaObj.t || "" : "";
+      const mReal = m && !ehMarcador(m) ? m : "";
+      const tReal = t && !ehMarcador(t) ? t : "";
+      const mFalta = m === "FALTA";
+      const tFalta = t === "FALTA";
+
+      if(mReal && (!obraFiltro || mReal === obraFiltro)){
+        (porObra[mReal] = porObra[mReal] || []).push({ f, periodo: mReal === tReal ? "dia inteiro" : "manhã" });
+        workedIds.add(f.id);
+      }
+      if(tReal && tReal !== mReal && (!obraFiltro || tReal === obraFiltro)){
+        (porObra[tReal] = porObra[tReal] || []).push({ f, periodo: "tarde" });
+        workedIds.add(f.id);
+      }
+      if(!obraFiltro){
+        if(mFalta || tFalta){
+          faltas.push({ f, periodo: mFalta && tFalta ? "dia inteiro" : (mFalta ? "manhã" : "tarde") });
+        } else if(!mReal && !tReal){
+          semLancamento++;
+        }
+      }
+    }));
+  } catch(e){
+    cont.innerHTML = '<div class="empty-state">Não deu pra consultar agora — tenta de novo.</div>';
+    return;
+  }
+
+  const tagClasse = { "dia inteiro": "tipo-d", "manhã": "tipo-m", "tarde": "tipo-t" };
+  const tagRotulo = { "dia inteiro": "D", "manhã": "M", "tarde": "T" };
+
+  const obrasOrdenadas = Object.keys(porObra).sort((a, b) => porObra[b].length - porObra[a].length);
+  const linhaPessoa = ({ f, periodo }, tag) => `
+    <div class="apont-pessoa-row" data-func-id="${f.id}">
+      <div>
+        <div class="nome">${escapeHtml(f.nome)}</div>
+        <div class="funcao">${escapeHtml(f.funcao || "—")}${tag === "F" && periodo !== "dia inteiro" ? " · falta " + periodo : ""}</div>
+      </div>
+      <div style="text-align:right"><span class="apont-periodo-tag ${tag === "F" ? "tipo-f" : tagClasse[periodo]}">${tag || tagRotulo[periodo]}</span></div>
+    </div>`;
+
+  const resumoHtml = `
+    <div class="apont-resumo-func">
+      <div class="apont-resumo-info">
+        <div class="apont-resumo-nome">Dia ${dataLabel}${obraFiltro ? " · " + escapeHtml(obraFiltro) : ""}</div>
+        <div class="apont-resumo-sub">${NOMES_DIAS_SEMANA[wd]} — ${label}</div>
+      </div>
+      <div class="apont-mini-stats">
+        <div class="apont-mini-stat total">
+          <div class="num">${workedIds.size}</div>
+          <div class="lbl">Trabalharam</div>
+        </div>
+        ${!obraFiltro ? `
+        <div class="apont-mini-stat">
+          <div class="num">${faltas.length}</div>
+          <div class="lbl">Faltas</div>
+        </div>
+        <div class="apont-mini-stat">
+          <div class="num">${semLancamento}</div>
+          <div class="lbl">Sem lançamento</div>
+        </div>` : ""}
+      </div>
+    </div>`;
+
+  const cardsObra = obrasOrdenadas.map(obra => `
+    <div class="apont-card" style="margin-top:16px;">
+      <h3 style="color:${corAvatar(obra)}">${escapeHtml(obra)} <span style="font-weight:400;color:var(--muted);font-size:12px">(${porObra[obra].length})</span></h3>
+      ${porObra[obra].slice().sort((a,b) => (a.f.nome||"").localeCompare(b.f.nome||"", "pt-BR")).map(item => linhaPessoa(item)).join("")}
+    </div>`).join("") || (!obraFiltro ? "" : '<div class="empty-state" style="padding:20px 0;">Ninguém trabalhou nessa obra nesse dia.</div>');
+
+  const cardFaltas = (!obraFiltro && faltas.length) ? `
+    <div class="apont-card" style="margin-top:16px;">
+      <h3 style="color:var(--danger-ink)">Faltas <span style="font-weight:400;color:var(--muted);font-size:12px">(${faltas.length})</span></h3>
+      ${faltas.slice().sort((a,b) => (a.f.nome||"").localeCompare(b.f.nome||"", "pt-BR")).map(item => linhaPessoa(item, "F")).join("")}
+    </div>` : "";
+
+  cont.innerHTML = resumoHtml + cardsObra + cardFaltas;
 
   cont.querySelectorAll(".apont-pessoa-row[data-func-id]").forEach(row => {
     row.onclick = () => {
