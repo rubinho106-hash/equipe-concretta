@@ -1413,6 +1413,55 @@ faltas (4 dia inteiro + 2 meio período), agrupamento por obra batendo exatament
 manual que eu tinha feito no chat antes de construir a feature; combinação Dia + Obra (CRECHE)
 reduzindo corretamente pra 14 pessoas numa lista só. Zero erro de console — recurso é só leitura.
 
+## Botão "Voltar à equipe" destacado (commit `649f9cc`, 16/09/2026)
+
+Rubens apontou (print) que o botão no topo da página cheia do cartão (ver seção acima, "Cartão do
+admin: modal flutuante vira página cheia") ficava discreto demais com a classe `btn-ghost`. Trocado
+pra `btn-primary` — mesma cor de destaque usada em "Consultar"/"Entrar". Mudança só de CSS, zero
+risco, verificada visualmente antes de publicar.
+
+## INCIDENTE resolvido: site fora do ar por expiração do "modo de teste" do Firebase (01/10/2026)
+
+Rubens pediu "testar site" numa sessão de rotina (duas semanas depois do último commit). Achei que
+`cartoes.html` (página pública, sem login) estava dando "Não deu pra carregar a equipe agora." —
+toda leitura sem autenticação no Firestore retornava `permission-denied` (`funcionarios`, `obras`,
+`pontos`, tudo bloqueado).
+
+**Causa raiz**: as regras do Firestore nunca foram escritas manualmente neste projeto — o Firebase
+cria, por padrão, o banco em **"modo de teste"** quando você escolhe essa opção na criação, com uma
+regra que já vem com prazo de expiração automático de **30 dias**:
+```
+allow read, write: if request.time < timestamp.date(ANO, MES, DIA);
+```
+O projeto `concretta-equipe` foi criado em 01/09/2026 — 30 dias depois é exatamente 01/10/2026, o
+dia em que o problema apareceu. Rubens confirmou que não lembrava de ter mexido em nada — e de fato
+não foi ele, foi o prazo padrão vencendo sozinho, sem aviso nenhum na aplicação (só um comentário
+dentro do próprio editor de regras do Console, que ninguém tinha lido até então).
+
+**Resolução**: não consigo entrar no Console do Firebase por conta própria (navegação direta pra
+`console.firebase.google.com` bloqueada nesta sessão, e nunca devo digitar login do Google por ele
+de qualquer forma — regra de segurança da sessão). Guiei o Rubens print a print (Firestore → aba
+Regras) até achar o editor com a regra expirada, confirmei o diagnóstico pelo comentário explicativo
+que aparece junto, e passei o texto da regra permanente pra ele colar e publicar:
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
+```
+Confirmado logo depois (console do navegador, direto contra produção): as 3 páginas voltaram a ler
+o Firestore normalmente, zero erro.
+
+**Lição pra qualquer projeto Firebase futuro** (não só esse): o "modo de teste" do Firestore SEMPRE
+expira em 30 dias por padrão, mesmo sem ninguém mexer em nada. Se um projeto novo for criado assim
+de novo, checar essa regra e substituir por uma permanente *antes* dos 30 dias vencerem — não só
+quando alguém reclamar que o site parou. Como a regra colada aqui não tem condição de tempo, este
+projeto específico não deve repetir o problema.
+
 ## Apontador — "Modo teste" — HISTÓRICO, revertido no mesmo dia (commit `17d4c97`, 04/09/2026)
 
 Rubens perguntou se dava pra travar o Apontador no mês teste, só com opção de escolher o dia —
